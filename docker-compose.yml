@@ -37,8 +37,6 @@ services:
     depends_on:
       - postgres
       - redis
-    volumes:
-      - ./logs:/app/logs
 
   celery_worker:
     build:
@@ -57,8 +55,6 @@ services:
       - postgres
       - redis
       - atualiza_brasil
-    volumes:
-      - ./logs:/app/logs
 
   celery_beat:
     build:
@@ -76,8 +72,6 @@ services:
     depends_on:
       - postgres
       - redis
-    volumes:
-      - ./logs:/app/logs
 
   flower:
     build:
