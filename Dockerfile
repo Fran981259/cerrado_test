@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y \
     gcc \
     libpq-dev \
     cron \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copia requirements e instala dependências Python
