@@ -77,35 +77,45 @@ class GroqClient:
     
     def rewrite_article(self, article: Dict, 
                        reporter_prompt: str,
-                       attribution: str) -> Dict:
-        """Reescreve artigo com voz do repórter."""
+                       attribution: str,
+                       related_sources: list = None) -> Dict:
+        """Reescreve artigo com voz do repórter — versão PROFISSIONAL longa e cruzada."""
         
         title = article.get('title_pt') or article.get('title', '')
         summary = article.get('summary_pt') or article.get('summary', '')
         source = article.get('source', 'Portal de Notícias')
         source_url = article.get('url', '')
         
-        user_prompt = f"""Reescreva esta notícia em Português Brasileiro com sua voz editorial.
+        # Fontes relacionadas para cruzamento
+        related_text = ""
+        if related_sources:
+            related_text = "\nOUTRAS FONTES SOBRE O MESMO FATO (cruze informações):\n"
+            for i, rs in enumerate(related_sources[:3], 1):
+                related_text += f"{i}. {rs.get('title','')} — {rs.get('source','')} ({rs.get('url','')})\n   Resumo: {rs.get('summary','')[:200]}\n"
+
+        user_prompt = f"""Reescreva esta notícia em Português Brasileiro com padrão PROFISSIONAL, COMPLETO e LONGO.
 
 TÍTULO ORIGINAL: {title}
-CONTEÚDO: {summary}
-FONTE: {source}
-URL: {source_url}
+CONTEÚDO BASE: {summary}
+FONTE PRINCIPAL: {source} — {source_url}
+{related_text}
+INSTRUÇÕES OBRIGATÓRIAS (REGRA DO SISTEMA):
+1. Reescreva completamente (paráfrase total, NÃO cópia) — apuração própria
+2. PESQUISE E CRUZE as outras fontes listadas acima; confronte dados, confirme fatos e complemente lacunas
+3. Escreva matéria LONGA e COMPLETA: 700-900 palavras (mínimo 700)
+4. Estruture profissionalmente: LEAD forte (o que/quem/quando/onde/por quê) → CONTEXTO/HISTÓRICO → DESENVOLVIMENTO com dados/números → ANÁLISE/IMPACTO para Mato Grosso do Sul → FECHAMENTO com desdobramentos
+5. Inclua dados, estatísticas, citações de autoridades ou especialistas (quando faltar, contextualize com base nas fontes)
+6. Use sua voz editorial característica, linguagem clara e fluida
+7. Cite todas as fontes consultadas ao longo do texto e no rodapé
+8. Termine com: {attribution}
+9. NÃO invente fatos — se faltar dado, diga "segundo apuração" ou "ainda não divulgado"
 
-INSTRUÇÕES:
-1. Reescreva completamente (paráfrase, NÃO cópia)
-2. Mantenha os fatos principais
-3. Adicione contexto para o público brasileiro
-4. Use sua voz editorial característica
-5. Termine com: {attribution}
-6. Limite: 400-600 palavras
-
-REESCRITA:"""
+REESCRITA LONGA (700-900 palavras):"""
         
         rewritten = self.complete(
             prompt=user_prompt,
             system_prompt=reporter_prompt,
-            max_tokens=1500,
+            max_tokens=3000,
             temperature=0.7,
         )
         

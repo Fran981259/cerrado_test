@@ -92,6 +92,19 @@ reporters:
     specialties: ["economia", "bolsa", "mercado", "empregos"]
     tom_voz: "analítico, pragmático, noticioso"
 
+# Regras profissionais de escrita — ATUALIZADO 28/08/2026
+writing_rules:
+  professional_standard:
+    enabled: true
+    min_words: 700
+    max_words: 900
+    require_cross_reference: true
+    min_sources: 3  # 1 principal + 2 cruzadas
+    structure: ["lead", "contexto_historico", "desenvolvimento_com_dados", "analise_impacto_ms", "fechamento_desdobramentos"]
+    require_data_and_quotes: true
+    forbidden: ["resumo curto", "cópia literal", "matéria sem fontes cruzadas"]
+    enforcement: "bloqueia publicação se < 700 palavras ou < 2 fontes cruzadas"
+
 # Portal de referência legal
 legal:
   copyright_notice: |
