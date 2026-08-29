@@ -1,0 +1,146 @@
+# ============================================================
+# CONFIGURAÇÃO: Volume e Scheduler — Atualiza Brasil
+# ============================================================
+# Mínimo: 50 matérias/dia
+# Atualização: a cada 30 minutos
+# ============================================================
+
+volume:
+  # Meta diária
+  min_articles_per_day: 50
+  ideal_articles_per_day: 70
+  max_articles_per_day: 100
+  
+  # Atualização
+  update_interval_minutes: 30
+  runs_per_day: 48  # 24h * 2 (a cada 30 min)
+  
+  # Distribuição por ciclo (a cada 30 min)
+  articles_per_cycle: 3
+  # 3 artigos * 48 runs = 144/dia (suficiente para garantir 50+)
+  # Filtros de qualidade rejeitam ~60% mantendo só os melhores
+
+  # Distribuição por categoria (% do total diário)
+  distribution:
+    technology: 0.16      # 8/dia
+    economy: 0.14         # 7/dia
+    geopolitics: 0.14     # 7/dia
+    sports: 0.12          # 6/dia
+    security: 0.10        # 5/dia
+    politics: 0.10        # 5/dia
+    health: 0.08          # 4/dia
+    culture: 0.06         # 3/dia
+    education: 0.05       # 2-3/dia
+    agriculture: 0.05     # 2-3/dia
+    
+  # Curiosidades (15% do volume diário = ~7-8/dia)
+  curiosities:
+    enabled: true
+    daily_target: 8
+    ratio: 0.15  # 15% do total
+    boost_engagement: 1.3  # +30%
+    distribution:
+      - "1 por categoria (9 categorias)"
+      - "Intercaladas a cada 7 artigos"
+    sources:
+      - "templates próprios (gerados)"
+      - "detecção de artigos externos com padrões de curiosidade"
+
+# ============================================================
+# CLASSIFICAÇÃO DE PRIORIDADE
+# ============================================================
+priority:
+  # Apenas Tier 1 e Tier 2 são publicados
+  publishable_tiers:
+    - TIER_1  # Score >= 4.0 — Destaque
+    - TIER_2  # Score >= 3.0 — Normal
+    
+  # Tier 3 só se necessário para atingir meta
+  fill_tier:
+    - TIER_3  # Score >= 2.0 — Último recurso
+
+  # Pesos do score final
+  weights:
+    importance: 0.6   # 60%
+    engagement: 0.4   # 40%
+
+# ============================================================
+# RANDOMIZAÇÃO
+# ============================================================
+randomization:
+  enabled: true
+  
+  # Cada categoria tem 85% chance de ser minerada em cada ciclo
+  category_probability: 0.85
+  
+  # Pega 60-80% dos portais de cada categoria por ciclo
+  portal_sample_range:
+    min: 0.6
+    max: 0.8
+  
+  # Quantidade de artigos por portal (varia)
+  articles_per_portal:
+    min: 5
+    max: 20
+
+# ============================================================
+# HORÁRIOS DE PICO (volume maior)
+# ============================================================
+peak_hours:
+  # Manhã — pico de leitura
+  morning:
+    start: "06:00"
+    end: "10:00"
+    articles_per_cycle: 4  # Maior volume
+    
+  # Almoço — segundo pico
+  lunch:
+    start: "11:30"
+    end: "14:00"
+    articles_per_cycle: 4
+    
+  # Noite — pico noturno
+  evening:
+    start: "18:00"
+    end: "22:00"
+    articles_per_cycle: 4
+    
+  # Demais horários — volume normal
+  normal:
+    articles_per_cycle: 3
+
+# ============================================================
+# ANTI-SPAM / ANTI-REPETIÇÃO
+# ============================================================
+anti_spam:
+  # Não publicar mais de X artigos do mesmo portal em 1 hora
+  max_per_source_per_hour: 3
+  
+  # Não publicar mais de X artigos sobre o mesmo tema em 24h
+  max_per_topic_per_day: 5
+  
+  # Cooldown entre artigos do mesmo domínio
+  min_interval_minutes_per_source: 10
+  
+  # Detecção de similaridade
+  similarity_threshold: 0.85  # > 85% = considera duplicata
+
+# ============================================================
+# LOGS E MÉTRICAS
+# ============================================================
+monitoring:
+  log:
+    mined_count: true
+    classified_count: true
+    published_count: true
+    rejected_count: true
+    translation_time: true
+    
+  metrics:
+    - "articles_mined_per_cycle"
+    - "articles_published_per_cycle"
+    - "average_importance_score"
+    - "average_engagement_score"
+    - "rejection_rate"
+    - "daily_total"
+    - "daily_target_progress"

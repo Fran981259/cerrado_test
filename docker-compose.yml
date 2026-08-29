@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: atualiza_brasil_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: atualiza_brasil
+      POSTGRES_USER: portal_user
+      POSTGRES_PASSWORD: portal_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: atualiza_brasil_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+
+  atualiza_brasil:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: atualiza_brasil_app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://portal_user:portal_pass@postgres:5432/atualiza_brasil
+      REDIS_URL: redis://redis:6379/0
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./logs:/app/logs
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: atualiza_brasil_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://atualiza_brasil:8000
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://atualizabrasil.news}
+    depends_on:
+      - atualiza_brasil
+
+volumes:
+  postgres_data:

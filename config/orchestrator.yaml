@@ -1,0 +1,118 @@
+# Configuração do Orquestrador — Atualiza Brasil
+# Responsável por gerenciar o workflow diário e as regras de publicação
+
+orchestrator:
+  name: "Atualiza Brasil"
+  version: "1.0.0"
+  timezone: "America/Sao_Paulo"
+  run_mode: "production"  # production, development, dry_run
+  
+  # Frequência padrão de verificação
+  check_interval_minutes: 30
+  max_concurrent_tasks: 5
+  
+  # Rate limiting para respeitar servidores
+  rate_limit:
+    min_delay_seconds: 2
+    max_requests_per_minute: 20
+  
+  # Cache de respostas
+  cache:
+    enabled: true
+    ttl_seconds: 3600
+
+database:
+  url: "postgresql://portal_user:portal_pass@postgres:5432/atualiza_brasil"
+  pool_size: 5
+  echo: false  # True para debug
+
+redis:
+  url: "redis://redis:6379/0"
+  session_ttl: 86400
+
+openai:
+  model: "gpt-4"
+  temperature: 0.7
+  max_tokens: 1500
+  timeout_seconds: 120
+
+# Configuração específica dos repórteres
+reporters:
+  - slug: "enzo.bianchi"
+    name: "ENZO BIANCHI"
+    role: "technology"
+    specialties: ["tecnologia", "inovação", "apps", "gadgets"]
+    tom_voz: "técnico, futuro, dinâmico"
+    
+  - slug: "marcus.teixeira"
+    name: "MARCUS TEIXEIRA"
+    role: "sports"
+    specialties: ["esportes", "times locais", "fórmulas"]
+    tom_voz: "empolgado, narrativo, competitivo"
+    
+  - slug: "rafael.dumas"
+    name: "RAFAEL DUMAS"
+    role: "security"
+    specialties: ["segurança", "crimes", "polícia"]
+    tom_voz: "sério, direto, investigativo"
+    
+  - slug: "luciana.freitas"
+    name: "LUCIANA FREITAS"
+    role: "politics"
+    specialties: ["política", "governos", "eleições"]
+    tom_voz: "preciso, político, informado"
+    
+  - slug: "maya.santos"
+    name: "MAYA SANTOS"
+    role: "health"
+    specialties: ["saúde", "hospitalar", "doenças"]
+    tom_voz: "científico, cuidadoso, rigoroso"
+    
+  - slug: "lucas.nakamura"
+    name: "LUCAS NAKAMURA"
+    role: "education"
+    specialties: ["educação", "universidades", "concursos"]
+    tom_voz: "didático, acessível, motivador"
+    
+  - slug: "bia.fernandes"
+    name: "BIA FERNANDES"
+    role: "agriculture"
+    specialties: ["agronegócio", "produtos", "safras", "mercado"]
+    tom_voz: "territorial, profissional, realista"
+    
+  - slug: "leon.vaz"
+    name: "LEON VAZ"
+    role: "culture"
+    specialties: ["cultura", "eventos", "shows"]
+    tom_voz: "criativo, sensível, engajado"
+    
+  - slug: "camila.rocha"
+    name: "CAMILA ROCHA"
+    role: "economy"
+    specialties: ["economia", "bolsa", "mercado", "empregos"]
+    tom_voz: "analítico, pragmático, noticioso"
+
+# Portal de referência legal
+legal:
+  copyright_notice: |
+    Conteúdo publicado sob direitos autorais próprios. 
+    Fontes sempre citadas conforme Art. 46/47 da Lei 9.610/98.
+  attribution_template: |
+    Fonte: {{source}} | Publicado: Atualiza Brasil | Data: {{timestamp}}
+  compliance_check_enabled: true
+  log_retention_days: 90
+
+# Notificação e alertas
+notifications:
+  email:
+    smtp_host: "smtp.gmail.com"
+    smtp_port: 587
+    admin_email: "admin@atualizabrasil.news"
+  slack:
+    webhook_url: ""  # configurar em produção
+
+# Métricas e analytics
+analytics:
+  track_impressions: true
+  track_engagement: true
+  daily_report_enabled: true
