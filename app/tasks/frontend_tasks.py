@@ -59,8 +59,8 @@ def export_frontend_articles_to_files(limit: int = 100) -> dict:
             seen.add(slug)
 
             sources = a.sources if isinstance(a.sources, list) else []
-            urls = [s.get("url", "") for s in sources] if sources else []
-            names = [s.get("name", "") for s in sources] if sources else []
+            urls = [s.get("url", "") if isinstance(s, dict) else str(s) for s in sources] if sources else []
+            names = [s.get("name", "") if isinstance(s, dict) else "" for s in sources] if sources else []
 
             # foto de capa: usa a original quando existe; quando não, gera placeholder determinístico único por matéria
             # evita o problema de "muita foto repetida" (mesmo fallback para todos)
@@ -68,7 +68,11 @@ def export_frontend_articles_to_files(limit: int = 100) -> dict:
             if not cover:
                 # picsum com seed = hash da URL ou slug -> cada matéria tem capa distinta mas estável
                 import hashlib
-                seed = hashlib.md5(((a.slug or slug) + (a.sources[0].get("url","") if a.sources and isinstance(a.sources, list) and a.sources[0].get("url") else "")).encode()).hexdigest()[:8]
+                first_url = ""
+                if a.sources and isinstance(a.sources, list) and len(a.sources) > 0:
+                    first = a.sources[0]
+                    first_url = first.get("url", "") if isinstance(first, dict) else str(first)
+                seed = hashlib.md5(((a.slug or slug) + first_url).encode()).hexdigest()[:8]
                 cover = f"https://picsum.photos/seed/{seed}/800/450"
 
             out.append({

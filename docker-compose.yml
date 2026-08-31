@@ -34,6 +34,9 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GROQ_MODEL: ${GROQ_MODEL:-qwen/qwen3-32b}
+      SITE_URL: ${SITE_URL:-https://atualizabrasil.news}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://atualizabrasil.news}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://atualiza_brasil:8000}
     depends_on:
       - postgres
       - redis
@@ -53,6 +56,8 @@ services:
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GROQ_MODEL: ${GROQ_MODEL:-qwen/qwen3-32b}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      SITE_URL: ${SITE_URL:-https://atualizabrasil.news}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://atualizabrasil.news}
     depends_on:
       - postgres
       - redis
@@ -73,6 +78,8 @@ services:
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GROQ_MODEL: ${GROQ_MODEL:-qwen/qwen3-32b}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      SITE_URL: ${SITE_URL:-https://atualizabrasil.news}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://atualizabrasil.news}
     depends_on:
       - postgres
       - redis
@@ -108,7 +115,7 @@ services:
       - "3000:3000"
     environment:
       NEXT_PUBLIC_API_URL: http://atualiza_brasil:8000
-      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://100.95.111.24:3000}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://atualizabrasil.news}
     depends_on:
       - atualiza_brasil
 
