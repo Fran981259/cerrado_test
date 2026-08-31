@@ -13,6 +13,11 @@ import os
 import logging
 import requests
 from typing import Dict, Optional
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except Exception:
+    pass
 from datetime import datetime
 
 logging.basicConfig(level=logging.INFO)

@@ -5,6 +5,11 @@ API FastAPI REAL - consulta banco de dados.
 
 import logging
 import os
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except Exception:
+    pass
 import threading
 import time
 from datetime import datetime
