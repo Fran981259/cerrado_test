@@ -209,6 +209,10 @@ class SensitiveContentFilter:
     """Filtro de conteúdo sensível."""
     
     SENSITIVE_TOPICS = {
+        'children': {
+            'keywords': ['child victim', 'criança vítima', 'minor', 'menor'],
+            'action': 'block',  # Bloquear por padrão — prioridade máxima
+        },
         'violence': {
             'keywords': ['murder', 'assassinato', 'killing', 'homicídio'],
             'action': 'review',  # Revisar antes de publicar
@@ -220,10 +224,6 @@ class SensitiveContentFilter:
         'tragedy': {
             'keywords': ['tragedy', 'tragédia', 'disaster', 'desastre'],
             'action': 'review',
-        },
-        'children': {
-            'keywords': ['child victim', 'criança vítima', 'minor', 'menor'],
-            'action': 'block',  # Bloquear por padrão
         },
     }
     
