@@ -139,11 +139,15 @@ class RealPortalScanner:
         "security": "rafael.dumas",
         "politics": "luciana.freitas",
         "health": "maya.santos",
-        "education": "fernanda.lima",
+        "education": "lucas.nakamura",
         "agriculture": "bia.fernandes",
-        "entertainment": "pedro.mendes",
-        "economy": "carlos.nunes",
+        "entertainment": "leon.vaz",
+        "economy": "camila.rocha",
         "general": "enzo.bianchi",
+        # aliases vindos do classifier/miner
+        "technology": "enzo.bianchi",
+        "culture": "leon.vaz",
+        "science": "maya.santos",
     }
     
     def __init__(self):
@@ -317,39 +321,75 @@ class RealPortalScanner:
         return "general"
     
     def _is_valid_article(self, article: Dict) -> bool:
-        """Valida se é um artigo válido."""
-        title = article.get("title", "")
-        url = article.get("url", "")
+        """Valida se é um artigo válido — filtro anti-lixo para AdSense."""
+        title = (article.get("title", "") or "").strip()
+        url = (article.get("url", "") or "").strip()
         
         if len(title) < 20:
             return False
-        
+        if len(title.split()) < 4:
+            return False
         if not url.startswith("http"):
             return False
         
-        # Filtra títulos que não são notícias
-        invalid_titles = [
+        title_lower = title.lower().strip()
+        url_lower = url.lower()
+
+        # 1) Títulos genéricos / placeholders (reprovam AdSense)
+        invalid_exact = {
+            "o estado online",
+            "ms news",
+            "ms todo dia",
+            "agência de notícias ms",
+        }
+        if title_lower in invalid_exact:
+            return False
+
+        invalid_contains = [
             "últimas notícias", "última hora", "breaking news", "notícias ao vivo",
             "para o servidor", "contato", "sobre nós", "política de privacidade",
             "termos de uso", "cadastro", "login", "registro", "newsletter",
             "edição anterior", "arquivo", "search", "pesquisa", "search result",
             "click here", "saiba mais", "leia mais", "veja também", "veja mais",
             "voltar", "anterior", "próximo", "next", "previous",
+            "veja notícias em campo grande", "últimas notícias de economia",
+            "o jornal que respeita seus leitores",
+            "mercedita e serenatas",  # placeholder cultural poluído
         ]
-        title_lower = title.lower().strip()
-        if any(inv in title_lower for inv in invalid_titles):
+        if any(inv in title_lower for inv in invalid_contains):
             return False
-        
-        if len(title.split()) < 3:
+
+        # 2) Título muito curto ou igual ao nome do portal
+        if len(title.split()) < 4:
             return False
-        
-        skip_patterns = [
+
+        # 3) URLs de listagem / homepage / artefatos do portal
+        skip_url_substrings = [
             "javascript:", "mailto:", "#", "/search",
             "/login", "/signup", "/register", "/feed", "/rss",
             "/podcast", "/video", "/author", "/sobre", "/contato",
-            "/privacy", "/termos", "/login", "/cadastro"
+            "/privacy", "/termos", "/cadastro",
+            "/homepage-nova", "/arte-e-lazer/mercedita", "/tag/", "/categoria/",
+            "/author/", "/page/", "?s=", "?p=",
         ]
-        if any(p in url.lower() for p in skip_patterns):
+        if any(p in url_lower for p in skip_url_substrings):
+            return False
+
+        # 4) Homepage raiz sem slug profundo (ex: https://oestadoonline.com.br/)
+        # exige pelo menos 2 segmentos após domínio para ser matéria
+        try:
+            path = urlparse(url).path.strip("/")
+            if not path or path.count("/") < 1:
+                # allow agência ms que tem slug com 1 segmento mas longo
+                if len(path) < 15:
+                    return False
+        except Exception:
+            return False
+
+        # 5) Repetição grosseira de palavras (falha de scraping)
+        # ex: "O Estado Online O Estado Online"
+        words = title_lower.split()
+        if len(words) >= 4 and len(set(words)) <= 2:
             return False
         
         return True

@@ -6,6 +6,9 @@ __pycache__/
 venv/
 .env
 !.env.example
+# Nunca versionar .env real com secrets
+.env.local
+.env.*.local
 logs/
 *.log
 
@@ -34,4 +37,7 @@ Thumbs.db
 *.key
 
 # Dados locais do pipeline (SQLite, regenerados automaticamente)
-data/
+# só ignora /data na raiz, não frontend/src/data
+/data/
+data/atualiza_brasil.db
+data/*.db

@@ -117,21 +117,26 @@ class ArticlePublisher:
         return reporter
     
     def _generate_slug(self, title: str) -> str:
-        """Gera slug URL-friendly único."""
-        slug = title.lower()
+        """Gera slug URL-friendly único (sem colisão)."""
+        import unicodedata
+        # normaliza acentos
+        slug = unicodedata.normalize("NFKD", title or "").encode("ascii", "ignore").decode("ascii")
+        slug = slug.lower()
         slug = re.sub(r'[^a-z0-9\s-]', '', slug)
         slug = re.sub(r'\s+', '-', slug)
         slug = slug.strip('-')
+        base_slug = (slug[:180].strip('-') or "artigo")
         
-        # Garante unicidade
-        base_slug = slug[:180]
-        counter = 1
+        # 1) tenta base sem sufixo
+        if not self.db.query(NewsArticle).filter(NewsArticle.slug == base_slug).first():
+            return base_slug
+        # 2) base-2, base-3...
+        counter = 2
         while True:
-            exists = self.db.query(NewsArticle).filter(
-                NewsArticle.slug == f"{base_slug}-{counter}"
-            ).first()
+            candidate = f"{base_slug}-{counter}"
+            exists = self.db.query(NewsArticle).filter(NewsArticle.slug == candidate).first()
             if not exists:
-                return f"{base_slug}-{counter}"
+                return candidate
             counter += 1
     
     def _log_publication(self, article: NewsArticle, article_data: Dict):
