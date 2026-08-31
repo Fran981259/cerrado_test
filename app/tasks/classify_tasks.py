@@ -15,20 +15,54 @@ logger = logging.getLogger(__name__)
 )
 def classify_pending_articles(self):
     """
-    Classifica artigos pendentes por importância e engajamento.
+    Classifica artigos em status 'draft' por importância e engajamento,
+    gravando os scores no banco e marcando-os como 'classified'.
     Roda a cada 30 minutos.
     """
     try:
-        logger.info("[CELERY] Iniciando classify_pending_articles")
-        # Aqui viria a lógica de buscar artigos pendentes do banco
-        # Por ora, retorna sucesso
-        return {
-            "status": "success",
-            "classified": 0,
-            "message": "Implementar busca no DB"
-        }
+        from app.database import get_session
+        from app.schema import NewsArticle
+        from app.classifier import NewsClassifier
+        from datetime import datetime
+
+        logger.info("[CLASSIFY] Iniciando classificação de drafts")
+        db = get_session()
+        classifier = NewsClassifier()
+        classified = 0
+        try:
+            articles = (
+                db.query(NewsArticle)
+                .filter(NewsArticle.status == "draft")
+                .order_by(NewsArticle.created_at.asc())
+                .limit(100)
+                .all()
+            )
+            for art in articles:
+                data = {
+                    "title": art.title,
+                    "summary": art.summary or "",
+                    "category": art.category or "general",
+                }
+                enriched = classifier.classify(data)
+                cls = enriched.get("classification", {})
+                art.importance_score = int((cls.get("importance_score", 0) or 0) * 10)
+                art.engagement_score = int((cls.get("engagement_score", 0) or 0) * 10)
+                art.final_score = int((cls.get("final_score", 0) or 0) * 10)
+                art.priority_tier = cls.get("priority_tier") or "TIER_2"
+                art.status = "classified"
+                art.updated_at = datetime.utcnow()
+                classified += 1
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()
+
+        logger.info(f"[CLASSIFY] Classificados: {classified} artigos")
+        return {"status": "success", "classified": classified}
     except Exception as e:
-        logger.error(f"[CELERY] Erro em classify_pending_articles: {e}")
+        logger.error(f"[CLASSIFY] Erro: {e}")
         raise self.retry(exc=e)
 
 

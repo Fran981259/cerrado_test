@@ -85,7 +85,8 @@ class GroqClient:
         summary = article.get('summary_pt') or article.get('summary', '')
         source = article.get('source', 'Portal de Notícias')
         source_url = article.get('url', '')
-        
+        body = article.get('body', '') or ''
+
         # Fontes relacionadas para cruzamento
         related_text = ""
         if related_sources:
@@ -93,22 +94,30 @@ class GroqClient:
             for i, rs in enumerate(related_sources[:3], 1):
                 related_text += f"{i}. {rs.get('title','')} — {rs.get('source','')} ({rs.get('url','')})\n   Resumo: {rs.get('summary','')[:200]}\n"
 
+        body_text = ""
+        if body:
+            paragraphs = [p for p in body.split("\n\n") if p.strip()][:12]
+            body_text = "\n".join(f"- {p}" for p in paragraphs)
+            body_text = f"\n\nCONTEXTO APURADO NO PORTAL (use como base factual; reescreva com APURAÇÃO PRÓPRIA, NÃO copie):\n{body_text}"
+
         user_prompt = f"""Reescreva esta notícia em Português Brasileiro com padrão PROFISSIONAL, COMPLETO e LONGO.
 
 TÍTULO ORIGINAL: {title}
-CONTEÚDO BASE: {summary}
+LEAD (resumo): {summary}
 FONTE PRINCIPAL: {source} — {source_url}
+{body_text}
 {related_text}
 INSTRUÇÕES OBRIGATÓRIAS (REGRA DO SISTEMA):
 1. Reescreva completamente (paráfrase total, NÃO cópia) — apuração própria
-2. PESQUISE E CRUZE as outras fontes listadas acima; confronte dados, confirme fatos e complemente lacunas
-3. Escreva matéria LONGA e COMPLETA: 700-900 palavras (mínimo 700)
-4. Estruture profissionalmente: LEAD forte (o que/quem/quando/onde/por quê) → CONTEXTO/HISTÓRICO → DESENVOLVIMENTO com dados/números → ANÁLISE/IMPACTO para Mato Grosso do Sul → FECHAMENTO com desdobramentos
-5. Inclua dados, estatísticas, citações de autoridades ou especialistas (quando faltar, contextualize com base nas fontes)
-6. Use sua voz editorial característica, linguagem clara e fluida
-7. Cite todas as fontes consultadas ao longo do texto e no rodapé
-8. Termine com: {attribution}
-9. NÃO invente fatos — se faltar dado, diga "segundo apuração" ou "ainda não divulgado"
+2. Use o CONTEXTO APURADO acima para dar densidade, precisão e riqueza factual ao texto (fatos, números, citações)
+3. PESQUISE E CRUZE as outras fontes listadas acima; confronte dados, confirme fatos e complemente lacunas
+4. Escreva matéria LONGA e COMPLETA: 700-900 palavras (mínimo 700)
+5. Estruture profissionalmente: LEAD forte (o que/quem/quando/onde/por quê) → CONTEXTO/HISTÓRICO → DESENVOLVIMENTO com dados/números → ANÁLISE/IMPACTO para Mato Grosso do Sul → FECHAMENTO com desdobramentos
+6. Inclua dados, estatísticas, citações de autoridades ou especialistas (quando faltar, contextualize com base nas fontes)
+7. Use sua voz editorial característica, linguagem clara e fluida
+8. Cite todas as fontes consultadas ao longo do texto e no rodapé
+9. Termine com: {attribution}
+10. NÃO invente fatos — se faltar dado, diga "segundo apuração" ou "ainda não divulgado"
 
 REESCRITA LONGA (700-900 palavras):"""
         

@@ -188,6 +188,8 @@ class ArticlePublisher:
             'category': article.category,
             'reporter': article.reporter.display_name if article.reporter else None,
             'reporter_slug': article.reporter.slug if article.reporter else None,
+            'author': article.author,
+            'image_url': article.image_url,
             'sources': article.sources,
             'tags': article.tags,
             'published_at': article.published_at.isoformat() if article.published_at else None,

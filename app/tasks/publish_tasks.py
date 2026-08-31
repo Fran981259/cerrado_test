@@ -19,31 +19,52 @@ logger = logging.getLogger(__name__)
 )
 def publish_ready_articles(self):
     """
-    Publica artigos reescritos no portal.
-    Busca artigos pendentes no banco e publica.
+    Publica artigos reescritos (status 'rewritten') no portal,
+    definindo status='published' e published_at.
+    Roda a cada 30 minutos.
     """
-    logger.info("[PUBLISH] Iniciando publicação")
-    
+    logger.info("[PUBLISH] Iniciando publicação de artigos reescritos")
+
+    from app.database import get_session
+    from app.schema import NewsArticle
+    from datetime import datetime
+
+    db = get_session()
+    published = 0
+    failed = 0
     try:
-        db = get_session()
-        publisher = ArticlePublisher(db)
-        
-        # Busca artigos pendentes (status = 'pending_rewrite' ou similar)
-        # Por ora, simula publicação direta
-        
-        result = {
-            "status": "success",
-            "published": 0,
-            "message": "Task configurada"
-        }
-        
-        db.close()
-        logger.info(f"[PUBLISH] Concluído: {result}")
-        return result
-        
+        articles = (
+            db.query(NewsArticle)
+            .filter(NewsArticle.status == "rewritten")
+            .order_by(NewsArticle.updated_at.asc())
+            .limit(100)
+            .all()
+        )
+        for art in articles:
+            try:
+                if not art.content or not art.slug:
+                    # gera slug se necessário para publicação
+                    if not art.slug:
+                        publisher = ArticlePublisher(db)
+                        art.slug = publisher._generate_slug(art.title)
+                art.status = "published"
+                art.published_at = datetime.utcnow()
+                art.visibility = "public"
+                art.updated_at = datetime.utcnow()
+                published += 1
+            except Exception as e:
+                logger.error(f"[PUBLISH] erro num artigo: {e}")
+                failed += 1
+        db.commit()
     except Exception as e:
-        logger.error(f"[PUBLISH] Erro: {e}")
-        raise self.retry(exc=e)
+        db.rollback()
+        logger.error(f"[PUBLISH] erro no lote: {e}")
+        raise
+    finally:
+        db.close()
+
+    logger.info(f"[PUBLISH] Publicados: {published}, falhas: {failed}")
+    return {"status": "success", "published": published, "failed": failed}
 
 
 @celery_app.task(

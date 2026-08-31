@@ -32,3 +32,6 @@ Thumbs.db
 
 # Tailscale
 *.key
+
+# Dados locais do pipeline (SQLite, regenerados automaticamente)
+data/

@@ -14,15 +14,36 @@ DATABASE_URL = os.getenv(
     "postgresql://portal_user:portal_pass@localhost:5432/atualiza_brasil"
 )
 
-# Engine
-engine = create_engine(
-    DATABASE_URL,
-    poolclass=QueuePool,
-    pool_size=5,
-    max_overflow=10,
-    pool_pre_ping=True,
-    echo=False,
-)
+try:
+    # Tenta PostgreSQL (produção). create_engine é lazy, então checamos com connect.
+    _engine = create_engine(
+        DATABASE_URL,
+        poolclass=QueuePool,
+        pool_size=5,
+        max_overflow=10,
+        pool_pre_ping=True,
+        echo=False,
+    )
+    with _engine.connect() as _c:
+        pass
+    engine = _engine
+    _using_sqlite = False
+except Exception:
+    # Fallback local (desenvolvimento sem Postgres): usa SQLite.
+    import sqlite3
+    _sqlite_file = os.path.join(os.path.dirname(__file__), "..", "data", "atualiza_brasil.db")
+    _sqlite_file = os.path.abspath(_sqlite_file)
+    os.makedirs(os.path.dirname(_sqlite_file), exist_ok=True)
+    engine = create_engine(
+        f"sqlite:///{_sqlite_file}",
+        connect_args={"check_same_thread": False},
+        echo=False,
+    )
+    _using_sqlite = True
+    import logging
+    logging.getLogger(__name__).warning(
+        f"PostgreSQL indisponível ({DATABASE_URL}); usando SQLite em {_sqlite_file}"
+    )
 
 # Session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

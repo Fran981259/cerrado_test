@@ -26,25 +26,37 @@ def groq_client_source_name(url: str) -> str:
 
 
 def _find_related_sources(article: dict, max_related: int = 3) -> list:
-    """Busca até 3 fontes relacionadas ao mesmo fato para cruzamento."""
+    """Busca até 3 fontes relacionadas ao mesmo fato no banco para cruzamento."""
     try:
-        scanner = RealPortalScanner()
-        all_articles = scanner.scan_all().get("articles", [])
-        title = article.get("title", "").lower()
-        # pega palavras-chave relevantes (4+ letras)
-        keywords = [w for w in re.findall(r"\w+", title.lower()) if len(w) >= 4][:6]
-        if not keywords:
-            return []
-        scored = []
-        for a in all_articles:
-            if a.get("url") == article.get("url"):
-                continue
-            t = a.get("title", "").lower()
-            score = sum(1 for kw in keywords if kw in t)
-            if score >= 1:
-                scored.append((score, a))
-        scored.sort(key=lambda x: x[0], reverse=True)
-        return [a for _, a in scored[:max_related]]
+        from app.database import get_session
+        from app.schema import NewsArticle
+        db = get_session()
+        try:
+            title = article.get("title", "").lower()
+            keywords = [w for w in re.findall(r"\w+", title) if len(w) >= 4][:6]
+            if not keywords:
+                return []
+            candidates = db.query(NewsArticle).filter(
+                NewsArticle.status.in_(["classified", "rewritten", "published"])
+            ).limit(300).all()
+            scored = []
+            for a in candidates:
+                urls = [s.get("url", "") for s in (a.sources or [])] if isinstance(a.sources, list) else []
+                if article.get("url") in urls:
+                    continue
+                t = (a.title or "").lower()
+                score = sum(1 for kw in keywords if kw in t)
+                if score >= 1:
+                    scored.append((score, {
+                        "title": a.title,
+                        "summary": a.summary or "",
+                        "url": urls[0] if urls else "",
+                        "source": groq_client_source_name(urls[0] if urls else ""),
+                    }))
+            scored.sort(key=lambda x: x[0], reverse=True)
+            return [a for _, a in scored[:max_related]]
+        finally:
+            db.close()
     except Exception as e:
         logger.warning(f"[REWRITE] falha ao buscar fontes relacionadas: {e}")
         return []
@@ -54,26 +66,119 @@ def _find_related_sources(article: dict, max_related: int = 3) -> list:
     name="app.tasks.rewrite_tasks.rewrite_pending_articles",
     bind=True,
     max_retries=3,
-    time_limit=600
+    time_limit=600,
+    soft_time_limit=540
 )
 def rewrite_pending_articles(self):
     """
-    Reescreve artigos pendentes com LLM — versão profissional longa.
+    Reescreve artigos em status 'classified' com LLM (Groq) ou fallback local,
+    gravando o conteúdo e marcando-os como 'rewritten'.
+    Roda a cada 30 minutos.
     """
-    logger.info("[REWRITE] Iniciando reescrita pendentes (profissional)")
-    
+    logger.info("[REWRITE] Iniciando reescrita de artigos classificados (profissional)")
+
+    from app.database import get_session
+    from app.schema import NewsArticle, Reporter
+    from app.rewriter import load_reporters_config, ArticleRewriter
+    from datetime import datetime
+
+    db = get_session()
+    rewritten = 0
+    failed = 0
     try:
-        result = {
-            "status": "success",
-            "rewritten": 0,
-            "message": "Task profissional (700-900 palavras + fontes cruzadas) ativa",
-        }
-        logger.info(f"[REWRITE] Concluído: {result}")
-        return result
-        
+        articles = (
+            db.query(NewsArticle)
+            .filter(NewsArticle.status == "classified")
+            .order_by(NewsArticle.final_score.desc())
+            .limit(50)
+            .all()
+        )
+
+        reporters = load_reporters_config()
+        groq = GroqClient()
+
+        for art in articles:
+            try:
+                if not art.sources:
+                    art.status = "failed"
+                    art.updated_at = datetime.utcnow()
+                    failed += 1
+                    continue
+
+                main_url = art.sources[0]["url"] if isinstance(art.sources, list) and art.sources else ""
+                main_source = groq_client_source_name(main_url)
+
+                # corpo real extraído do portal (proveniência) ou, se ausente, o lead
+                raw_body = (art.original_text or art.content or "")[:6000]
+                clean_lead = (art.summary or "")[:400]
+
+                article_data = {
+                    "title": art.title,
+                    "summary": clean_lead,
+                    "body": raw_body,
+                    "url": main_url,
+                    "source": main_source,
+                    "category": art.category or "general",
+                    "published_at": art.published_at.isoformat() if art.published_at else None,
+                    "author": art.author,
+                }
+
+                # repórter pela categoria
+                reporter = None
+                for r in reporters.values():
+                    if r.role == article_data["category"]:
+                        reporter = r
+                        break
+                if not reporter:
+                    reporter = list(reporters.values())[0]
+
+                related = _find_related_sources(article_data, max_related=3)
+                if related:
+                    article_data["related_sources"] = related
+
+                content = ""
+                if groq.api_key:
+                    result_groq = groq.rewrite_article(
+                        article_data,
+                        reporter.get_system_prompt(),
+                        reporter.attribution,
+                        related_sources=related,
+                    )
+                    candidate = result_groq.get("rewritten_content", "")
+                    if candidate and len(candidate.split()) >= 500:
+                        content = candidate
+
+                if not content:
+                    fallback_rewriter = ArticleRewriter(reporter)
+                    fallback = fallback_rewriter.rewrite(article_data)
+                    content = fallback.get("content", "")
+
+                if not content:
+                    art.status = "failed"
+                    art.updated_at = datetime.utcnow()
+                    failed += 1
+                    continue
+
+                art.content = content
+                art.summary = (art.summary or "")[:2000]
+                art.status = "rewritten"
+                art.updated_at = datetime.utcnow()
+                rewritten += 1
+            except Exception as e:
+                logger.error(f"[REWRITE] erro num artigo: {e}")
+                art.status = "failed"
+                art.updated_at = datetime.utcnow()
+                failed += 1
+        db.commit()
     except Exception as e:
-        logger.error(f"[REWRITE] Erro: {e}")
-        raise self.retry(exc=e)
+        db.rollback()
+        logger.error(f"[REWRITE] erro no lote: {e}")
+        raise
+    finally:
+        db.close()
+
+    logger.info(f"[REWRITE] Reescritos: {rewritten}, falhas: {failed}")
+    return {"status": "success", "rewritten": rewritten, "failed": failed}
 
 
 @celery_app.task(

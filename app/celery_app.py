@@ -24,6 +24,7 @@ celery_app = Celery(
         "app.tasks.curiosity_tasks",
         "app.tasks.auditor_tasks",
         "app.tasks.maintenance",
+        "app.tasks.frontend_tasks",
     ]
 )
 
@@ -55,48 +56,20 @@ celery_app.conf.update(
     # Beat schedule (agendamento)
     beat_schedule={
         # ================================
+        # PIPELINE COMPLETO (scan -> classify -> rewrite -> publish -> export)
+        # Roda a cada 30 minutos
+        # ================================
+        "run-full-pipeline": {
+            "task": "app.tasks.scan_tasks.run_full_pipeline",
+            "schedule": 1800.0,  # A cada 30 minutos
+        },
+
+        # ================================
         # MINER (Notícias Globais)
         # ================================
         "mine-global-news": {
             "task": "app.tasks.mine_tasks.mine_global_news",
             "schedule": 1800.0,  # A cada 30 minutos
-            "options": {"queue": "mining"},
-        },
-
-        # ================================
-        # SCANNER (Notícias MS/BR)
-        # ================================
-        "scan-brazil-news": {
-            "task": "app.tasks.scan_tasks.scan_brazil_news",
-            "schedule": 1800.0,  # A cada 30 minutos
-            "options": {"queue": "scanning"},
-        },
-
-        # ================================
-        # CLASSIFIER (Classificação)
-        # ================================
-        "classify-pending": {
-            "task": "app.tasks.classify_tasks.classify_pending_articles",
-            "schedule": 1800.0,  # A cada 30 minutos
-            "options": {"queue": "processing"},
-        },
-
-        # ================================
-        # REWRITER (LLM - Reescrita)
-        # ================================
-        "rewrite-pending": {
-            "task": "app.tasks.rewrite_tasks.rewrite_pending_articles",
-            "schedule": 1800.0,  # A cada 30 minutos
-            "options": {"queue": "rewriting"},
-        },
-
-        # ================================
-        # PUBLISHER (Publicação)
-        # ================================
-        "publish-ready": {
-            "task": "app.tasks.publish_tasks.publish_ready_articles",
-            "schedule": 1800.0,  # A cada 30 minutos
-            "options": {"queue": "publishing"},
         },
 
         # ================================
@@ -105,7 +78,6 @@ celery_app.conf.update(
         "generate-daily-curiosities": {
             "task": "app.tasks.curiosity_tasks.generate_daily_curiosities",
             "schedule": crontab(hour=6, minute=0),  # 06:00 todo dia
-            "options": {"queue": "curiosity"},
         },
 
         # ================================
@@ -114,7 +86,6 @@ celery_app.conf.update(
         "cleanup-old-content": {
             "task": "app.tasks.maintenance.cleanup_old_content",
             "schedule": crontab(hour=3, minute=0),  # 03:00 todo dia
-            "options": {"queue": "maintenance"},
         },
 
         # ================================
@@ -123,7 +94,6 @@ celery_app.conf.update(
         "update-sitemap": {
             "task": "app.tasks.maintenance.update_sitemap",
             "schedule": crontab(hour=4, minute=0),  # 04:00 todo dia
-            "options": {"queue": "maintenance"},
         },
 
         # ================================
@@ -132,7 +102,6 @@ celery_app.conf.update(
         "system-health-check": {
             "task": "app.tasks.maintenance.system_health_check",
             "schedule": 300.0,  # A cada 5 minutos
-            "options": {"queue": "maintenance"},
         },
 
         # ================================
@@ -141,7 +110,6 @@ celery_app.conf.update(
         "report-metrics": {
             "task": "app.tasks.maintenance.report_metrics",
             "schedule": crontab(minute=0),  # A cada hora (minuto 0)
-            "options": {"queue": "maintenance"},
         },
 
         # ================================
@@ -150,7 +118,6 @@ celery_app.conf.update(
         "horus-full-audit": {
             "task": "app.tasks.auditor_tasks.full_audit",
             "schedule": crontab(minute=30),  # A cada hora (minuto 30)
-            "options": {"queue": "auditing"},
         },
 
         # ================================
@@ -159,7 +126,6 @@ celery_app.conf.update(
         "evolve-reporters": {
             "task": "app.tasks.auditor_tasks.evolve_reporters",
             "schedule": crontab(hour=2, minute=0),  # 02:00 todo dia
-            "options": {"queue": "auditing"},
         },
     },
 )

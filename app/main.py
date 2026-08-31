@@ -4,6 +4,9 @@ API FastAPI REAL - consulta banco de dados.
 """
 
 import logging
+import os
+import threading
+import time
 from datetime import datetime
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,6 +27,41 @@ app = FastAPI(
     description="Sistema automatizado de notícias com repórteres digitais",
     version="1.0.0"
 )
+
+
+def _run_pipeline_once() -> None:
+    """Executa o pipeline completo uma vez (scan -> classify -> rewrite -> publish -> export)."""
+    try:
+        from app.tasks.scan_tasks import run_full_pipeline
+        run_full_pipeline()
+    except Exception as e:
+        logger.error(f"[SCHEDULER] erro no pipeline: {e}")
+
+
+def _local_scheduler(interval_seconds: int = 1800) -> None:
+    """Agendador local que roda o pipeline a cada intervalo (sem depender de Redis/Celery)."""
+    logger.info(f"[SCHEDULER] Iniciado — pipeline a cada {interval_seconds}s")
+    while True:
+        try:
+            _run_pipeline_once()
+        except Exception as e:
+            logger.error(f"[SCHEDULER] erro: {e}")
+        time.sleep(interval_seconds)
+
+
+@app.on_event("startup")
+def _start_scheduler():
+    """Inicia o agendador local se habilitado (padrão: sim, quando Celery não está no comando)."""
+    enabled = os.getenv("ENABLE_LOCAL_SCHEDULER", "1") == "1"
+    # Desliga o local scheduler quando o beat do Celery assume
+    if os.getenv("CELERY_SCHEDULER", "0") == "1":
+        enabled = False
+    if enabled:
+        interval = int(os.getenv("LOCAL_SCHEDULER_INTERVAL", "1800"))
+        t = threading.Thread(target=_local_scheduler, args=(interval,), daemon=True)
+        t.start()
+        logger.info("[SCHEDULER] Agendador local ativo")
+
 
 # CORS
 app.add_middleware(
@@ -109,6 +147,8 @@ def get_article(slug: str):
             "content": article.content,
             "category": article.category,
             "reporter": article.reporter.display_name if article.reporter else None,
+            "author": article.author,
+            "image_url": article.image_url,
             "sources": article.sources,
             "tags": article.tags,
             "published_at": article.published_at.isoformat() if article.published_at else None,

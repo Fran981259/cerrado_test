@@ -3,6 +3,7 @@
 
 from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, JSON, Boolean
 from sqlalchemy.orm import relationship
+from datetime import datetime
 from app.database import Base
 
 
@@ -17,6 +18,8 @@ class NewsArticle(Base):
     slug = Column(String(500), unique=True, index=True)
     summary = Column(Text, nullable=True)
     content = Column(Text, nullable=False)
+    author = Column(String(200), nullable=True)
+    image_url = Column(String(500), nullable=True)
 
     # Associação com repórter
     reporter_id = Column(Integer, ForeignKey("reporters.id"), nullable=False)
@@ -44,8 +47,8 @@ class NewsArticle(Base):
     is_curiosity = Column(Boolean, default=False)
 
     # Timestamps
-    created_at = Column(DateTime, default="now", nullable=False)
-    updated_at = Column(DateTime, default="now", onupdate="now", nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     # Relacionamento
     reporter = relationship("Reporter", back_populates="articles")
@@ -71,11 +74,11 @@ class Reporter(Base):
     articles_published = Column(Integer, default=0)
     experience_points = Column(Integer, default=0)
     personality_stage = Column(String(20), default="newborn")
-    birth_date = Column(DateTime, default="now", nullable=False)
+    birth_date = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default="now", nullable=False)
-    updated_at = Column(DateTime, default="now", onupdate="now", nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     # Relacionamentos
     articles = relationship("NewsArticle", back_populates="reporter", cascade="all, delete-orphan")
@@ -99,8 +102,8 @@ class SourcePortal(Base):
     robots_txt_last_fetched = Column(DateTime, nullable=True)
     robots_txt_allowed = Column(Boolean, default=True)
 
-    created_at = Column(DateTime, default="now", nullable=False)
-    updated_at = Column(DateTime, default="now", onupdate="now", nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
 
 class ScrapingTask(Base):
@@ -118,7 +121,7 @@ class ScrapingTask(Base):
     result_json = Column(JSON, nullable=True)
     error_message = Column(Text, nullable=True)
 
-    created_at = Column(DateTime, default="now", nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
 class PublicationLog(Base):
@@ -131,4 +134,4 @@ class PublicationLog(Base):
     reporter_id = Column(Integer, ForeignKey("reporters.id"), nullable=True)
     details = Column(Text, nullable=True)
 
-    created_at = Column(DateTime, default="now", nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
