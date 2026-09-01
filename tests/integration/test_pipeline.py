@@ -26,7 +26,7 @@ def test_sitemap_generated():
     assert res["sitemap_updated"] is True
     assert pathlib.Path("frontend/public/sitemap.xml").exists()
     xml = pathlib.Path("frontend/public/sitemap.xml").read_text(encoding="utf-8")
-    assert "<urlset" in xml and "atualizabrasil.news" in xml or "localhost" in xml
+    assert "<urlset" in xml and "portalcerrado.com.br" in xml or "localhost" in xml
 
 def test_health_check_has_expected_keys():
     h = system_health_check()

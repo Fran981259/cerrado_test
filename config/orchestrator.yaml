@@ -1,8 +1,8 @@
-# Configuração do Orquestrador — Atualiza Brasil
+# Configuração do Orquestrador — Portal Cerrado
 # Responsável por gerenciar o workflow diário e as regras de publicação
 
 orchestrator:
-  name: "Atualiza Brasil"
+  name: "Portal Cerrado"
   version: "1.0.0"
   timezone: "America/Sao_Paulo"
   run_mode: "production"  # production, development, dry_run
@@ -111,7 +111,7 @@ legal:
     Conteúdo publicado sob direitos autorais próprios. 
     Fontes sempre citadas conforme Art. 46/47 da Lei 9.610/98.
   attribution_template: |
-    Fonte: {{source}} | Publicado: Atualiza Brasil | Data: {{timestamp}}
+    Fonte: {{source}} | Publicado: Portal Cerrado | Data: {{timestamp}}
   compliance_check_enabled: true
   log_retention_days: 90
 
@@ -120,7 +120,7 @@ notifications:
   email:
     smtp_host: "smtp.gmail.com"
     smtp_port: 587
-    admin_email: "admin@atualizabrasil.news"
+    admin_email: "admin@portalcerrado.com.br"
   slack:
     webhook_url: ""  # configurar em produção
 

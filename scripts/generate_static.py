@@ -1,5 +1,5 @@
 """
-Gerador de HTML Estático — Atualiza Brasil
+Gerador de HTML Estático — Portal Cerrado
 Design moderno estilo portal de notícias (tipo Campo Grande News).
 """
 
@@ -162,7 +162,7 @@ def generate_html(articles):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Atualiza Brasil — Últimas Notícias de Mato Grosso do Sul</title>
+    <title>Portal Cerrado — Últimas Notícias de Mato Grosso do Sul</title>
     <meta name="description" content="Portal de notícias de Mato Grosso do Sul. Informações atualizadas 24 horas sobre política, esportes, segurança, economia e mais.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -826,12 +826,12 @@ def generate_html(articles):
                 <div class="footer-col">
                     <h4>Contato</h4>
                     <ul>
-                        <li><a href="#">contato@atualizabrasil.news</a></li>
+                        <li><a href="#">contato@portalcerrado.com.br</a></li>
                     </ul>
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>© {datetime.now().year} Atualiza Brasil — Portal automatizado com IA</p>
+                <p>© {datetime.now().year} Portal Cerrado — Portal automatizado com IA</p>
                 <p>Powered by Groq AI • Python • BeautifulSoup</p>
             </div>
         </div>
@@ -896,7 +896,7 @@ def generate_html(articles):
 
 
 def main():
-    print("📰 Gerando portal Atualiza Brasil...\n")
+    print("📰 Gerando portal Portal Cerrado...\n")
     
     print("⏳ Buscando notícias...")
     articles = fetch_articles()

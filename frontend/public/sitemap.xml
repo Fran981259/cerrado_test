@@ -1,332 +1,332 @@
 <?xml version='1.0' encoding='utf-8'?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://atualizabrasil.news/</loc>
+    <loc>http://localhost/</loc>
     <changefreq>hourly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/sobre</loc>
+    <loc>http://localhost/sobre</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/privacidade</loc>
+    <loc>http://localhost/privacidade</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/termos</loc>
+    <loc>http://localhost/termos</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/contato</loc>
+    <loc>http://localhost/contato</loc>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/surpreendente-o-bitcoin-foi-criado-em-2009</loc>
+    <loc>http://localhost/noticia/surpreendente-o-bitcoin-foi-criado-em-2009</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/curiosidade-o-brasil-tem-8-patrimonios-mundiais-da-unesco</loc>
+    <loc>http://localhost/noticia/curiosidade-o-brasil-tem-8-patrimonios-mundiais-da-unesco</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/curiosidade-uma-unica-arvore-de-eucalipto-pode-produzir-mais-papel-do-que-meio-hectare-de-floresta-nativa</loc>
+    <loc>http://localhost/noticia/curiosidade-uma-unica-arvore-de-eucalipto-pode-produzir-mais-papel-do-que-meio-hectare-de-floresta-nativa</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/vamos-la-a-prova-do-enem-tem-mais-de-180-questoes</loc>
+    <loc>http://localhost/noticia/vamos-la-a-prova-do-enem-tem-mais-de-180-questoes</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/vamos-la-rir-ativamente-pode-queimar-calorias</loc>
+    <loc>http://localhost/noticia/vamos-la-rir-ativamente-pode-queimar-calorias</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/falando-em-numeros-a-onu-foi-criada-em-1945-apos-a-segunda-guerra-mundial</loc>
+    <loc>http://localhost/noticia/falando-em-numeros-a-onu-foi-criada-em-1945-apos-a-segunda-guerra-mundial</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/raramente-conhecido-a-policia-federal-brasileira-foi-criada-em-1944-durante-o-governo-de-getulio-vargas</loc>
+    <loc>http://localhost/noticia/raramente-conhecido-a-policia-federal-brasileira-foi-criada-em-1944-durante-o-governo-de-getulio-vargas</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/poucos-sabem-que-a-bola-de-futebol-usada-na-primeira-copa-do-mundo-pesava-quase-o-dobro-das-atuais</loc>
+    <loc>http://localhost/noticia/poucos-sabem-que-a-bola-de-futebol-usada-na-primeira-copa-do-mundo-pesava-quase-o-dobro-das-atuais</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/curiosidade-o-teclado-qwerty-foi-projetado-para-lentificar-a-digitacao-tudo-por-causa-das-maquinas-de-escrever</loc>
+    <loc>http://localhost/noticia/curiosidade-o-teclado-qwerty-foi-projetado-para-lentificar-a-digitacao-tudo-por-causa-das-maquinas-de-escrever</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/tiroteio-na-br-359-termina-com-tres-mortos-durante-acao-da-forca-tatica-em-coxim-3d3bd3</loc>
+    <loc>http://localhost/noticia/tiroteio-na-br-359-termina-com-tres-mortos-durante-acao-da-forca-tatica-em-coxim-3d3bd3</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/ministro-eloy-terena-participa-de-dialogo-sobre-el-nino-2026-2027-em-campo-grand-723e70</loc>
+    <loc>http://localhost/noticia/ministro-eloy-terena-participa-de-dialogo-sobre-el-nino-2026-2027-em-campo-grand-723e70</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/homem-e-baleado-na-cabeca-e-nas-costas-durante-ataque-em-coxim-o-estado-online-f5431b</loc>
+    <loc>http://localhost/noticia/homem-e-baleado-na-cabeca-e-nas-costas-durante-ataque-em-coxim-o-estado-online-f5431b</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/com-25-feminicidios-em-ms-fabio-trad-defende-mais-politicas-para-mulheres-o-esta-e8bd6b</loc>
+    <loc>http://localhost/noticia/com-25-feminicidios-em-ms-fabio-trad-defende-mais-politicas-para-mulheres-o-esta-e8bd6b</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/campo-grande-bate-novo-recorde-de-calor-e-registra-35-6c-no-fim-de-agosto-o-esta-040aeb</loc>
+    <loc>http://localhost/noticia/campo-grande-bate-novo-recorde-de-calor-e-registra-35-6c-no-fim-de-agosto-o-esta-040aeb</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/traducao-imprecisa-pode-gerar-prejuizos-e-comprometer-negocios-no-mercado-global-58d5dc</loc>
+    <loc>http://localhost/noticia/traducao-imprecisa-pode-gerar-prejuizos-e-comprometer-negocios-no-mercado-global-58d5dc</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/bonus-de-r-4-mil-pode-reduzir-valor-da-entrada-da-casa-propria-em-campo-grande-o-b6eb3d</loc>
+    <loc>http://localhost/noticia/bonus-de-r-4-mil-pode-reduzir-valor-da-entrada-da-casa-propria-em-campo-grande-o-b6eb3d</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/el-nino-deve-trazer-chuva-acima-da-media-e-mudancas-na-temperatura-em-ms-em-sete-9ede01</loc>
+    <loc>http://localhost/noticia/el-nino-deve-trazer-chuva-acima-da-media-e-mudancas-na-temperatura-em-ms-em-sete-9ede01</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/toffoli-suspende-campanha-de-renan-santos-a-presidencia-e-bloqueia-fundo-eleitor-80caa1</loc>
+    <loc>http://localhost/noticia/toffoli-suspende-campanha-de-renan-santos-a-presidencia-e-bloqueia-fundo-eleitor-80caa1</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/promessa-de-emprestimo-de-r-5-mil-acaba-em-golpe-e-condenacao-na-justica-de-camp-a8f7c2</loc>
+    <loc>http://localhost/noticia/promessa-de-emprestimo-de-r-5-mil-acaba-em-golpe-e-condenacao-na-justica-de-camp-a8f7c2</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/sesc-ms-completa-80-anos-com-historias-de-transformacao-pela-educacao-cultura-e--f769fe</loc>
+    <loc>http://localhost/noticia/sesc-ms-completa-80-anos-com-historias-de-transformacao-pela-educacao-cultura-e--f769fe</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/defesa-civil-alerta-para-tempestades-e-risco-de-alagamentos-em-campo-grande-o-es-4e19d5</loc>
+    <loc>http://localhost/noticia/defesa-civil-alerta-para-tempestades-e-risco-de-alagamentos-em-campo-grande-o-es-4e19d5</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/curso-gratuito-de-bordado-abre-inscricoes-e-oferece-oportunidade-de-qualificacao-7ec40c</loc>
+    <loc>http://localhost/noticia/curso-gratuito-de-bordado-abre-inscricoes-e-oferece-oportunidade-de-qualificacao-7ec40c</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/camara-deve-decidir-sobre-taxa-das-blusinhas-nesta-segunda-o-estado-online-f0b2ae</loc>
+    <loc>http://localhost/noticia/camara-deve-decidir-sobre-taxa-das-blusinhas-nesta-segunda-o-estado-online-f0b2ae</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/pitbull-foge-invade-residencia-e-mata-dois-caes-em-maracaju-o-estado-online-306536</loc>
+    <loc>http://localhost/noticia/pitbull-foge-invade-residencia-e-mata-dois-caes-em-maracaju-o-estado-online-306536</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/carreta-incendiada-mobiliza-bombeiros-no-jardim-botanico-em-campo-grande-o-estad-66231a</loc>
+    <loc>http://localhost/noticia/carreta-incendiada-mobiliza-bombeiros-no-jardim-botanico-em-campo-grande-o-estad-66231a</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/mato-grosso-do-sul-mantem-r-1-6-bilhao-em-credito-para-empresas-e-produtores-o-e-434885</loc>
+    <loc>http://localhost/noticia/mato-grosso-do-sul-mantem-r-1-6-bilhao-em-credito-para-empresas-e-produtores-o-e-434885</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/dois-jovens-de-mundo-novo-morrem-em-acidente-de-moto-na-fronteira-com-o-paraguai-2a51e6</loc>
+    <loc>http://localhost/noticia/dois-jovens-de-mundo-novo-morrem-em-acidente-de-moto-na-fronteira-com-o-paraguai-2a51e6</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/tre-ms-retoma-julgamento-sobre-mandato-de-marquinhos-trad-e-analisa-recurso-cont-3f3b3e</loc>
+    <loc>http://localhost/noticia/tre-ms-retoma-julgamento-sobre-mandato-de-marquinhos-trad-e-analisa-recurso-cont-3f3b3e</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/valor-do-combustivel-pode-variar-ate-13-5-entre-postos-de-campo-grande-375761</loc>
+    <loc>http://localhost/noticia/valor-do-combustivel-pode-variar-ate-13-5-entre-postos-de-campo-grande-375761</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/lancado-edital-para-producao-de-documentario-sobre-os-40-anos-do-procon-ms-0bc2b6</loc>
+    <loc>http://localhost/noticia/lancado-edital-para-producao-de-documentario-sobre-os-40-anos-do-procon-ms-0bc2b6</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/mato-grosso-do-sul-acumula-mais-de-19-mil-novos-empregos-formais-em-2026-968ad0</loc>
+    <loc>http://localhost/noticia/mato-grosso-do-sul-acumula-mais-de-19-mil-novos-empregos-formais-em-2026-968ad0</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/em-entrevista-ao-jornal-o-estado-o-ministro-falou-sobre-cultura-politicas-public-534a84</loc>
+    <loc>http://localhost/noticia/em-entrevista-ao-jornal-o-estado-o-ministro-falou-sobre-cultura-politicas-public-534a84</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/bebe-de-5-meses-e-morto-com-golpes-de-foice-apos-homem-invadir-casa-por-vinganca-604492</loc>
+    <loc>http://localhost/noticia/bebe-de-5-meses-e-morto-com-golpes-de-foice-apos-homem-invadir-casa-por-vinganca-604492</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/medica-confundida-com-suspeita-de-trafico-de-drogas-e-liberada-apos-19-dias-com--c5edaa</loc>
+    <loc>http://localhost/noticia/medica-confundida-com-suspeita-de-trafico-de-drogas-e-liberada-apos-19-dias-com--c5edaa</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/antigos-conhecidos-voltam-ao-jogo-eleitoral-para-disputas-proporcionais-no-mato--5d4101</loc>
+    <loc>http://localhost/noticia/antigos-conhecidos-voltam-ao-jogo-eleitoral-para-disputas-proporcionais-no-mato--5d4101</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/homem-e-esfaqueado-no-pescoco-dentro-de-casa-e-acusa-ex-enteado-em-campo-grande--0a9fc1</loc>
+    <loc>http://localhost/noticia/homem-e-esfaqueado-no-pescoco-dentro-de-casa-e-acusa-ex-enteado-em-campo-grande--0a9fc1</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/funcionarios-de-transportadora-sentem-odor-em-encomenda-e-acionam-a-policia-na-c-9b529d</loc>
+    <loc>http://localhost/noticia/funcionarios-de-transportadora-sentem-odor-em-encomenda-e-acionam-a-policia-na-c-9b529d</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/rio-da-prata-interrompe-fluxo-sob-ponte-do-cure-durante-periodo-de-estiagem-o-es-eebcc2</loc>
+    <loc>http://localhost/noticia/rio-da-prata-interrompe-fluxo-sob-ponte-do-cure-durante-periodo-de-estiagem-o-es-eebcc2</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/fib-2026-transforma-sexta-feira-em-maratona-cultural-com-leo-foguete-turma-da-bo-099a1a</loc>
+    <loc>http://localhost/noticia/fib-2026-transforma-sexta-feira-em-maratona-cultural-com-leo-foguete-turma-da-bo-099a1a</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/homem-e-encontrado-morto-em-antigo-posto-de-saude-das-moreninhas-o-estado-online-1e369c</loc>
+    <loc>http://localhost/noticia/homem-e-encontrado-morto-em-antigo-posto-de-saude-das-moreninhas-o-estado-online-1e369c</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/as-crianceiras-de-marcio-de-camillo-o-estado-online-0b3f26</loc>
+    <loc>http://localhost/noticia/as-crianceiras-de-marcio-de-camillo-o-estado-online-0b3f26</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/mulher-desmaia-ao-volante-e-carro-invade-loja-nas-moreninhas-o-estado-online-f510e9</loc>
+    <loc>http://localhost/noticia/mulher-desmaia-ao-volante-e-carro-invade-loja-nas-moreninhas-o-estado-online-f510e9</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/kung-fu-do-exercicio-a-selecao-o-estado-online-eb2af5</loc>
+    <loc>http://localhost/noticia/kung-fu-do-exercicio-a-selecao-o-estado-online-eb2af5</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/abertura-do-25o-festival-de-inverno-de-bonito-celebra-a-cultura-local-como-perte-361f86</loc>
+    <loc>http://localhost/noticia/abertura-do-25o-festival-de-inverno-de-bonito-celebra-a-cultura-local-como-perte-361f86</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/uems-realiza-feira-cultural-sabores-do-cerrado-em-campo-grande-af316c</loc>
+    <loc>http://localhost/noticia/uems-realiza-feira-cultural-sabores-do-cerrado-em-campo-grande-af316c</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/justica-realiza-na-quarta-feira-a-audiencia-entre-governo-lula-e-discord-sobre-i-29833b</loc>
+    <loc>http://localhost/noticia/justica-realiza-na-quarta-feira-a-audiencia-entre-governo-lula-e-discord-sobre-i-29833b</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/oleo-de-soja-ja-responde-por-77-do-biodiesel-produzido-em-mato-grosso-do-sul-o-e-412909</loc>
+    <loc>http://localhost/noticia/oleo-de-soja-ja-responde-por-77-do-biodiesel-produzido-em-mato-grosso-do-sul-o-e-412909</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/motociclista-de-29-anos-morre-apos-ser-atropelado-duas-vezes-em-cruzamento-do-no-9d8bef</loc>
+    <loc>http://localhost/noticia/motociclista-de-29-anos-morre-apos-ser-atropelado-duas-vezes-em-cruzamento-do-no-9d8bef</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/com-cachorro-em-61-5-dos-lares-de-ms-o-que-fazer-quando-o-pet-morre-o-estado-onl-f86a84</loc>
+    <loc>http://localhost/noticia/com-cachorro-em-61-5-dos-lares-de-ms-o-que-fazer-quando-o-pet-morre-o-estado-onl-f86a84</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/festival-de-inverno-de-bonito-chega-ao-segundo-dia-com-ferrugem-e-programacao-es-5816d3</loc>
+    <loc>http://localhost/noticia/festival-de-inverno-de-bonito-chega-ao-segundo-dia-com-ferrugem-e-programacao-es-5816d3</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://atualizabrasil.news/noticia/reajustes-acima-da-inflacao-nao-evitam-piso-baixo-no-centro-oeste-o-estado-onlin-19a6b7</loc>
+    <loc>http://localhost/noticia/reajustes-acima-da-inflacao-nao-evitam-piso-baixo-no-centro-oeste-o-estado-onlin-19a6b7</loc>
     <lastmod>2026-08-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>

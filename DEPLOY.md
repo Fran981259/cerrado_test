@@ -1,4 +1,4 @@
-# DEPLOY — Atualiza Brasil no VPS
+# DEPLOY — Portal Cerrado no VPS
 
 Este guia ensina como colocar o portal no ar em um VPS.
 
@@ -92,7 +92,7 @@ docker-compose --version
 ## 4. CONFIGURAR DOMÍNIO (opcional mas recomendado)
 
 ### Registrar domínio
-- Nome: `atualizabrasil.news` (exemplo)
+- Nome: `portalcerrado.com.br` (exemplo)
 - Onde: Namecheap, Cloudflare, Registro.br
 
 ### Configurar DNS no Cloudflare
@@ -153,8 +153,8 @@ CELERY_BROKER_URL=redis://redis:6379/0
 CELERY_RESULT_BACKEND=redis://redis:6379/0
 
 # Site
-SITE_URL=https://atualizabrasil.news
-SITE_NAME=Atualiza Brasil
+SITE_URL=https://portalcerrado.com.br
+SITE_NAME=Portal Cerrado
 DEFAULT_LOCALE=pt-BR
 TIMEZONE=America/Sao_Paulo
 
@@ -245,7 +245,7 @@ O projeto já tem `nginx.conf`. Para usar SSL com Cloudflare:
 
 ```bash
 sudo apt install -y certbot
-sudo certbot certonly --nginx -d atualizabrasil.news -d www.atualizabrasil.news
+sudo certbot certonly --nginx -d portalcerrado.com.br -d www.portalcerrado.com.br
 ```
 
 ---
@@ -299,7 +299,7 @@ crontab -e
 
 Use https://uptimerobot.com (gratuito):
 1. Crie conta
-2. Adicione monitor para https://atualizabrasil.news
+2. Adicione monitor para https://portalcerrado.com.br
 3. Alerta por email se cair
 
 ---

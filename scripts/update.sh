@@ -1,9 +1,9 @@
 #!/bin/bash
-# Atualiza Atualiza Brasil em 1 comando — para rodar no host Razuk (100.95.111.24)
+# Atualiza Portal Cerrado em 1 comando — para rodar no host Razuk (100.95.111.24)
 # Uso: ./scripts/update.sh  (ou: bash scripts/update.sh)
 set -e
 cd "$(dirname "$0")/.."
-echo "== Atualiza Brasil — Update 1-clique =="
+echo "== Portal Cerrado — Update 1-clique =="
 echo "[1/4] git pull"
 git pull --ff-only
 echo "[2/4] docker build backend"

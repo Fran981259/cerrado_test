@@ -9,7 +9,7 @@ def _get_reporter_id(db):
     from app.schema import Reporter
     rep = db.query(Reporter).first()
     if not rep:
-        rep = Reporter(slug="test.reporter", display_name="Test Reporter", role="general", email="test@atualizabrasil.news")
+        rep = Reporter(slug="test.reporter", display_name="Test Reporter", role="general", email="test@portalcerrado.com.br")
         db.add(rep); db.commit(); db.refresh(rep)
     return rep.id
 

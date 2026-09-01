@@ -34,12 +34,12 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GROQ_MODEL: ${GROQ_MODEL:-qwen/qwen3-32b}
-      SITE_URL: ${SITE_URL:-https://atualizabrasil.news}
-      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://atualizabrasil.news}
+      SITE_URL: ${SITE_URL:-https://portalcerrado.com.br}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://portalcerrado.com.br}
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://atualiza_brasil:8000}
       CELERY_SCHEDULER: "1"
       PUBLISH_API_KEY: ${PUBLISH_API_KEY:-}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://atualizabrasil.news,http://localhost:3000,http://100.95.111.24:3000}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://portalcerrado.com.br,http://localhost:3000,http://100.95.111.24:3000}
       ENVIRONMENT: ${ENVIRONMENT:-production}
       SIMILARITY_THRESHOLD: ${SIMILARITY_THRESHOLD:-0.35}
     volumes:
@@ -63,8 +63,8 @@ services:
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GROQ_MODEL: ${GROQ_MODEL:-qwen/qwen3-32b}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      SITE_URL: ${SITE_URL:-https://atualizabrasil.news}
-      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://atualizabrasil.news}
+      SITE_URL: ${SITE_URL:-https://portalcerrado.com.br}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://portalcerrado.com.br}
       ENVIRONMENT: ${ENVIRONMENT:-production}
       SIMILARITY_THRESHOLD: ${SIMILARITY_THRESHOLD:-0.35}
     volumes:
@@ -89,8 +89,8 @@ services:
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GROQ_MODEL: ${GROQ_MODEL:-qwen/qwen3-32b}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      SITE_URL: ${SITE_URL:-https://atualizabrasil.news}
-      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://atualizabrasil.news}
+      SITE_URL: ${SITE_URL:-https://portalcerrado.com.br}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://portalcerrado.com.br}
       ENVIRONMENT: ${ENVIRONMENT:-production}
       SIMILARITY_THRESHOLD: ${SIMILARITY_THRESHOLD:-0.35}
     volumes:
@@ -130,7 +130,7 @@ services:
       - "3000:3000"
     environment:
       NEXT_PUBLIC_API_URL: http://atualiza_brasil:8000
-      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://atualizabrasil.news}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://portalcerrado.com.br}
     depends_on:
       - atualiza_brasil
 

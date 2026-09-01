@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-# Setup do ambiente — Atualiza Brasil
+# Setup do ambiente — Portal Cerrado
 # Cria venv, instala dependências e (opcionalmente) Postgres/Redis.
 # Uso: bash setup.sh
 # ============================================================

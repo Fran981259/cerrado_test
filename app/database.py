@@ -1,5 +1,5 @@
 """
-Conexão com Banco de Dados — Atualiza Brasil
+Conexão com Banco de Dados — Portal Cerrado
 PostgreSQL via SQLAlchemy
 """
 

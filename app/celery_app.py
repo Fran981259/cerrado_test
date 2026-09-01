@@ -1,5 +1,5 @@
 """
-Celery App — Atualiza Brasil
+Celery App — Portal Cerrado
 Configuração do Celery para agendamento de tarefas.
 """
 

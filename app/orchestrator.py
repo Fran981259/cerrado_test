@@ -1,5 +1,5 @@
 """
-Entry point principal — Atualiza Brasil
+Entry point principal — Portal Cerrado
 Orquestra todos os agentes e gerencia o ciclo diário.
 """
 
@@ -130,7 +130,7 @@ def run_scheduler():
 
 def main():
     """Função principal."""
-    logger.info("=== Atualiza Brasil Iniciado ===")
+    logger.info("=== Portal Cerrado Iniciado ===")
     logger.info(f"Versão: 1.0.0")
     logger.info(f"Iniciado em: {datetime.utcnow().isoformat()}")
     
@@ -147,7 +147,7 @@ def main():
     except Exception as e:
         logger.error(f"Erro crítico: {e}")
     finally:
-        logger.info("Atualiza Brasil finalizado.")
+        logger.info("Portal Cerrado finalizado.")
 
 
 if __name__ == "__main__":

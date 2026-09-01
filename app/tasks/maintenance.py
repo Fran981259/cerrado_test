@@ -1,5 +1,5 @@
 """
-Tarefas de Manutenção do Sistema — Atualiza Brasil
+Tarefas de Manutenção do Sistema — Portal Cerrado
 VERSÃO REAL: cleanup, sitemap, health e métricas com DB/Redis.
 """
 from app.celery_app import celery_app
@@ -105,7 +105,7 @@ def update_sitemap(self):
         finally:
             db.close()
 
-        base = os.getenv("NEXT_PUBLIC_SITE_URL") or os.getenv("SITE_URL") or "https://atualizabrasil.news"
+        base = os.getenv("NEXT_PUBLIC_SITE_URL") or os.getenv("SITE_URL") or "https://portalcerrado.com.br"
         base = base.rstrip("/")
 
         # monta XML

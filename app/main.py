@@ -1,5 +1,5 @@
 """
-Aplicação Principal — Atualiza Brasil
+Aplicação Principal — Portal Cerrado
 API FastAPI REAL - consulta banco de dados.
 """
 
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 init_db()
 
 app = FastAPI(
-    title="Atualiza Brasil",
+    title="Portal Cerrado",
     description="Sistema automatizado de notícias com repórteres digitais",
     version="1.0.0"
 )
@@ -94,12 +94,12 @@ def _cors_origins():
     if raw.strip():
         return [o.strip() for o in raw.split(",") if o.strip()]
     # default: prod domain + Tailscale/dev
-    site = os.getenv("SITE_URL", "https://atualizabrasil.news")
+    site = os.getenv("SITE_URL", "https://portalcerrado.com.br")
     frontend = os.getenv("NEXT_PUBLIC_SITE_URL", site)
     return [
         site.rstrip("/"),
         frontend.rstrip("/"),
-        "https://atualizabrasil.news",
+        "https://portalcerrado.com.br",
         "http://localhost:3000",
         "http://100.95.111.24:3000",
         "http://localhost:8000",
@@ -117,7 +117,7 @@ app.add_middleware(
 @app.get("/")
 def root():
     return {
-        "portal": "Atualiza Brasil",
+        "portal": "Portal Cerrado",
         "version": "1.0.0",
         "status": "operacional",
         "timestamp": datetime.utcnow().isoformat(),

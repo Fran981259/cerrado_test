@@ -1,4 +1,4 @@
-# Andamento do Projeto — Atualiza Brasil
+# Andamento do Projeto — Portal Cerrado
 
 **Última atualização:** 28/08/2026 18:55
 **Versão:** 3.0 (Frontend Next.js Online)
@@ -7,7 +7,7 @@
 
 ## RESUMO EXECUTIVO
 
-O projeto **Atualiza Brasil** é um portal de notícias automatizado com 9 repórteres de IA, minerando global + Brasil (MS/MT), publicando 50+ matérias/dia. **Backend 100% testado, Frontend Next.js 100% implementado e online em localhost:3000 com 26 artigos reais.**
+O projeto **Portal Cerrado** é um portal de notícias automatizado com 9 repórteres de IA, minerando global + Brasil (MS/MT), publicando 50+ matérias/dia. **Backend 100% testado, Frontend Next.js 100% implementado e online em localhost:3000 com 26 artigos reais.**
 
 ---
 
@@ -118,7 +118,7 @@ Route (app)          Revalidate
 - [ ] Iniciar Celery workers
 - [ ] Configurar Nginx + SSL (Let's Encrypt)
 - [ ] Configurar Cloudflare CDN
-- [ ] Apontar domínio (atualizabrasil.news)
+- [ ] Apontar domínio (portalcerrado.com.br)
 - [ ] Teste E2E em produção + PageSpeed > 80
 
 ---

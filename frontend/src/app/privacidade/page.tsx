@@ -19,9 +19,9 @@ export default function PrivacidadePage() {
         <h2>Compartilhamento</h2>
         <p>Não vendemos seus dados. Compartilhamos apenas com provedores necessários (hospedagem, analytics, e-mail).</p>
         <h2>Seus direitos</h2>
-        <p>Você pode solicitar acesso, correção ou exclusão dos seus dados pelo e-mail contato@atualizabrasil.news.</p>
+        <p>Você pode solicitar acesso, correção ou exclusão dos seus dados pelo e-mail contato@portalcerrado.com.br.</p>
         <h2>Contato do encarregado</h2>
-        <p>Encarregado (DPO): contato@atualizabrasil.news</p>
+        <p>Encarregado (DPO): contato@portalcerrado.com.br</p>
       </div>
     </div>
   );

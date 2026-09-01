@@ -36,11 +36,11 @@ def test_local_scheduler_respects_enable_flag(monkeypatch):
     assert enabled is False
 
 def test_cors_explicit_origins(monkeypatch):
-    monkeypatch.setenv("CORS_ALLOWED_ORIGINS", "https://atualizabrasil.news,http://localhost:3000")
+    monkeypatch.setenv("CORS_ALLOWED_ORIGINS", "https://portalcerrado.com.br,http://localhost:3000")
     # Importa a função _cors_origins
     import app.main as main_mod
     origins = main_mod._cors_origins()
-    assert "https://atualizabrasil.news" in origins
+    assert "https://portalcerrado.com.br" in origins
     assert "http://localhost:3000" in origins
     assert "*" not in origins
 
@@ -50,7 +50,7 @@ def test_cors_default_no_wildcard(monkeypatch):
     import app.main as main_mod
     origins = main_mod._cors_origins()
     assert "*" not in origins
-    assert "https://atualizabrasil.news" in origins
+    assert "https://portalcerrado.com.br" in origins
 
 def test_database_fallback_dev(monkeypatch):
     # Em dev, fallback para SQLite deve funcionar

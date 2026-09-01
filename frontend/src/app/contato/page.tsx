@@ -28,13 +28,13 @@ export default function ContatoPage() {
         <div className="space-y-4">
           <div className="rounded-2xl bg-[#1a1a2e] text-white p-6">
             <h3 className="font-bold">Redação</h3>
-            <p className="mt-2 text-sm opacity-80">contato@atualizabrasil.news<br />Campo Grande — MS</p>
+            <p className="mt-2 text-sm opacity-80">contato@portalcerrado.com.br<br />Campo Grande — MS</p>
             <p className="mt-4 text-xs opacity-60">Sugestões de pauta, correções e parcerias comerciais.</p>
           </div>
           <div className="rounded-2xl bg-white border border-zinc-100 p-6">
             <h3 className="font-bold text-zinc-900">Anuncie</h3>
             <p className="mt-2 text-sm text-zinc-600">Alcance leitores de MS com mídia contextual. Fale com nosso comercial.</p>
-            <a href="mailto:contato@atualizabrasil.news?subject=Anúncio" className="mt-4 inline-block rounded-full bg-zinc-900 text-white px-5 py-2.5 text-sm font-bold">Quero anunciar</a>
+            <a href="mailto:contato@portalcerrado.com.br?subject=Anúncio" className="mt-4 inline-block rounded-full bg-zinc-900 text-white px-5 py-2.5 text-sm font-bold">Quero anunciar</a>
           </div>
         </div>
       </div>

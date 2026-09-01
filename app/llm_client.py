@@ -1,5 +1,5 @@
 """
-Cliente LLM — Atualiza Brasil
+Cliente LLM — Portal Cerrado
 Integração com OpenRouter (modelos FREE).
 """
 
@@ -70,8 +70,8 @@ class LLMClient:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
-            "HTTP-Referer": "https://atualizabrasil.news",
-            "X-Title": "Atualiza Brasil",
+            "HTTP-Referer": "https://portalcerrado.com.br",
+            "X-Title": "Portal Cerrado",
         }
         
         try:

@@ -1,4 +1,4 @@
-# SPEC.md — Atualiza Brasil
+# SPEC.md — Portal Cerrado
 ## Especificação Técnica Completa
 
 **Versão:** 1.0.0  
@@ -228,7 +228,7 @@ FAILURE_HANDLERS = {
 enzo.bianchi:
   role: "technology"
   system_prompt: |
-    Você é Enzo Bianchi, repórter tecnológico do Atualiza Brasil.
+    Você é Enzo Bianchi, repórter tecnológico do Portal Cerrado.
     
     CARACTERÍSTICAS:
     - Tom: Técnico mas acessível
@@ -242,7 +242,7 @@ enzo.bianchi:
     - Evite jargões excessivos
     - Max 800 palavras por matéria
     
-    ASSINATURA: "Por Enzo Bianchi, do Atualiza Brasil"
+    ASSINATURA: "Por Enzo Bianchi, do Portal Cerrado"
 ```
 
 ### 5.3 Cronograma de Publicação
@@ -304,7 +304,7 @@ PORTAL_CONFIG = {
 
 ```html
 <!-- Primary -->
-<title>{TÍTULO} | Atualiza Brasil</title>
+<title>{TÍTULO} | Portal Cerrado</title>
 <meta name="description" content="{RESUMO_150-160}">
 <link rel="canonical" href="{URL_CANÔNICA}">
 
@@ -341,7 +341,7 @@ PORTAL_CONFIG = {
 │  TÍTULO GRANDE DA MATÉRIA                               │
 │  Resumo da matéria em 1-2 linhas                       │
 │                                                         │
-│  Por [REPORTER], do Atualiza Brasil                    │
+│  Por [REPORTER], do Portal Cerrado                    │
 │  [DATA] • [TEMPO DE LEITURA]                           │
 │                                                         │
 ├─────────────────────────────────────────────────────────┤
@@ -408,7 +408,7 @@ cache: {
 ### 8.1 Política de Privacidade (Obrigatória AdSense)
 
 ```markdown
-# Política de Privacidade — Atualiza Brasil
+# Política de Privacidade — Portal Cerrado
 
 Última atualização: [DATA]
 
@@ -426,7 +426,7 @@ cache: {
 - Solicitar acesso aos seus dados
 - Solicitar correção de dados
 - Solicitar exclusão de dados
-- Contato: privacidade@atualizabrasil.news
+- Contato: privacidade@portalcerrado.com.br
 
 ## 4. Cookies de Terceiros
 - Google Analytics
@@ -437,7 +437,7 @@ cache: {
 ### 8.2 Termos de Uso
 
 ```markdown
-# Termos de Uso — Atualiza Brasil
+# Termos de Uso — Portal Cerrado
 
 ## 1. Objeto
 Plataforma de notícias automatizada que agrega e reescreve 
@@ -450,7 +450,7 @@ conteúdo de fontes públicas.
   posicionamento editorial do portal
 
 ## 3. Propriedade Intelectual
-Todo conteúdo original é propriedade do Atualiza Brasil.
+Todo conteúdo original é propriedade do Portal Cerrado.
 Texto original das fontes pertence aos respectivos veículos.
 
 ## 4. Conteúdo Gerado por Terceiros
@@ -466,7 +466,7 @@ nas notícias publicadas.
 ```markdown
 ## Isenção de Responsabilidade — Conteúdo Automatizado
 
-O Atualiza Brasil utiliza inteligência artificial para 
+O Portal Cerrado utiliza inteligência artificial para 
 produzir conteúdo jornalístico de forma automatizada.
 
 As opiniões expressas nas matérias são dos nossos repórteres 
@@ -520,7 +520,7 @@ health_checks:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  ATUALIZA BRASIL — DASHBOARD DE PRODUÇÃO              │
+│  Portal Cerrado — DASHBOARD DE PRODUÇÃO              │
 ├─────────────────────────────────────────────────────────┤
 │                                                         │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐           │
@@ -621,8 +621,8 @@ health_checks:
 
 | Serviço | Configuração |
 |---------|-------------|
-| **Domínio** | atualizabrasil.news |
-| **Email** | admin@atualizabrasil.news |
+| **Domínio** | portalcerrado.com.br |
+| **Email** | admin@portalcerrado.com.br |
 | **Sentry** | DSN em produção |
 | **Cloudflare** | Zona configurada |
 | **PostgreSQL** | localhost:5432 |

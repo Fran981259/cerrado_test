@@ -5,12 +5,12 @@ export const metadata: Metadata = { title: "Sobre" };
 export default function SobrePage() {
   return (
     <div className="container-custom py-10 max-w-3xl">
-      <h1 className="text-3xl font-black tracking-tight text-zinc-900">Sobre o Atualiza Brasil</h1>
+      <h1 className="text-3xl font-black tracking-tight text-zinc-900">Sobre o Portal Cerrado</h1>
       <p className="mt-2 text-sm font-semibold text-[#e63946]">Mato Grosso do Sul • Jornalismo 24 horas</p>
 
       <div className="mt-8 prose prose-zinc max-w-none prose-p:leading-relaxed prose-headings:font-extrabold">
         <p>
-          O <strong>Atualiza Brasil</strong> é um portal de notícias focado em Mato Grosso do Sul, com cobertura de política, economia, segurança,
+          O <strong>Portal Cerrado</strong> é um portal de notícias focado em Mato Grosso do Sul, com cobertura de política, economia, segurança,
           agronegócio, saúde, educação, cultura e tecnologia. Nosso compromisso é informar com rapidez, precisão e contexto local.
         </p>
         <h2>Como produzimos</h2>
@@ -32,7 +32,7 @@ export default function SobrePage() {
         </ul>
         <h2>Fale conosco</h2>
         <p>
-          Sugestões, correções ou parcerias? Escreva para <a href="mailto:contato@atualizabrasil.news" className="text-[#e63946] font-bold">contato@atualizabrasil.news</a> ou use a página de{" "}
+          Sugestões, correções ou parcerias? Escreva para <a href="mailto:contato@portalcerrado.com.br" className="text-[#e63946] font-bold">contato@portalcerrado.com.br</a> ou use a página de{" "}
           <a href="/contato" className="text-[#e63946] font-bold">contato</a>.
         </p>
       </div>

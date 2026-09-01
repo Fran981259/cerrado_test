@@ -1,5 +1,5 @@
 """
-Tarefas de Scan — Atualiza Brasil
+Tarefas de Scan — Portal Cerrado
 VERSÃO REAL - Coleta de portais brasileiros e PERSISTE no banco de dados.
 """
 
@@ -130,7 +130,7 @@ def _persist_articles(articles: list, fetch_details: bool = True) -> dict:
                         slug=reporter_profile.slug,
                         display_name=reporter_profile.display_name,
                         role=reporter_profile.role,
-                        email=f"{reporter_profile.slug}@atualizabrasil.news",
+                        email=f"{reporter_profile.slug}@portalcerrado.com.br",
                     )
                     db.add(reporter)
                     db.flush()

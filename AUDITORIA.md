@@ -1,4 +1,4 @@
-# 🟢 AUDITORIA TÉCNICA — Atualiza Brasil
+# 🟢 AUDITORIA TÉCNICA — Portal Cerrado
 
 > **Data:** 2026-09-01
 > **Auditor:** Muse Spark (auditoria crítica 12 itens)
@@ -9,7 +9,7 @@
 ### P1 — Crítico
 - **1. Pipeline duplicado:** `app/main.py` loga scheduler ativo e `docker-compose.yml` define `CELERY_SCHEDULER=1` em `atualiza_brasil` para auto-desativar local quando Beat está presente — apenas um caminho ativo em produção.
 - **2. Auth `/api/publish`:** `X-API-Key` via `PUBLISH_API_KEY` (env) com `Depends(require_api_key)`; em `production` sem chave retorna 503, em `dev` permite com warning.
-- **3. CORS:** `allow_origins=["*"]` + `allow_credentials=True` removido; agora `allow_origins` explícito via `CORS_ALLOWED_ORIGINS` (default `https://atualizabrasil.news,http://localhost:3000,http://100.95.111.24:3000`).
+- **3. CORS:** `allow_origins=["*"]` + `allow_credentials=True` removido; agora `allow_origins` explícito via `CORS_ALLOWED_ORIGINS` (default `https://portalcerrado.com.br,http://localhost:3000,http://100.95.111.24:3000`).
 - **4. HORUS real:** `auditor.py` não retorna mais `quality_score_avg: 8.2` fixo; `_audit_agents`, `_audit_content_quality`, `_audit_compliance`, `_audit_performance` consultam `NewsArticle`/`ScrapingTask`/`Reporter` e `SequenceMatcher`; se sem dados retorna `status: not_implemented` em vez de fake healthy.
 
 ### P2 — Qualidade

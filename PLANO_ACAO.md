@@ -1,4 +1,4 @@
-# PLANO DE AÇÃO — Atualiza Brasil para 100% GO-LIVE
+# PLANO DE AÇÃO — Portal Cerrado para 100% GO-LIVE
 
 **Data:** 31/08/2026
 **Status atual:** 75-80% real (Backend 85%, Frontend 90%, Infra 60%)
@@ -16,7 +16,7 @@
          ▼                              ▼                              ▼
    M1: Lixo zerado                M2: VPS no ar                  M3: 50+ matérias/dia + PageSpeed >80 + AdSense aplicado
    Critério: 0 títulos            Critério: https://              Critério: 100% das tasks reais
-   genéricos em articles.json     atualizabrasil.news             + 0 stubs + testes verdes
+   genéricos em articles.json     portalcerrado.com.br             + 0 stubs + testes verdes
                                   com SSL + /health OK
 ```
 
@@ -57,13 +57,13 @@
 |----|--------|-------|-------------------------------|
 | **2.1** | **Provisionar VPS** | 45min | Hetzner CX21 (4GB/2vCPU/80GB) Ubuntu 22.04 Frankfurt. Criar SSH key, firewall `ufw allow 22,80,443`. Validação: `ssh portal@IP "docker --version"` |
 | **2.2** | **Instalar Docker + Deps** | 30min | Seguir `DEPLOY.md#3`: `docker-ce + compose-plugin`. Validação: `docker compose version && docker ps` |
-| **2.3** | **Enviar projeto + .env prod** | 30min | `rsync -avz --exclude .git --exclude __pycache__ --exclude .venv --exclude data/*.db . portal@IP:/home/portal/atualiza-brasil/` + criar `.env` prod (GROQ nova key, `ENVIRONMENT=production`, `DEBUG=false`, `NEXT_PUBLIC_SITE_URL=https://atualizabrasil.news`, `DATABASE_URL=postgresql://...`). Validação: `ssh portal@IP "cat atualiza-brasil/.env \| grep GROQ"` |
+| **2.3** | **Enviar projeto + .env prod** | 30min | `rsync -avz --exclude .git --exclude __pycache__ --exclude .venv --exclude data/*.db . portal@IP:/home/portal/atualiza-brasil/` + criar `.env` prod (GROQ nova key, `ENVIRONMENT=production`, `DEBUG=false`, `NEXT_PUBLIC_SITE_URL=https://portalcerrado.com.br`, `DATABASE_URL=postgresql://...`). Validação: `ssh portal@IP "cat atualiza-brasil/.env \| grep GROQ"` |
 | **2.4** | **Subir stack + Migrations** | 45min | `docker compose up -d --build` → 7 containers `running`. `docker compose exec atualiza_brasil python -c "from app.database import init_db; init_db(); print('ok')"` + verificar `psql -c "\dt"` com 5 tabelas. Validação: `curl http://localhost:8000/health` → `{"status":"healthy","articles_count":N}` |
-| **2.5** | **Nginx + SSL + Domínio** | 60min | Cloudflare DNS `A @ → IP` + `A www → IP`. `certbot --nginx -d atualizabrasil.news -d www.atualizabrasil.news` ou Cloudflare Origin cert. Validação: `https://atualizabrasil.news` com cadeado, `curl -I https://atualizabrasil.news | grep 200`, `frontend` em `:3000` proxy. |
+| **2.5** | **Nginx + SSL + Domínio** | 60min | Cloudflare DNS `A @ → IP` + `A www → IP`. `certbot --nginx -d portalcerrado.com.br -d www.portalcerrado.com.br` ou Cloudflare Origin cert. Validação: `https://portalcerrado.com.br` com cadeado, `curl -I https://portalcerrado.com.br | grep 200`, `frontend` em `:3000` proxy. |
 | **2.6** | **Ativar Workers Reais** | 30min | `docker compose logs celery_worker -f` mostra `[PIPELINE] Iniciando a cada 30min`; `docker compose exec celery_worker celery -A app.celery_app inspect active` responde. Desligar `LOCAL_SCHEDULER` em prod: `CELERY_SCHEDULER=1` ou `ENABLE_LOCAL_SCHEDULER=0`. Validação: aguardar 35min e ver `SELECT count(*) FROM news_articles WHERE created_at > now()-interval '1 hour'` aumentou. |
 | **2.7** | **Implementar maintenance REAL** | 60min | Editar `app/tasks/maintenance.py`: `cleanup_old_content` → `DELETE FROM news_articles WHERE status='draft' AND created_at < now()-7d`; `update_sitemap` → gerar `frontend/public/sitemap.xml` real (iterar `published`); `report_metrics` → contar `articles_today/this_hour`; `system_health_check` → ping DB+Redis real. Teste: `docker compose exec atualiza_brasil python -c "from app.tasks.maintenance import cleanup_old_content; print(cleanup_old_content())"` retorna `cleaned>0` se houver lixo. |
 
-**Entregável Sprint 2:** URL pública `https://atualizabrasil.news` no ar, 3 matérias novas em 1h via Celery, `flower` em `:5555` com tasks verdes.
+**Entregável Sprint 2:** URL pública `https://portalcerrado.com.br` no ar, 3 matérias novas em 1h via Celery, `flower` em `:5555` com tasks verdes.
 
 ### SPRINT 3 — HOMOLOGAÇÃO, TESTES E ADSENSE [P1] — 5h
 
@@ -72,7 +72,7 @@
 | **3.1** | **Testes automatizados** | 60min | Criar `tests/unit/test_filter.py` (duplicata, sensível), `test_classifier.py` (tier), `tests/integration/test_pipeline.py` (scan→classify→publish mock). `pip install pytest` + `pytest -v` 100% verde. Add `requirements.txt` e CI `github/workflows/test.yml`. |
 | **3.2** | **Frontend gaps** | 60min | Criar `frontend/src/app/loading.tsx` (skeleton), `frontend/src/app/categoria/[slug]/page.tsx`, `components/AdSense.tsx` (placeholder), `next/image` para `image_url`, paginação real `?page=`. `npm run lint` 0 erros. |
 | **3.3** | **SEO + Performance** | 45min | Verificar `sitemap.ts` dinâmico (via `getAllRealArticles` ou API), `robots.ts` `allow:/`, meta OG nos 3 layouts, `next.config.ts` `images.remotePatterns` já ok. Rodar `npx next build` < 6s, Lighthouse >80. |
-| **3.4** | **Monitoramento** | 45min | Sentry gratuito (`SENTRY_DSN` no `.env`), UptimeRobot monitor `https://atualizabrasil.news/health` a cada 5min + alerta email/Telegram, `docker stats` <70% RAM. |
+| **3.4** | **Monitoramento** | 45min | Sentry gratuito (`SENTRY_DSN` no `.env`), UptimeRobot monitor `https://portalcerrado.com.br/health` a cada 5min + alerta email/Telegram, `docker stats` <70% RAM. |
 | **3.5** | **Carga AdSense — 50 matérias** | 60min | Deixar pipeline rodar 24h OU forçar `for i in {1..3}; do docker compose exec atualiza_brasil python -c "from app.tasks.scan_tasks import run_full_pipeline; run_full_pipeline()"; sleep 1800; done` até `SELECT count(*) WHERE status='published'` >=50. Validar 0 genéricos, 9 repórteres com `articles_published>0`. |
 | **3.6** | **Aplicação AdSense** | 30min | Criar conta AdSense, adicionar `<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXX">` em `frontend/src/app/layout.tsx`, enviar domínio, aguardar 1-2 semanas. |
 
@@ -125,10 +125,10 @@ DIA 3 (5h) — SPRINT 3 HOMOLOGAÇÃO
 ## 5. DEFINIÇÃO DE PRONTO (DoD) PARA GO-LIVE
 
 - [ ] `docker compose ps` mostra 7 containers `healthy/running` há 24h
-- [ ] `curl https://atualizabrasil.news/health` → `healthy` + `articles_count >=50`
-- [ ] `curl https://atualizabrasil.news/api/news?limit=5` retorna 5 com `content` >600 palavras
-- [ ] `https://atualizabrasil.news/sitemap.xml` tem >=50 `<url>` dinâmicos
-- [ ] `https://atualizabrasil.news/robots.txt` permite e aponta sitemap
+- [ ] `curl https://portalcerrado.com.br/health` → `healthy` + `articles_count >=50`
+- [ ] `curl https://portalcerrado.com.br/api/news?limit=5` retorna 5 com `content` >600 palavras
+- [ ] `https://portalcerrado.com.br/sitemap.xml` tem >=50 `<url>` dinâmicos
+- [ ] `https://portalcerrado.com.br/robots.txt` permite e aponta sitemap
 - [ ] Lighthouse mobile `Performance >80, SEO >90`
 - [ ] `pytest -v` 100% verde local e no VPS
 - [ ] UptimeRobot 24h sem downtime + Flower sem `failed` >5%
@@ -150,7 +150,7 @@ curl -s "http://localhost:8000/api/news?limit=2" | jq '.news[0].title, .news[0].
 ssh portal@SEU_IP "docker compose -f ~/atualiza-brasil/docker-compose.yml ps"
 ssh portal@SEU_IP "curl -s http://localhost:8000/health | jq"
 ssh portal@SEU_IP "docker compose exec postgres psql -U portal_user -d atualiza_brasil -c 'SELECT status, count(*) FROM news_articles GROUP BY status;'"
-curl -s https://atualizabrasil.news/api/news?limit=1 | jq
+curl -s https://portalcerrado.com.br/api/news?limit=1 | jq
 
 # SPRINT 3 — qualidade
 pytest -v
@@ -163,7 +163,7 @@ npx --prefix frontend next lint
 ## 7. PRÓXIMA AÇÃO IMEDIATA (15 min)
 
 1. Decida: **Rodar Sprint 1 agora?** (recomendado sim — é local e desbloqueia tudo)
-2. Me diga: **Hetzner ou DigitalOcean?** e se já tem domínio `atualizabrasil.news` registrado
+2. Me diga: **Hetzner ou DigitalOcean?** e se já tem domínio `portalcerrado.com.br` registrado
 3. Eu já preparo o **patch 1.1+1.2** (scanner+publisher) e deixo o `articles.json` limpo — confirma?
 
 ---

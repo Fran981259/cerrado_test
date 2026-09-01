@@ -31,10 +31,10 @@ export default function Footer() {
         <div>
           <h4 className="font-bold text-white text-sm">Contato</h4>
           <p className="mt-3 text-sm opacity-80">
-            contato@atualizabrasil.news<br />
+            contato@portalcerrado.com.br<br />
             Campo Grande — MS
           </p>
-          <p className="mt-4 text-xs opacity-60">© {new Date().getFullYear()} Atualiza Brasil. Todos os direitos reservados.</p>
+          <p className="mt-4 text-xs opacity-60">© {new Date().getFullYear()} Portal Cerrado. Todos os direitos reservados.</p>
         </div>
       </div>
       <div className="border-t border-white/10">

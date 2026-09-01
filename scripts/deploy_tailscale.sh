@@ -5,7 +5,7 @@ T_USER="razuk"
 SRC="/home/razuk/Documents/BotGram"
 DST="~/BotGram"
 
-echo "=== Deploy Atualiza Brasil -> Tailscale $T_HOST ==="
+echo "=== Deploy Portal Cerrado -> Tailscale $T_HOST ==="
 echo "1. Verificando conectividade..."
 ping -c1 -W2 $T_HOST || { echo "Tailscale offline"; exit 1; }
 
@@ -37,7 +37,7 @@ else
   echo "docker não encontrado no remoto"
 fi
 # re-gera sitemap com prod URL
-SITE_URL=https://atualizabrasil.news NEXT_PUBLIC_SITE_URL=https://atualizabrasil.news python3 -c "from app.tasks.maintenance import update_sitemap; print(update_sitemap())" || true
+SITE_URL=https://portalcerrado.com.br NEXT_PUBLIC_SITE_URL=https://portalcerrado.com.br python3 -c "from app.tasks.maintenance import update_sitemap; print(update_sitemap())" || true
 REMOTE
 
 echo "=== Deploy finalizado. Valide: http://100.95.111.24:3000 e http://100.95.111.24:8000/health ==="

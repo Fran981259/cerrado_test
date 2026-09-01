@@ -1,5 +1,5 @@
 """
-Agente Publicador — Atualiza Brasil
+Agente Publicador — Portal Cerrado
 Publica as matérias no banco de dados REAL.
 """
 
@@ -125,7 +125,7 @@ class ArticlePublisher:
                 slug=slug,
                 display_name=slug.replace('.', ' ').title(),
                 role='general',
-                email=f"{slug}@atualizabrasil.news",
+                email=f"{slug}@portalcerrado.com.br",
             )
             self.db.add(reporter)
             self.db.commit()

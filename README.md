@@ -1,4 +1,4 @@
-# Atualiza Brasil
+# Portal Cerrado
 
 > Portal de notícias brasileiro 100% automatizado, com repórteres digitais por área temática. Piloto no Mato Grosso do Sul, com expansão para cobertura nacional e global.
 
@@ -28,7 +28,7 @@
 
 ## 🎯 Sobre o Projeto
 
-O **Atualiza Brasil** é um portal de notícias automatizado que combina inteligência artificial, curadoria editorial e jornalismo digital. O sistema coleta notícias de fontes nacionais e internacionais, reescreve com a voz única de repórteres digitais especializados, e publica em um portal compatível com Google AdSense.
+O **Portal Cerrado** é um portal de notícias automatizado que combina inteligência artificial, curadoria editorial e jornalismo digital. O sistema coleta notícias de fontes nacionais e internacionais, reescreve com a voz única de repórteres digitais especializados, e publica em um portal compatível com Google AdSense.
 
 ### Objetivos
 
@@ -42,7 +42,7 @@ O **Atualiza Brasil** é um portal de notícias automatizado que combina intelig
 
 ### Por que minerar portais internacionais?
 
-Notícias de **geopolítica, tecnologia, ciência, mercados globais e saúde** frequentemente surgem primeiro no exterior. O Atualiza Brasil monitora fontes globais para trazer essas notícias em primeira mão para o público brasileiro, traduzindo contexto e impacto local.
+Notícias de **geopolítica, tecnologia, ciência, mercados globais e saúde** frequentemente surgem primeiro no exterior. O Portal Cerrado monitora fontes globais para trazer essas notícias em primeira mão para o público brasileiro, traduzindo contexto e impacto local.
 
 ```
 Exemplo de fluxo:
@@ -390,7 +390,7 @@ global_miner:
 │     └──▶ "Traduzido e adaptado de TechCrunch"               │
 │                                                             │
 │  ⚠️ REGRA OBRIGATÓRIA:                                     │
-│     O Atualiza Brasil NUNCA publica conteúdo em inglês.      │
+│     O Portal Cerrado NUNCA publica conteúdo em inglês.      │
 │     Toda matéria do exterior é traduzida para pt-BR.        │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
@@ -408,7 +408,7 @@ global_miner:
 >
 > A expectativa é que a novidade impacte diretamente o mercado brasileiro de tecnologia, especialmente startups que desenvolvem soluções baseadas em IA...
 >
-> Por **Enzo Bianchi**, do Atualiza Brasil
+> Por **Enzo Bianchi**, do Portal Cerrado
 > *Traduzido e adaptado de TechCrunch*
 
 ### Portais Nacionais (Piloto MS)
@@ -543,7 +543,7 @@ SMTP_HOST=smtp.resend.com
 SMTP_PORT=587
 SMTP_USER=resend
 SMTP_PASSWORD=re_...
-ADMIN_EMAIL=admin@atualizabrasil.news
+ADMIN_EMAIL=admin@portalcerrado.com.br
 
 # Monitoring
 SENTRY_DSN=https://...@sentry.io/...
@@ -554,8 +554,8 @@ ADSENSE_CLIENT_ID=ca-pub-...
 ADSENSE_ENABLED=true
 
 # Site
-SITE_URL=https://atualizabrasil.news
-SITE_NAME=Atualiza Brasil
+SITE_URL=https://portalcerrado.com.br
+SITE_NAME=Portal Cerrado
 DEFAULT_LOCALE=pt-BR
 TIMEZONE=America/Sao_Paulo
 ```
@@ -643,7 +643,7 @@ git clone https://github.com/seu-usuario/atualiza-brasil.git
 cd atualiza-brasil
 
 # 3. Configurar SSL com Let's Encrypt
-certbot certonly --standalone -d atualizabrasil.news -d www.atualizabrasil.news
+certbot certonly --standalone -d portalcerrado.com.br -d www.portalcerrado.com.br
 
 # 4. Configurar nginx (proxy reverso)
 cp docker/nginx.conf /etc/nginx/sites-available/atualiza-brasil
@@ -738,7 +738,7 @@ docker-compose logs -f backend
 
 ### Lei de Direitos Autorais (Lei 9.610/98)
 
-O Atualiza Brasil opera em conformidade com:
+O Portal Cerrado opera em conformidade com:
 
 - **Art. 46, I, "a"**: Citação de notícias em outros periódicos, com menção da fonte
 - **Art. 47**: Paráfrases livres que não constituam reprodução
@@ -756,7 +756,7 @@ O Atualiza Brasil opera em conformidade com:
 - ✅ Termos de Uso publicados
 - ✅ Formulário de contato com consentimento
 - ✅ Cookies com aviso (Google Analytics + AdSense)
-- ✅ Direito de exclusão de dados (e-mail: privacidade@atualizabrasil.news)
+- ✅ Direito de exclusão de dados (e-mail: privacidade@portalcerrado.com.br)
 - ✅ Logs de acesso (anonimizados após 90 dias)
 
 ### Google AdSense
@@ -810,15 +810,15 @@ Compatibilidade garantida com:
 
 Este é um projeto proprietário. Para colaborações:
 
-📧 **contato@atualizabrasil.news**
+📧 **contato@portalcerrado.com.br**
 
 ---
 
 ## 📄 Licença
 
-Copyright © 2026 Atualiza Brasil. Todos os direitos reservados.
+Copyright © 2026 Portal Cerrado. Todos os direitos reservados.
 
-Este software é propriedade exclusiva do Atualiza Brasil. Uso não autorizado é proibido.
+Este software é propriedade exclusiva do Portal Cerrado. Uso não autorizado é proibido.
 
 ---
 
@@ -826,23 +826,23 @@ Este software é propriedade exclusiva do Atualiza Brasil. Uso não autorizado �
 
 | Canal | Contato |
 |-------|---------|
-| **Email Geral** | contato@atualizabrasil.news |
-| **Email Admin** | admin@atualizabrasil.news |
-| **Privacidade/LGPD** | privacidade@atualizabrasil.news |
-| **Imprensa** | imprensa@atualizabrasil.news |
-| **Site** | https://atualizabrasil.news |
+| **Email Geral** | contato@portalcerrado.com.br |
+| **Email Admin** | admin@portalcerrado.com.br |
+| **Privacidade/LGPD** | privacidade@portalcerrado.com.br |
+| **Imprensa** | imprensa@portalcerrado.com.br |
+| **Site** | https://portalcerrado.com.br |
 
 ---
 
 ## 🎯 Equipe
 
 - **Founder & Tech Lead**: [Seu nome]
-- **AI Engineering**: Atualiza Brasil Team
+- **AI Engineering**: Portal Cerrado Team
 - **Editorial**: 9 Repórteres Digitais
 - **Legal**: Assessoria jurídica especializada
 
 ---
 
-**Atualiza Brasil** — *O Brasil sempre atualizado, com a credibilidade de uma equipe editorial completa.*
+**Portal Cerrado** — *O Brasil sempre atualizado, com a credibilidade de uma equipe editorial completa.*
 
 📰 Tecnologia • 🌍 Geopolítica • 💼 Economia • 🏥 Saúde • 🎓 Educação • 🌾 Agronegócio • ⚽ Esportes • 🎭 Cultura • 🛡️ Segurança
