@@ -149,9 +149,19 @@ def rewrite_pending_articles(self):
                         content = candidate
 
                 if not content:
+                    # Se LLM está configurado, tenta fallback variado; se LLM não está disponível, mantém para retry (não publica thin content)
+                    if not groq.api_key:
+                        logger.info(f"[REWRITE] LLM não configurado e Groq vazio para '{art.title[:40]}' — mantendo como classified para retry")
+                        failed += 1
+                        continue
                     fallback_rewriter = ArticleRewriter(reporter)
                     fallback = fallback_rewriter.rewrite(article_data)
                     content = fallback.get("content", "")
+                    # Fallback agora retorna "" se muito curto/genérico — trata como falha para retry, não publica
+                    if not content or len(content.split()) < 200:
+                        logger.warning(f"[REWRITE] Fallback vazio/curto para '{art.title[:40]}' — mantendo para retry")
+                        failed += 1
+                        continue
 
                 if not content:
                     art.status = "failed"

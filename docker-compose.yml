@@ -37,6 +37,13 @@ services:
       SITE_URL: ${SITE_URL:-https://atualizabrasil.news}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://atualizabrasil.news}
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://atualiza_brasil:8000}
+      CELERY_SCHEDULER: "1"
+      PUBLISH_API_KEY: ${PUBLISH_API_KEY:-}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://atualizabrasil.news,http://localhost:3000,http://100.95.111.24:3000}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      SIMILARITY_THRESHOLD: ${SIMILARITY_THRESHOLD:-0.35}
+    volumes:
+      - app_data:/app/data
     depends_on:
       - postgres
       - redis
@@ -58,6 +65,10 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       SITE_URL: ${SITE_URL:-https://atualizabrasil.news}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://atualizabrasil.news}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      SIMILARITY_THRESHOLD: ${SIMILARITY_THRESHOLD:-0.35}
+    volumes:
+      - app_data:/app/data
     depends_on:
       - postgres
       - redis
@@ -80,6 +91,10 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       SITE_URL: ${SITE_URL:-https://atualizabrasil.news}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://atualizabrasil.news}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      SIMILARITY_THRESHOLD: ${SIMILARITY_THRESHOLD:-0.35}
+    volumes:
+      - app_data:/app/data
     depends_on:
       - postgres
       - redis
@@ -121,3 +136,4 @@ services:
 
 volumes:
   postgres_data:
+  app_data:

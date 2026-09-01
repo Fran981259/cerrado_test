@@ -58,20 +58,56 @@ def _local_scheduler(interval_seconds: int = 1800) -> None:
 def _start_scheduler():
     """Inicia o agendador local se habilitado (padrão: sim, quando Celery não está no comando)."""
     enabled = os.getenv("ENABLE_LOCAL_SCHEDULER", "1") == "1"
+    celery_active = os.getenv("CELERY_SCHEDULER", "0") == "1"
     # Desliga o local scheduler quando o beat do Celery assume
-    if os.getenv("CELERY_SCHEDULER", "0") == "1":
+    if celery_active:
         enabled = False
     if enabled:
         interval = int(os.getenv("LOCAL_SCHEDULER_INTERVAL", "1800"))
         t = threading.Thread(target=_local_scheduler, args=(interval,), daemon=True)
         t.start()
-        logger.info("[SCHEDULER] Agendador local ativo")
+        logger.info(f"[SCHEDULER] Agendador LOCAL ativo — intervalo {interval}s (CELERY_SCHEDULER=0, ENABLE_LOCAL_SCHEDULER=1)")
+    else:
+        reason = "CELERY_SCHEDULER=1 (Beat assume)" if celery_active else "ENABLE_LOCAL_SCHEDULER=0"
+        logger.info(f"[SCHEDULER] Agendador LOCAL desativado ({reason}) — pipeline via Celery Beat")
 
 
-# CORS
+# --- Auth dependency for write endpoints ---
+from fastapi import Header, Depends
+
+def require_api_key(x_api_key: str = Header(None)):
+    expected = os.getenv("PUBLISH_API_KEY") or os.getenv("API_KEY")
+    # If no key configured, deny in production, allow in dev with warning
+    if not expected:
+        if os.getenv("ENVIRONMENT", "development") == "production":
+            logger.error("[AUTH] PUBLISH_API_KEY not set in production — denying write")
+            raise HTTPException(status_code=503, detail="Server misconfigured: publish auth not set")
+        logger.warning("[AUTH] PUBLISH_API_KEY not set — allowing write in dev (set it in production!)")
+        return
+    if x_api_key != expected:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-API-Key")
+
+
+# CORS — explicit origins, not wildcard+credentials (invalid per spec)
+def _cors_origins():
+    raw = os.getenv("CORS_ALLOWED_ORIGINS") or os.getenv("CORS_ORIGINS") or ""
+    if raw.strip():
+        return [o.strip() for o in raw.split(",") if o.strip()]
+    # default: prod domain + Tailscale/dev
+    site = os.getenv("SITE_URL", "https://atualizabrasil.news")
+    frontend = os.getenv("NEXT_PUBLIC_SITE_URL", site)
+    return [
+        site.rstrip("/"),
+        frontend.rstrip("/"),
+        "https://atualizabrasil.news",
+        "http://localhost:3000",
+        "http://100.95.111.24:3000",
+        "http://localhost:8000",
+    ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -194,8 +230,8 @@ def list_reporters():
 
 
 @app.post("/api/publish")
-def publish_article_endpoint(article: dict):
-    """Publica uma matéria manualmente."""
+def publish_article_endpoint(article: dict, _auth=Depends(require_api_key)):
+    """Publica uma matéria manualmente. Requer X-API-Key."""
     try:
         publisher = ArticlePublisher()
         result = publisher.publish_article(article)

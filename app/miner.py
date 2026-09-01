@@ -144,6 +144,15 @@ class GlobalNewsMiner:
         rss_url = portal.get('rss')
         if not rss_url:
             return articles
+
+        # Enforce robots.txt for RSS URL
+        try:
+            from app.robots import is_allowed
+            if not is_allowed(rss_url):
+                logger.warning(f"[ROBOTS] RSS bloqueado por robots.txt: {rss_url}")
+                return articles
+        except Exception as e:
+            logger.debug(f"[ROBOTS] check falhou para {rss_url}: {e}")
         
         try:
             response = self.session.get(rss_url)

@@ -19,6 +19,9 @@ DATABASE_URL = os.getenv(
     "postgresql://portal_user:portal_pass@localhost:5432/atualiza_brasil"
 )
 
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
+IS_PRODUCTION = ENVIRONMENT == "production"
+
 try:
     # Tenta PostgreSQL (produção). create_engine é lazy, então checamos com connect.
     _engine = create_engine(
@@ -33,7 +36,13 @@ try:
         pass
     engine = _engine
     _using_sqlite = False
-except Exception:
+except Exception as e:
+    if IS_PRODUCTION:
+        import logging
+        logging.getLogger(__name__).error(
+            f"PostgreSQL indisponível em produção ({DATABASE_URL}): {e} — falhando (sem fallback SQLite)"
+        )
+        raise
     # Fallback local (desenvolvimento sem Postgres): usa SQLite.
     import sqlite3
     _sqlite_file = os.path.join(os.path.dirname(__file__), "..", "data", "atualiza_brasil.db")
@@ -47,7 +56,7 @@ except Exception:
     _using_sqlite = True
     import logging
     logging.getLogger(__name__).warning(
-        f"PostgreSQL indisponível ({DATABASE_URL}); usando SQLite em {_sqlite_file}"
+        f"PostgreSQL indisponível ({DATABASE_URL}); usando SQLite em {_sqlite_file} (ENVIRONMENT={ENVIRONMENT})"
     )
 
 # Session factory

@@ -3,8 +3,10 @@ Agente Publicador — Atualiza Brasil
 Publica as matérias no banco de dados REAL.
 """
 
+import os
 import re
 import logging
+from difflib import SequenceMatcher
 from datetime import datetime
 from typing import Dict, List, Optional
 from sqlalchemy.orm import Session
@@ -14,6 +16,9 @@ from app.schema import NewsArticle, Reporter, PublicationLog
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Threshold de similaridade para Lei 9.610/98 Art. 46/47 (paráfrase)
+DEFAULT_SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", "0.35"))
 
 
 class ArticlePublisher:
@@ -38,6 +43,19 @@ class ArticlePublisher:
         for field in required:
             if not article_data.get(field):
                 raise ValueError(f"Campo obrigatório: {field}")
+
+        # --- Lei 9.610/98 Art. 46/47: verifica paráfrase (similaridade) ---
+        threshold = float(os.getenv("SIMILARITY_THRESHOLD", str(DEFAULT_SIMILARITY_THRESHOLD)))
+        content = article_data.get('content', '') or ''
+        original = article_data.get('original_text') or article_data.get('body') or ''
+        # Só verifica se temos ambos e se não é curiosidade (is_curiosity pode ter original vazio)
+        if content and original and not article_data.get('is_curiosity'):
+            # compara até 4000 chars para performance, case-insensitive
+            sim = SequenceMatcher(None, content[:4000].lower(), original[:4000].lower()).ratio()
+            if sim > threshold:
+                logger.warning(f"[COMPLIANCE] Similaridade {sim:.2%} > {threshold:.0%} para '{article_data.get('title','')[:60]}' — bloqueado (Art. 46/47)")
+                raise ValueError(f"Conteúdo muito similar ao original ({sim:.1%} > {threshold:.0%} threshold) — reescreva com paráfrase própria")
+            logger.info(f"[COMPLIANCE] Similaridade {sim:.1%} OK para '{article_data.get('title','')[:40]}'")
         
         # Busca repórter
         reporter = self._get_or_create_reporter(article_data['reporter_slug'])

@@ -106,27 +106,34 @@ class ArticleRewriter:
         else:
             fontes_cruzadas = f"\n\nEm apuração complementar, nossa equipe cruzou dados com outros portais regionais para ampliar o contexto.\n"
 
-        # Template profissional longo (700+ palavras quando expandido via LLM; fallback gera ~650)
-        content = f"""{title}
+        # Fallback sem LLM: usa APENAS conteúdo apurado, sem boilerplate genérico repetido.
+        # Se não há corpo apurado suficiente, retorna vazio para retry (evita thin content AdSense)
+        if not contexto_fatos and not summary:
+            logger.warning(f"[REWRITER] Fallback sem LLM e sem corpo para '{title[:50]}' — abortando para retry")
+            return ""
+        if paragraphs and len(" ".join(paragraphs).split()) < 80 and not summary:
+            logger.warning(f"[REWRITER] Corpo muito curto ({len(' '.join(paragraphs).split())} palavras) — abortando fallback")
+            return ""
 
-LEAD — {summary}
-{contexto_fatos}
-CONTEXTO — O tema se insere em um cenário mais amplo que vem sendo acompanhado por autoridades, especialistas e pela população. Dados recentes e o histórico do setor ajudam a entender por que o assunto é relevante neste momento. Em MS, onde a dinâmica econômica e social tem peso regional, desdobramentos como este costumam refletir em cadeia produtiva, serviços e cotidiano da população. A apuração considerou o histórico recente, indicadores oficiais e a repercussão em outras praças.
-
-DADOS E NÚMEROS — Quando disponíveis, os números foram confrontados entre as fontes para garantir precisão. A metodologia incluiu checagem de datas, locais e declarações, além da comparação de séries históricas. Em casos que envolvem emprego, safra, saúde ou segurança, os indicadores regionais foram contextualizados com médias estaduais e nacionais, permitindo ao leitor dimensionar a relevância do fato.
-
-DESENVOLVIMENTO — De acordo com as informações apuradas, {summary.lower()} A reportagem buscou ampliar a cobertura com base em registros oficiais, notas de órgãos competentes e apuração cruzada. O cruzamento com outros veículos — incluindo checagem de datas, locais e declarações — reforça a consistência das informações aqui apresentadas.{fontes_cruzadas}
-Ainda segundo o levantamento, os próximos passos envolvem acompanhamento de pronunciamentos oficiais, eventuais medidas administrativas e o monitoramento de impactos práticos para a população sul-mato-grossense. Especialistas ouvidos em coberturas semelhantes destacam que transparência, dados comparativos e acompanhamento contínuo são essenciais para o entendimento completo do tema.
-
-O QUE DIZEM AS FONTES CRUZADAS — A consulta a mais de uma origem permitiu confirmar pontos centrais e complementar lacunas. Divergências pontuais foram tratadas com checagem adicional e, quando persistiram, registradas com transparência. O leitor encontra, ao final, a lista completa das fontes consultadas, com links para conferência.
-
-ANÁLISE E IMPACTO PARA MS — Para Mato Grosso do Sul, os efeitos podem ser sentidos em diferentes frentes. No campo econômico, há reflexos sobre produção, consumo e serviços. No campo social, a atenção recai sobre como a população será informada e atendida. Nossa análise considera o histórico recente, indicadores regionais e a necessidade de respostas coordenadas entre poder público e sociedade civil. Em Campo Grande, Dourados, Três Lagoas e Corumbá, os desdobramentos tendem a ter leitura particular, dada a diversidade produtiva e demográfica do estado.
-
-SERVIÇO E PRÓXIMOS PASSOS — A situação segue em acompanhamento. Novas informações devem ser divulgadas nas próximas horas, e nossa redação seguirá atualizando o caso com apuração própria, checagem cruzada e contextualização completa. A recomendação é acompanhar os canais oficiais, verificar comunicados de órgãos competentes e manter-se informado por fontes confiáveis.
-
-Fontes consultadas: {source_name} ({source_url}){''.join([f", {r.get('source','')} ({r.get('url','')})" for r in related[:3]])}
-
-{self.reporter.attribution}"""
+        # Monta fallback variado por artigo, usando apenas fatos apurados + lead
+        # Não repete boilerplate verbatim; cada artigo tem lead + apuração + fontes cruzadas + assinatura
+        partes = [title, "", f"LEAD — {summary}"]
+        if contexto_fatos:
+            partes.append(contexto_fatos)
+        # Desenvolvimento com base no summary expandido, sem frase genérica fixa
+        if summary:
+            partes.append(f"APURAÇÃO — {summary}")
+        if fontes_cruzadas and related:
+            partes.append(fontes_cruzadas.strip())
+        partes.append(f"Fontes consultadas: {source_name} ({source_url}){''.join([f', {r.get('source','')} ({r.get('url','')})' for r in related[:3]])}")
+        partes.append(self.reporter.attribution)
+        # Filtra vazios e junta
+        content = "\n\n".join(p for p in partes if p and p.strip())
+        # Se ainda ficou curto (<200 palavras), não publica — deixa para retry com LLM
+        if len(content.split()) < 200:
+            logger.warning(f"[REWRITER] Fallback gerou apenas {len(content.split())} palavras para '{title[:40]}' — considerado curto, abortando")
+            return ""
+        return content
         
         return content
     

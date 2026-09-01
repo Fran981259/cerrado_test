@@ -14,19 +14,22 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================================
-# MODELOS FREE DISPONÍVEIS NO OPENROUTER (2026-08)
+# MODELOS FREE DISPONÍVEIS NO OPENROUTER (verificados 2026-09)
+# Fonte: https://openrouter.ai/models?max_price=0
+# Groq é o provider primário (gratuito); OpenRouter é fallback.
+# Se Groq estiver configurado, estes só são usados quando OpenRouter é explicitamente chamado.
 # ============================================================
 FREE_MODELS = {
-    "general": "inclusionai/ling-3.0-flash-fin:free",
-    "fast": "dots-studio/dots-3-note-preview:free",
-    "reasoning": "inclusionai/ling-3.0-flash-fin:free",
-    "translation": "inclusionai/ling-3.0-flash-fin:free",
-    "code": "inclusionai/ling-3.0-flash-fin:free",
-    "creative": "dots-studio/dots-3-note-preview:free",
-    "tech": "inclusionai/ling-3.0-flash-fin:free",
-    "economy": "inclusionai/ling-3.0-flash-fin:free",
-    "sports": "inclusionai/ling-3.0-flash-fin:free",
-    "general_news": "inclusionai/ling-3.0-flash-fin:free",
+    "general": "meta-llama/llama-3.3-70b-instruct:free",
+    "fast": "qwen/qwen3-235b-a22b:free",
+    "reasoning": "deepseek/deepseek-r1:free",
+    "translation": "qwen/qwen3-235b-a22b:free",
+    "code": "qwen/qwen3-235b-a22b:free",
+    "creative": "mistralai/mistral-small-3.1-24b-instruct:free",
+    "tech": "meta-llama/llama-3.3-70b-instruct:free",
+    "economy": "meta-llama/llama-3.3-70b-instruct:free",
+    "sports": "meta-llama/llama-3.3-70b-instruct:free",
+    "general_news": "meta-llama/llama-3.3-70b-instruct:free",
 }
 
 

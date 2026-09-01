@@ -189,7 +189,16 @@ class RealPortalScanner:
         url = portal["url"]
         
         logger.info(f"Escaneando: {name} ({url})")
-        
+
+        # Enforce robots.txt at runtime (cached, re-check daily)
+        try:
+            from app.robots import is_allowed
+            if not is_allowed(url):
+                logger.warning(f"[ROBOTS] Bloqueado por robots.txt: {url}")
+                return {"name": name, "url": url, "status": "blocked", "error": "robots.txt disallow", "articles": []}
+        except Exception as e:
+            logger.debug(f"[ROBOTS] check falhou para {url}: {e}")
+
         try:
             response = self.session.get(url, timeout=15, allow_redirects=True)
             response.raise_for_status()

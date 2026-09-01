@@ -5,6 +5,7 @@
 # conteúdo sensível, etc.
 # ============================================================
 
+import os
 import re
 import hashlib
 import logging
@@ -15,14 +16,43 @@ from difflib import SequenceMatcher
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Redis TTL for dedup (7 dias)
+DEDUP_TTL_SECONDS = int(os.getenv("DEDUP_TTL_SECONDS", "604800"))
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
+def _get_redis():
+    try:
+        import redis as redis_lib
+        client = redis_lib.from_url(REDIS_URL, socket_connect_timeout=2, socket_timeout=2, decode_responses=True)
+        client.ping()
+        return client
+    except Exception as e:
+        logger.debug(f"[DEDUP] Redis não disponível ({REDIS_URL}): {e} — usando memória")
+        return None
+
 
 class ContentFilter:
-    """Filtro de qualidade e duplicatas."""
+    """Filtro de qualidade e duplicatas — com persistência Redis (ou memória fallback)."""
     
     def __init__(self, similarity_threshold: float = 0.85):
         self.similarity_threshold = similarity_threshold
         self.seen_hashes: Set[str] = set()
         self.seen_titles: List[str] = []
+        # Tenta Redis para persistência cross-run
+        self._redis = _get_redis()
+        self._redis_hash_key = "dedup:hashes"
+        self._redis_titles_key = "dedup:titles"
+        if self._redis:
+            try:
+                # Carrega hashes existentes
+                for h in self._redis.smembers(self._redis_hash_key) or []:
+                    self.seen_hashes.add(h)
+                for t in self._redis.smembers(self._redis_titles_key) or []:
+                    self.seen_titles.append(t)
+                logger.info(f"[DEDUP] Redis carregado: {len(self.seen_hashes)} hashes, {len(self.seen_titles)} títulos")
+            except Exception as e:
+                logger.debug(f"[DEDUP] falha ao carregar Redis: {e}")
+                self._redis = None
         
         # Palavras sensíveis (não publicar)
         self.blocked_keywords = [
@@ -90,26 +120,55 @@ class ContentFilter:
         return True
     
     def _is_duplicate(self, article: Dict) -> bool:
-        """Detecta se o artigo é duplicata."""
-        # Hash por URL
-        url_hash = hashlib.md5(article.get('url', '').encode()).hexdigest()
-        if url_hash in self.seen_hashes:
-            return True
-        self.seen_hashes.add(url_hash)
-        
-        # Similaridade de título
-        title = article.get('title', '').lower()
-        for seen_title in self.seen_titles:
-            similarity = SequenceMatcher(None, title, seen_title).ratio()
-            if similarity >= self.similarity_threshold:
+        """Detecta se o artigo é duplicata — com persistência Redis."""
+        url = article.get('url', '') or ''
+        url_hash = hashlib.md5(url.encode()).hexdigest()
+        # Checa Redis primeiro
+        if self._redis:
+            try:
+                if self._redis.sismember(self._redis_hash_key, url_hash):
+                    return True
+            except Exception:
+                pass
+        else:
+            if url_hash in self.seen_hashes:
                 return True
-        
+
+        # Similaridade de título — busca títulos do Redis se disponível
+        title = article.get('title', '').lower()
+        titles_to_check = self.seen_titles
+        if self._redis:
+            try:
+                # Pega até 500 títulos mais recentes do Redis
+                redis_titles = self._redis.smembers(self._redis_titles_key) or set()
+                if redis_titles:
+                    titles_to_check = list(redis_titles)[:500]
+            except Exception:
+                pass
+        for seen_title in titles_to_check:
+            try:
+                similarity = SequenceMatcher(None, title, seen_title.lower()).ratio()
+                if similarity >= self.similarity_threshold:
+                    return True
+            except Exception:
+                continue
+
+        # Não é duplicata: persiste
+        self.seen_hashes.add(url_hash)
         self.seen_titles.append(title)
-        
-        # Limita memória
+        if self._redis:
+            try:
+                self._redis.sadd(self._redis_hash_key, url_hash)
+                self._redis.expire(self._redis_hash_key, DEDUP_TTL_SECONDS)
+                self._redis.sadd(self._redis_titles_key, title)
+                self._redis.expire(self._redis_titles_key, DEDUP_TTL_SECONDS)
+            except Exception as e:
+                logger.debug(f"[DEDUP] falha ao persistir no Redis: {e}")
+
+        # Limita memória local
         if len(self.seen_titles) > 1000:
             self.seen_titles = self.seen_titles[-500:]
-        
+
         return False
     
     def filter_batch(self, articles: List[Dict]) -> List[Dict]:

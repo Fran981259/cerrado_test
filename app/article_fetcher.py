@@ -52,6 +52,14 @@ class ArticleFetcher:
         {title, lead, content, published_at, author, image_url, url, status}
         Retorna status 'failed' em caso de erro; nunca lança.
         """
+        # Enforce robots.txt for article URL
+        try:
+            from app.robots import is_allowed
+            if not is_allowed(url):
+                logger.warning(f"[ROBOTS] Artigo bloqueado por robots.txt: {url}")
+                return {"status": "blocked", "url": url, "reason": "robots.txt disallow"}
+        except Exception as e:
+            logger.debug(f"[ROBOTS] check falhou para {url}: {e}")
         try:
             resp = self.session.get(url, timeout=self.TIMEOUT, allow_redirects=True)
             resp.raise_for_status()
