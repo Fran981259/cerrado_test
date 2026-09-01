@@ -1,0 +1,26 @@
+name: build-check
+on:
+  push:
+    branches: [main]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build backend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: botgram-atualiza_brasil:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Build frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: false
+          tags: botgram-frontend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
