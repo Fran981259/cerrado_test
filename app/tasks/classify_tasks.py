@@ -53,6 +53,14 @@ def classify_pending_articles(self):
                 art.updated_at = datetime.utcnow()
                 classified += 1
             db.commit()
+
+            # Atualiza sinais de tendencia para apoiar curadoria editorial.
+            try:
+                from app.ml_editorial import EditorialTrendAnalyzer
+
+                EditorialTrendAnalyzer().refresh_trend_signals(session=db, window_hours=24)
+            except Exception as trend_error:
+                logger.warning(f"[CLASSIFY] trend snapshot ignorado: {trend_error}")
         except Exception:
             db.rollback()
             raise

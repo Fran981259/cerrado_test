@@ -17,6 +17,10 @@ Portal de noticias automatizado com backend FastAPI, fila Celery, banco PostgreS
 
 ## Documentos Principais
 - `PLANO_ACAO.md` - plano unico e travado por escopo.
+- `PLANO_ML.md` - arquitetura e roteiro do modulo de machine learning.
+- `PLANO_ML_ACAO.md` - plano de acao do modulo de machine learning por fases.
+- `CRONOGRAMA_ML_EXECUTIVO.md` - cronograma executivo do modulo de machine learning.
+- `REFERENCIA_ML_NOTICIAS_CURTAS_PTB.md` - leitura comparativa de um projeto externo de classificacao de noticias.
 - `MEMORIA.md` - fatos canonicos do projeto.
 - `OPERACAO.md` - status operacional consolidado.
 - `SPEC.md` - especificacao tecnica resumida.

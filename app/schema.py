@@ -138,3 +138,19 @@ class PublicationLog(Base):
     details = Column(Text, nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class EditorialTrendSignal(Base):
+    """Snapshot de sinais editoriais para temas em alta."""
+    __tablename__ = "editorial_trend_signals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    topic = Column(String(100), nullable=False, index=True)
+    category = Column(String(50), nullable=True, index=True)
+    score = Column(Integer, nullable=False)
+    article_count = Column(Integer, nullable=False, default=0)
+    window_hours = Column(Integer, nullable=False, default=24)
+    evidence = Column(JSON, nullable=True)
+
+    generated_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

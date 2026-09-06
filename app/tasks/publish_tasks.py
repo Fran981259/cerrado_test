@@ -56,6 +56,13 @@ def publish_ready_articles(self):
                 logger.error(f"[PUBLISH] erro num artigo: {e}")
                 failed += 1
         db.commit()
+
+        try:
+            from app.ml_editorial import EditorialTrendAnalyzer
+
+            EditorialTrendAnalyzer().refresh_trend_signals(session=db, window_hours=24)
+        except Exception as trend_error:
+            logger.warning(f"[PUBLISH] trend snapshot ignorado: {trend_error}")
     except Exception as e:
         db.rollback()
         logger.error(f"[PUBLISH] erro no lote: {e}")
@@ -81,6 +88,13 @@ def publish_single_article(self, article: dict):
         publisher = ArticlePublisher()
         result = publisher.publish_article(article)
         publisher.close()
+
+        try:
+            from app.ml_editorial import EditorialTrendAnalyzer
+
+            EditorialTrendAnalyzer().refresh_trend_signals(window_hours=24)
+        except Exception as trend_error:
+            logger.warning(f"[PUBLISH] trend snapshot ignorado: {trend_error}")
         
         logger.info(f"[PUBLISH] Sucesso: {result['article_id']}")
         return result
