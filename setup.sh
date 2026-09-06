@@ -27,8 +27,8 @@ if command -v systemctl >/dev/null 2>&1; then
       sudo systemctl enable --now postgresql redis-server 2>/dev/null || true
       sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='portal_user'" | grep -q 1 || \
         sudo -u postgres psql -c "CREATE USER portal_user WITH PASSWORD 'portal_pass';"
-      sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='atualiza_brasil'" | grep -q 1 || \
-        sudo -u postgres psql -c "CREATE DATABASE atualiza_brasil OWNER portal_user;"
+      sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='portal_cerrado'" | grep -q 1 || \
+        sudo -u postgres psql -c "CREATE DATABASE portal_cerrado OWNER portal_user;"
       echo "==> PostgreSQL e Redis prontos."
     else
       echo "    Sem Postgres/Redis. O sistema usará fallback SQLite (funciona, porém SQLite <> Postgres em produção)."

@@ -1,5 +1,5 @@
 """
-Teste do Groq — Atualiza Brasil
+Teste do Groq — Portal Cerrado
 API gratuita com limites generosos.
 """
 
@@ -78,7 +78,7 @@ Escreva de forma clara, técnica e acessível."""
         result = client.rewrite_article(
             article,
             reporter_prompt,
-            "Por Enzo Bianchi, do Atualiza Brasil"
+            "Por Enzo Bianchi, do Portal Cerrado"
         )
         
         if result.get('rewritten_content'):

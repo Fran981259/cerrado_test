@@ -18,8 +18,10 @@ logger = logging.getLogger(__name__)
 def cleanup_old_content(self):
     """
     Remove conteúdo antigo: drafts >7d, failed >3d, logs antigos.
-    Roda 1x ao dia às 03:00.
+    Arquiva publicadas antigas (visibility='archived', saem das listas/sitemap,
+    link direto continua abrindo). Roda 1x ao dia às 03:00.
     """
+    ARCHIVE_DAYS = int(os.getenv("ARCHIVE_DAYS_AFTER_PUBLISH", "30"))
     try:
         logger.info("[MAINTENANCE] Iniciando cleanup_old_content")
         from app.database import get_session
@@ -61,6 +63,14 @@ def cleanup_old_content(self):
             except Exception:
                 q4 = 0
 
+            # publicadas antigas: arquiva (não apaga — preserva link e histórico)
+            cutoff_arch = now - timedelta(days=ARCHIVE_DAYS)
+            archived = db.query(NewsArticle).filter(
+                NewsArticle.status == "published",
+                NewsArticle.visibility == "public",
+                NewsArticle.published_at < cutoff_arch
+            ).update({"visibility": "archived"}, synchronize_session=False)
+
             db.commit()
         except Exception:
             db.rollback()
@@ -68,10 +78,11 @@ def cleanup_old_content(self):
         finally:
             db.close()
 
-        logger.info(f"[MAINTENANCE] Cleanup: {cleaned} registros removidos")
+        logger.info(f"[MAINTENANCE] Cleanup: {cleaned} removidos, {archived} arquivados")
         return {
             "status": "success",
             "cleaned": cleaned,
+            "archived": archived,
             "timestamp": datetime.utcnow().isoformat()
         }
     except Exception as e:
@@ -105,7 +116,7 @@ def update_sitemap(self):
         finally:
             db.close()
 
-        base = os.getenv("NEXT_PUBLIC_SITE_URL") or os.getenv("SITE_URL") or "https://portalcerrado.com.br"
+        base = os.getenv("NEXT_PUBLIC_SITE_URL") or os.getenv("SITE_URL") or "http://100.95.111.24:3000"
         base = base.rstrip("/")
 
         # monta XML

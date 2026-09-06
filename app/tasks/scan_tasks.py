@@ -279,7 +279,7 @@ def scan_and_queue(self):
 def run_full_pipeline(self):
     """
     Executa o pipeline completo de forma síncrona e confiável:
-    scan -> persistir drafts -> classificar -> reescrever -> publicar -> exportar frontend.
+    scan -> persistir drafts -> classificar -> reescrever -> publicar.
     É o gatilho principal do agendamento.
     """
     logger.info("[PIPELINE] Iniciando pipeline completo")
@@ -287,13 +287,10 @@ def run_full_pipeline(self):
         from app.tasks.classify_tasks import classify_pending_articles
         from app.tasks.rewrite_tasks import rewrite_pending_articles
         from app.tasks.publish_tasks import publish_ready_articles
-        from app.tasks.frontend_tasks import export_frontend_articles
-
         scan_result = scan_and_queue()
         classify_result = classify_pending_articles()
         rewrite_result = rewrite_pending_articles()
         publish_result = publish_ready_articles()
-        export_result = export_frontend_articles()
 
         logger.info("[PIPELINE] Pipeline completo finalizado")
         return {
@@ -302,9 +299,7 @@ def run_full_pipeline(self):
             "classify": classify_result,
             "rewrite": rewrite_result,
             "publish": publish_result,
-            "export": export_result,
         }
     except Exception as e:
         logger.error(f"[PIPELINE] Erro: {e}")
         raise self.retry(exc=e)
-

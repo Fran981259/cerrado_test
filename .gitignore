@@ -39,5 +39,5 @@ Thumbs.db
 # Dados locais do pipeline (SQLite, regenerados automaticamente)
 # só ignora /data na raiz, não frontend/src/data
 /data/
-data/atualiza_brasil.db
+data/portal_cerrado.db
 data/*.db

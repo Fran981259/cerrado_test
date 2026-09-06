@@ -10,14 +10,34 @@ export const CATEGORIES = {
   agriculture: { label: "Agronegócio", icon: "🌾", color: "#606c38" },
   education: { label: "Educação", icon: "🎓", color: "#0081a7" },
   culture: { label: "Cultura", icon: "🎭", color: "#7209b7" },
+  clima: { label: "Clima", icon: "🌤️", color: "#0284c7" },
   general: { label: "Geral", icon: "📰", color: "#6c757d" },
 } as const;
+
+// Aliases: o banco usa o nome da role do repórter; o frontend usa chaves curtas
+const CATEGORY_ALIASES: Record<string, CategorySlug> = {
+  technology: "tech",
+  security: "security",
+  politics: "politics",
+  economy: "economy",
+  health: "health",
+  agriculture: "agriculture",
+  education: "education",
+  culture: "culture",
+  entertainment: "entertainment",
+  sports: "sports",
+  science: "science",
+  clima: "clima",
+  general: "general",
+};
 
 export type CategorySlug = keyof typeof CATEGORIES;
 
 export function getCategory(slug?: string) {
   if (!slug) return CATEGORIES.general;
-  return (CATEGORIES as Record<string, (typeof CATEGORIES)[CategorySlug]>)[slug] ?? CATEGORIES.general;
+  const key = CATEGORY_ALIASES[slug] ?? (CATEGORIES as Record<string, unknown>)[slug];
+  if (typeof key === "string") return CATEGORIES[key as CategorySlug] ?? CATEGORIES.general;
+  return (key as (typeof CATEGORIES)[CategorySlug]) ?? CATEGORIES.general;
 }
 
 export const CATEGORY_LIST = Object.entries(CATEGORIES).map(([slug, v]) => ({ slug, ...v }));
@@ -34,5 +54,6 @@ export const PATTERN_IMAGES: Record<string, string> = {
   agriculture: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=600&h=400&fit=crop",
   education: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600&h=400&fit=crop",
   culture: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600&h=400&fit=crop",
+  clima: "https://images.unsplash.com/photo-1504608524841-42fe6f032b4b?w=600&h=400&fit=crop",
   general: "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=600&h=400&fit=crop",
 };

@@ -8,11 +8,11 @@ from celery.schedules import crontab
 import os
 
 # Configuração do broker
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 
 # Criação do app Celery
 celery_app = Celery(
-    "atualiza_brasil",
+    "portal_cerrado",
     broker=REDIS_URL,
     backend=REDIS_URL,
     include=[
@@ -24,7 +24,6 @@ celery_app = Celery(
         "app.tasks.curiosity_tasks",
         "app.tasks.auditor_tasks",
         "app.tasks.maintenance",
-        "app.tasks.frontend_tasks",
     ]
 )
 

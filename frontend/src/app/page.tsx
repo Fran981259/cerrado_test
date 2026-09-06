@@ -1,33 +1,42 @@
-import Link from "next/link";
-import { Suspense } from "react";
-import { fetchNews, MOCK_ARTICLES } from "@/lib/api";
+import { fetchNews } from "@/lib/api";
+import type { Article } from "@/lib/api";
 import { NewsCard } from "@/components/NewsCard";
-import CategoryFilter from "@/components/CategoryFilter";
 import Ticker from "@/components/Ticker";
+import Weather from "@/components/Weather";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 export default async function Home({ searchParams }: { searchParams: Promise<{ cat?: string }> }) {
   const { cat } = await searchParams;
-  let articles = await fetchNews({ category: cat, limit: 24 });
-  if (articles.length === 0) articles = MOCK_ARTICLES;
+  let list: Article[] = [];
+  let loadError = "";
+  try {
+    const articles = await fetchNews({ category: cat, limit: 24 });
+    list = cat ? articles.filter((a) => a.category === cat) : articles;
+  } catch {
+    loadError = "A API de noticias nao respondeu. O frontend depende do backend real para carregar o conteudo.";
+  }
 
-  // filtro client já aplicado via API, mas garante
-  const filtered = cat ? articles.filter((a) => a.category === cat) : articles;
-  const list = filtered.length ? filtered : articles;
-
-  const hero = list[0];
-  const secondary = list.slice(1, 5);
-  const rest = list.slice(5);
+  // Destaques randomizados a cada revalidação (60s): hero + 4 sorteados do pool recente.
+  // Shuffle intencional no render (ISR) — desabilita regra de pureza só aqui.
+  /* eslint-disable react-hooks/purity */
+  const pool = [...list.slice(0, 12)];
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  /* eslint-enable react-hooks/purity */
+  const picked = pool.slice(0, 5).map((a) => a.slug || a.title);
+  const hero = pool[0];
+  const secondary = pool.slice(1, 5);
+  const rest = [...list.filter((a) => !picked.includes(a.slug || a.title))];
 
   return (
     <div>
-      <Ticker articles={list} />
+      <Ticker />
 
       <div className="container-custom py-6">
-        <Suspense fallback={<div className="h-10 bg-zinc-100 rounded-full animate-pulse" />}>
-          <CategoryFilter />
-        </Suspense>
+        <Weather />
       </div>
 
       <div className="container-custom pb-10">
@@ -65,9 +74,13 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
             </div>
           </>
         )}
-        
-        {list.length === 0 && (
+
+        {!loadError && list.length === 0 && (
           <div className="py-20 text-center text-text-muted">Nenhuma notícia encontrada.</div>
+        )}
+
+        {loadError && (
+          <div className="py-20 text-center text-red-600 font-semibold">{loadError}</div>
         )}
       </div>
       <div className="container-custom pb-20">

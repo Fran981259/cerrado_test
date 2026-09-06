@@ -1,117 +1,140 @@
 services:
   postgres:
     image: postgres:15
-    container_name: atualiza_brasil_postgres
+    container_name: portal_cerrado_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: atualiza_brasil
+      POSTGRES_DB: portal_cerrado
       POSTGRES_USER: portal_user
       POSTGRES_PASSWORD: portal_pass
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      portal_cerrado_net:
+        aliases: [postgres]
 
   redis:
     image: redis:7-alpine
-    container_name: atualiza_brasil_redis
+    container_name: portal_cerrado_redis
     restart: unless-stopped
     ports:
       - "6379:6379"
     command: redis-server --appendonly yes
+    networks:
+      portal_cerrado_net:
+        aliases: [redis]
 
-  atualiza_brasil:
+  portal_cerrado:
+    image: ${BACKEND_IMAGE:-ghcr.io/fran981259/botgram-portal_cerrado:latest}
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: atualiza_brasil_app
+    container_name: portal_cerrado_app
     restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql://portal_user:portal_pass@postgres:5432/atualiza_brasil
+      DATABASE_URL: postgresql://portal_user:portal_pass@postgres:5432/portal_cerrado
       REDIS_URL: redis://redis:6379/0
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GROQ_MODEL: ${GROQ_MODEL:-qwen/qwen3-32b}
-      SITE_URL: ${SITE_URL:-https://portalcerrado.com.br}
-      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://portalcerrado.com.br}
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://atualiza_brasil:8000}
+      SITE_URL: ${SITE_URL:-http://100.95.111.24:3000}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://100.95.111.24:3000}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://portal_cerrado:8000}
       CELERY_SCHEDULER: "1"
       PUBLISH_API_KEY: ${PUBLISH_API_KEY:-}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://portalcerrado.com.br,http://localhost:3000,http://100.95.111.24:3000}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://100.95.111.24:3000,http://localhost:3000}
       ENVIRONMENT: ${ENVIRONMENT:-production}
       SIMILARITY_THRESHOLD: ${SIMILARITY_THRESHOLD:-0.35}
+      DATABASE_CONNECT_RETRIES: ${DATABASE_CONNECT_RETRIES:-10}
+      DATABASE_CONNECT_RETRY_DELAY: ${DATABASE_CONNECT_RETRY_DELAY:-1}
     volumes:
       - app_data:/app/data
     depends_on:
       - postgres
       - redis
+    networks:
+      portal_cerrado_net:
+        aliases: [portal_cerrado, portal-cerrado-api]
     healthcheck:
       disable: true
 
   celery_worker:
+    image: ${BACKEND_IMAGE:-ghcr.io/fran981259/botgram-portal_cerrado:latest}
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: atualiza_brasil_worker
+    container_name: portal_cerrado_worker
     restart: unless-stopped
     command: celery -A app.celery_app worker -l info
     environment:
-      DATABASE_URL: postgresql://portal_user:portal_pass@postgres:5432/atualiza_brasil
+      DATABASE_URL: postgresql://portal_user:portal_pass@postgres:5432/portal_cerrado
       REDIS_URL: redis://redis:6379/0
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GROQ_MODEL: ${GROQ_MODEL:-qwen/qwen3-32b}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      SITE_URL: ${SITE_URL:-https://portalcerrado.com.br}
-      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://portalcerrado.com.br}
+      SITE_URL: ${SITE_URL:-http://100.95.111.24:3000}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://100.95.111.24:3000}
       ENVIRONMENT: ${ENVIRONMENT:-production}
       SIMILARITY_THRESHOLD: ${SIMILARITY_THRESHOLD:-0.35}
+      DATABASE_CONNECT_RETRIES: ${DATABASE_CONNECT_RETRIES:-10}
+      DATABASE_CONNECT_RETRY_DELAY: ${DATABASE_CONNECT_RETRY_DELAY:-1}
     volumes:
       - app_data:/app/data
     depends_on:
       - postgres
       - redis
-      - atualiza_brasil
+      - portal_cerrado
+    networks:
+      - portal_cerrado_net
     healthcheck:
       disable: true
 
   celery_beat:
+    image: ${BACKEND_IMAGE:-ghcr.io/fran981259/botgram-portal_cerrado:latest}
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: atualiza_brasil_beat
+    container_name: portal_cerrado_beat
     restart: unless-stopped
     command: celery -A app.celery_app beat -l info
     environment:
-      DATABASE_URL: postgresql://portal_user:portal_pass@postgres:5432/atualiza_brasil
+      DATABASE_URL: postgresql://portal_user:portal_pass@postgres:5432/portal_cerrado
       REDIS_URL: redis://redis:6379/0
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GROQ_MODEL: ${GROQ_MODEL:-qwen/qwen3-32b}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      SITE_URL: ${SITE_URL:-https://portalcerrado.com.br}
-      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://portalcerrado.com.br}
+      SITE_URL: ${SITE_URL:-http://100.95.111.24:3000}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://100.95.111.24:3000}
       ENVIRONMENT: ${ENVIRONMENT:-production}
       SIMILARITY_THRESHOLD: ${SIMILARITY_THRESHOLD:-0.35}
+      DATABASE_CONNECT_RETRIES: ${DATABASE_CONNECT_RETRIES:-10}
+      DATABASE_CONNECT_RETRY_DELAY: ${DATABASE_CONNECT_RETRY_DELAY:-1}
     volumes:
       - app_data:/app/data
     depends_on:
       - postgres
       - redis
+    networks:
+      - portal_cerrado_net
     healthcheck:
       disable: true
 
   flower:
+    image: ${BACKEND_IMAGE:-ghcr.io/fran981259/botgram-portal_cerrado:latest}
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: atualiza_brasil_flower
+    container_name: portal_cerrado_flower
     restart: unless-stopped
     command: celery -A app.celery_app flower --port=5555
     ports:
       - "5555:5555"
     environment:
-      DATABASE_URL: postgresql://portal_user:portal_pass@postgres:5432/atualiza_brasil
+      DATABASE_URL: postgresql://portal_user:portal_pass@postgres:5432/portal_cerrado
       REDIS_URL: redis://redis:6379/0
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GROQ_MODEL: ${GROQ_MODEL:-qwen/qwen3-32b}
@@ -119,21 +142,34 @@ services:
       - redis
       - postgres
       - celery_worker
+    networks:
+      - portal_cerrado_net
 
   frontend:
+    image: ${FRONTEND_IMAGE:-ghcr.io/fran981259/botgram-frontend:latest}
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: atualiza_brasil_frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://portal_cerrado:8000
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://100.95.111.24:3000}
+    container_name: portal_cerrado_frontend
     restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
-      NEXT_PUBLIC_API_URL: http://atualiza_brasil:8000
-      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://portalcerrado.com.br}
+      NEXT_PUBLIC_API_URL: http://portal_cerrado:8000
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://100.95.111.24:3000}
     depends_on:
-      - atualiza_brasil
+      - portal_cerrado
+    networks:
+      - portal_cerrado_net
 
 volumes:
   postgres_data:
   app_data:
+
+networks:
+  portal_cerrado_net:
+    driver: overlay
+    attachable: true

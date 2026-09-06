@@ -1,5 +1,5 @@
 """
-Servidor HTTP Simples — Atualiza Brasil
+Servidor HTTP Simples — Portal Cerrado
 Mostra as notícias coletadas em localhost sem precisar de DB.
 """
 
@@ -127,7 +127,7 @@ def generate_html(articles):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Atualiza Brasil — Portal de Notícias</title>
+    <title>Portal Cerrado — Portal de Notícias</title>
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         
@@ -306,7 +306,7 @@ def generate_html(articles):
 </head>
 <body>
     <header class="header">
-        <h1>📰 Atualiza Brasil</h1>
+        <h1>📰 Portal Cerrado</h1>
         <p>Portal de notícias automatizado com 9 repórteres de IA</p>
     </header>
     
@@ -348,7 +348,7 @@ def generate_html(articles):
     </div>
     
     <footer class="footer">
-        <p>Atualiza Brasil — {datetime.now().strftime('%d/%m/%Y %H:%M')}</p>
+        <p>Portal Cerrado — {datetime.now().strftime('%d/%m/%Y %H:%M')}</p>
         <p>Powered by AI • Groq • Python</p>
     </footer>
 </body>
@@ -406,7 +406,7 @@ def main():
     
     print(f"""
 ╔══════════════════════════════════════════════════════════╗
-║           ATUALIZA BRASIL — SERVIDOR LOCAL               ║
+║           PORTAL CERRADO — SERVIDOR LOCAL               ║
 ╠══════════════════════════════════════════════════════════╣
 ║                                                          ║
 ║  🌐 Acesse: http://localhost:{port}                       ║

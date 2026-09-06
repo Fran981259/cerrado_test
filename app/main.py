@@ -24,9 +24,6 @@ from app.publisher import ArticlePublisher
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Cria tabelas se não existirem
-init_db()
-
 app = FastAPI(
     title="Portal Cerrado",
     description="Sistema automatizado de notícias com repórteres digitais",
@@ -57,6 +54,7 @@ def _local_scheduler(interval_seconds: int = 1800) -> None:
 @app.on_event("startup")
 def _start_scheduler():
     """Inicia o agendador local se habilitado (padrão: sim, quando Celery não está no comando)."""
+    init_db()
     enabled = os.getenv("ENABLE_LOCAL_SCHEDULER", "1") == "1"
     celery_active = os.getenv("CELERY_SCHEDULER", "0") == "1"
     # Desliga o local scheduler quando o beat do Celery assume
@@ -94,14 +92,13 @@ def _cors_origins():
     if raw.strip():
         return [o.strip() for o in raw.split(",") if o.strip()]
     # default: prod domain + Tailscale/dev
-    site = os.getenv("SITE_URL", "https://portalcerrado.com.br")
+    site = os.getenv("SITE_URL", "http://100.95.111.24:3000")
     frontend = os.getenv("NEXT_PUBLIC_SITE_URL", site)
     return [
         site.rstrip("/"),
         frontend.rstrip("/"),
-        "https://portalcerrado.com.br",
-        "http://localhost:3000",
         "http://100.95.111.24:3000",
+        "http://localhost:3000",
         "http://localhost:8000",
     ]
 
@@ -188,6 +185,7 @@ def get_article(slug: str):
             "content": article.content,
             "category": article.category,
             "reporter": article.reporter.display_name if article.reporter else None,
+            "reporter_slug": article.reporter.slug if article.reporter else None,
             "author": article.author,
             "image_url": article.image_url,
             "sources": article.sources,

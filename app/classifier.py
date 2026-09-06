@@ -1,5 +1,5 @@
 """
-Classificador de Notícias — Atualiza Brasil
+Classificador de Notícias — Portal Cerrado
 ============================================
 Avalia cada notícia minerada/coletada por:
 - Grau de importância (impacto)
@@ -318,36 +318,3 @@ def classify_articles(articles: List[Dict]) -> List[Dict]:
     """Classifica uma lista de artigos."""
     classifier = NewsClassifier()
     return [classifier.classify(article) for article in articles]
-
-
-if __name__ == "__main__":
-    # Demo
-    test_articles = [
-        {
-            'title': 'OpenAI announces GPT-5 with revolutionary AI capabilities',
-            'summary': 'The new model shows unprecedented reasoning...',
-            'source': 'TechCrunch',
-            'category': 'technology',
-        },
-        {
-            'title': 'Local celebrity shares recipe for chocolate cake',
-            'summary': 'A simple recipe for your weekend...',
-            'source': 'Some Lifestyle Blog',
-            'category': 'culture',
-        },
-        {
-            'title': 'Federal Reserve raises interest rates by 0.5%',
-            'summary': 'The decision impacts global markets...',
-            'source': 'Bloomberg',
-            'category': 'economy',
-        },
-    ]
-    
-    classifier = NewsClassifier()
-    for article in test_articles:
-        classified = classifier.classify(article)
-        c = classified['classification']
-        print(f"\n📰 {article['title'][:60]}...")
-        print(f"   Importância: {c['importance_score']} ({c['importance_level']})")
-        print(f"   Engajamento: {c['engagement_score']} ({c['engagement_level']})")
-        print(f"   Score Final: {c['final_score']} → {c['priority_tier']}")

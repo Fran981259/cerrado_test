@@ -12,7 +12,7 @@ ping -c1 -W2 $T_HOST || { echo "Tailscale offline"; exit 1; }
 echo "2. Rsync (excluindo .venv, data/*.db, .git temporários)..."
 rsync -avz --delete \
   --exclude '.venv' --exclude '__pycache__' --exclude '*.pyc' \
-  --exclude 'data/atualiza_brasil.db' --exclude 'data/*.db' \
+  --exclude 'data/portal_cerrado.db' --exclude 'data/*.db' \
   --exclude '.next' --exclude 'node_modules' \
   --exclude '.git' \
   -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no" \

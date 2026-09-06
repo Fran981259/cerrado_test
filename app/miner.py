@@ -1,5 +1,5 @@
 """
-Miner de Notícias Globais — Atualiza Brasil
+Miner de Notícias Globais — Portal Cerrado
 ============================================
 Coleta notícias de fontes internacionais, classifica, traduz para pt-BR.
 
@@ -53,7 +53,7 @@ class GlobalNewsMiner:
         self.classifier = NewsClassifier()
         self.session = httpx.Client(
             timeout=30.0,
-            headers={"User-Agent": "AtualizaBrasil-Miner/1.0"}
+            headers={"User-Agent": "PortalCerrado-Miner/1.0"}
         )
         self._load_glossary()
     
@@ -110,7 +110,13 @@ class GlobalNewsMiner:
         
         # Embaralha resultado final
         random.shuffle(all_news)
-        
+
+        # Google News RSS (descoberta pt-BR) — sempre incluído, sem randomização
+        try:
+            all_news.extend(self.mine_google_news(limit=8))
+        except Exception as e:
+            logger.error(f"Erro no Google News: {e}")
+
         # Remove duplicatas por URL
         seen = set()
         unique_news = []
@@ -126,7 +132,7 @@ class GlobalNewsMiner:
         """Coleta completa de todos os portais (sem randomização)."""
         all_news = []
         portals = self.config.get('global_miner', {}).get('portals', {})
-        
+
         for category, portal_list in portals.items():
             for portal in portal_list:
                 try:
@@ -134,8 +140,95 @@ class GlobalNewsMiner:
                     all_news.extend(articles)
                 except Exception as e:
                     logger.error(f"Erro ao minerar {portal['name']}: {e}")
-        
+
+        try:
+            all_news.extend(self.mine_google_news(limit=10))
+        except Exception as e:
+            logger.error(f"Erro no Google News: {e}")
+
         return all_news
+
+    # ----------------------------------------------------------
+    # GOOGLE NEWS RSS (pt-BR / Brasil)
+    # ----------------------------------------------------------
+    def mine_google_news(self, limit: int = 8) -> List[Dict[str, Any]]:
+        """Descoberta de pauta via Google News RSS (títulos + veículo + data).
+
+        Os links do Google News são tokens criptografados (CBMi): tenta-se
+        resolver para o publisher via HEAD; se não resolver, mantém o link
+        do Google e o pipeline tenta apurar (fetch_miss é tolerado).
+        """
+        out: List[Dict[str, Any]] = []
+        searches = self.config.get('global_miner', {}).get('google_news', [])
+        for search in searches:
+            rss_url = search.get('rss', '')
+            category = search.get('category', 'general')
+            if not rss_url:
+                continue
+            if search.get('respect_robots', True):
+                try:
+                    from app.robots import is_allowed
+                    if not is_allowed(rss_url):
+                        logger.warning(f"[ROBOTS] Google News bloqueado: {search.get('name')}")
+                        continue
+                except Exception:
+                    pass
+            try:
+                # Google redireciona /headlines/section/topic/* para a URL canônica
+                response = self.session.get(rss_url, follow_redirects=True)
+                response.raise_for_status()
+                feed = feedparser.parse(response.content)
+                for entry in feed.entries[:limit]:
+                    article = self._parse_gnews_entry(entry, search, category)
+                    if article and self._is_relevant(article):
+                        out.append(article)
+                logger.info(f"[GNEWS] {search.get('name')}: {len(feed.entries)} no feed")
+            except Exception as e:
+                logger.error(f"[GNEWS] erro em {search.get('name')}: {e}")
+        logger.info(f"[GNEWS] total aproveitado: {len(out)} artigos")
+        return out
+
+    def _resolve_google_url(self, url: str) -> str:
+        """Tenta resolver o link criptografado para o publisher real."""
+        try:
+            r = self.session.head(url, follow_redirects=True, timeout=10)
+            final = str(r.url)
+            if 'news.google.com' not in final:
+                return final
+        except Exception:
+            pass
+        return url
+
+    def _parse_gnews_entry(self, entry, search: Dict, category: str) -> Optional[Dict]:
+        try:
+            title = entry.get('title', '').strip()
+            if not title:
+                return None
+            link = entry.get('link', '')
+            src = entry.get('source') or {}
+            publisher = (src.get('title') or '').strip() or 'Google News'
+            resolved = self._resolve_google_url(link) if link else link
+            summary = self._clean_html(entry.get('summary', entry.get('description', '')))
+            published = entry.get('published', entry.get('updated', ''))
+            article = {
+                'title': title,
+                'url': resolved,
+                'summary': summary[:1500],
+                'source': publisher,
+                'source_url': (src.get('href') or '').strip() or 'https://news.google.com',
+                'source_lang': 'pt-BR',
+                'category': category,
+                'image_url': self._extract_image(entry),
+                'published_at': self._parse_date(published),
+                'mined_at': datetime.utcnow().isoformat(),
+                'hash': hashlib.md5(link.encode()).hexdigest(),
+                'requires_translation': False,
+                'origin': 'google_news',
+            }
+            return article
+        except Exception as e:
+            logger.error(f"[GNEWS] erro ao parsear: {e}")
+            return None
     
     def _mine_portal(self, portal: Dict, category: str, 
                      limit: int = 10) -> List[Dict[str, Any]]:
@@ -145,14 +238,15 @@ class GlobalNewsMiner:
         if not rss_url:
             return articles
 
-        # Enforce robots.txt for RSS URL
-        try:
-            from app.robots import is_allowed
-            if not is_allowed(rss_url):
-                logger.warning(f"[ROBOTS] RSS bloqueado por robots.txt: {rss_url}")
-                return articles
-        except Exception as e:
-            logger.debug(f"[ROBOTS] check falhou para {rss_url}: {e}")
+        # Enforce robots.txt for RSS URL (opt-out permitido por busca, ex: Google News RSS)
+        if portal.get('respect_robots', True):
+            try:
+                from app.robots import is_allowed
+                if not is_allowed(rss_url):
+                    logger.warning(f"[ROBOTS] RSS bloqueado por robots.txt: {rss_url}")
+                    return articles
+            except Exception as e:
+                logger.debug(f"[ROBOTS] check falhou para {rss_url}: {e}")
         
         try:
             response = self.session.get(rss_url)
@@ -255,6 +349,11 @@ class GlobalNewsMiner:
         title_lower = article['title'].lower()
         summary_lower = article['summary'].lower()
         combined = title_lower + ' ' + summary_lower
+
+        # Google News: já vem em pt-BR, com busca direcionada e veículo —
+        # relevante por construção (o filtro de qualidade/dedup vem depois)
+        if article.get('origin') == 'google_news' and article.get('source'):
+            return True
         
         brazil_kw = filters.get('brazil_keywords', [])
         for kw in brazil_kw:
@@ -473,23 +572,3 @@ def mine_global_news() -> List[Dict]:
     """Função principal."""
     pipeline = MinerPipeline()
     return pipeline.run()
-
-
-# ============================================================
-# EXEMPLO DE USO
-# ============================================================
-if __name__ == "__main__":
-    pipeline = MinerPipeline()
-    articles = pipeline.run()
-    
-    print(f"\n{'='*50}")
-    print(f"RESULTADO: {len(articles)} artigos prontos para publicação")
-    print(f"{'='*50}\n")
-    
-    for i, article in enumerate(articles[:10], 1):
-        c = article.get('classification', {})
-        print(f"{i}. {article.get('title_pt', article['title'])[:60]}...")
-        print(f"   Fonte: {article.get('source')}")
-        print(f"   Score: {c.get('final_score', 0)} ({c.get('priority_tier')})")
-        print(f"   Repórter: {article.get('reporter_slug')}")
-        print()

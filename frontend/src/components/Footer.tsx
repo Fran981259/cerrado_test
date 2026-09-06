@@ -5,7 +5,7 @@ export default function Footer() {
     <footer className="bg-[#1a1a2e] text-zinc-300 mt-16">
       <div className="container-custom py-12 grid gap-8 md:grid-cols-4">
         <div>
-          <div className="text-xl font-black text-white">ATUALIZA<span className="text-[#e63946]">BRASIL</span></div>
+          <div className="text-xl font-black text-white">PORTAL<span className="text-[#e63946]">CERRADO</span></div>
           <p className="mt-3 text-sm leading-relaxed opacity-80">
             Portal de notícias de Mato Grosso do Sul. Política, economia, segurança, agronegócio e tecnologia com apuração 24h.
           </p>

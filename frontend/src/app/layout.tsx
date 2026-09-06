@@ -35,7 +35,7 @@ export const metadata: Metadata = {
   },
   twitter: { card: "summary_large_image" },
   robots: { index: true, follow: true },
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://portalcerrado.com.br"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://100.95.111.24:3000"),
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

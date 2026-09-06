@@ -1,5 +1,5 @@
 """
-Cliente Groq — Atualiza Brasil
+Cliente Groq — Portal Cerrado
 API gratuita com limites generosos.
 
 Modelos disponíveis:
@@ -84,7 +84,7 @@ class GroqClient:
                        reporter_prompt: str,
                        attribution: str,
                        related_sources: list = None) -> Dict:
-        """Reescreve artigo com voz do repórter — versão PROFISSIONAL longa e cruzada."""
+        """Reescreve artigo com voz do repórter — versão PROFISSIONAL enxuta e cruzada."""
         
         title = article.get('title_pt') or article.get('title', '')
         summary = article.get('summary_pt') or article.get('summary', '')
@@ -105,7 +105,7 @@ class GroqClient:
             body_text = "\n".join(f"- {p}" for p in paragraphs)
             body_text = f"\n\nCONTEXTO APURADO NO PORTAL (use como base factual; reescreva com APURAÇÃO PRÓPRIA, NÃO copie):\n{body_text}"
 
-        user_prompt = f"""Reescreva esta notícia em Português Brasileiro com padrão PROFISSIONAL, COMPLETO e LONGO.
+        user_prompt = f"""Reescreva esta notícia em Português Brasileiro com padrão de jornal profissional (pirâmide invertida), COMPLETA e ENXUTA.
 
 TÍTULO ORIGINAL: {title}
 LEAD (resumo): {summary}
@@ -116,15 +116,18 @@ INSTRUÇÕES OBRIGATÓRIAS (REGRA DO SISTEMA):
 1. Reescreva completamente (paráfrase total, NÃO cópia) — apuração própria
 2. Use o CONTEXTO APURADO acima para dar densidade, precisão e riqueza factual ao texto (fatos, números, citações)
 3. PESQUISE E CRUZE as outras fontes listadas acima; confronte dados, confirme fatos e complemente lacunas
-4. Escreva matéria LONGA e COMPLETA: 700-900 palavras (mínimo 700)
-5. Estruture profissionalmente: LEAD forte (o que/quem/quando/onde/por quê) → CONTEXTO/HISTÓRICO → DESENVOLVIMENTO com dados/números → ANÁLISE/IMPACTO para Mato Grosso do Sul → FECHAMENTO com desdobramentos
-6. Inclua dados, estatísticas, citações de autoridades ou especialistas (quando faltar, contextualize com base nas fontes)
-7. Use sua voz editorial característica, linguagem clara e fluida
-8. Cite todas as fontes consultadas ao longo do texto e no rodapé
-9. Termine com: {attribution}
-10. NÃO invente fatos — se faltar dado, diga "segundo apuração" ou "ainda não divulgado"
+4. Escreva matéria LONGA e COMPLETA: 700 a 900 palavras (nunca abaixo de 700)
+5. Estruture como jornal: 1º parágrafo com fato principal + dado + fonte (o que/quem/quando/onde/por quê) → detalhes nos parágrafos seguintes → intertítulo em **negrito** a cada 2 ou 3 parágrafos → fecho com desdobramento concreto. NÃO repita o lead como primeiro parágrafo do corpo
+6. Parágrafos curtos OBRIGATÓRIOS: 2 a 3 frases cada, MÁXIMO 60 palavras por parágrafo. PROIBIDO muros de texto
+7. Cada dado com sua fonte no mesmo parágrafo (ex: segundo dados do Inmet)
+8. Use sua voz editorial característica, linguagem clara e fluida
+9. Cite as fontes pelo nome do veículo ao longo do texto. PROIBIDO bloco de links, rodapé de fontes e qualquer URL no texto (o botão de fonte original é separado)
+10. Termine com: {attribution}
+11. PROIBIDO rótulos de seção no texto (LEAD, APURAÇÃO, CONTEXTO, DESENVOLVIMENTO, DADOS E NÚMEROS). PROIBIDO listas com marcadores salvo quando essencial
+12. LIMPEZA OBRIGATÓRIA: remova linhas de metadados da fonte (datas tipo "Em 03/09/2026 às 13:53", "Atualizado em...", bylines tipo "Por Fulano", nomes de editoria). Converta subtítulos soltos no meio do texto em intertítulos em **negrito**
+13. NÃO invente fatos — se faltar dado, diga "segundo apuração" ou "ainda não divulgado"
 
-REESCRITA LONGA (700-900 palavras):"""
+REESCRITA LONGA (700 a 900 palavras):"""
         
         rewritten = self.complete(
             prompt=user_prompt,

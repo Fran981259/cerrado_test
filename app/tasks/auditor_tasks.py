@@ -1,5 +1,5 @@
 """
-Tarefas de Auditoria — Atualiza Brasil
+Tarefas de Auditoria — Portal Cerrado
 Agente HORUS + Evolução de Personalidade
 """
 

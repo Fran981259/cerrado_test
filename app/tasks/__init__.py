@@ -1,4 +1,4 @@
 """
-Tasks — Atualiza Brasil
+Tasks — Portal Cerrado
 Módulos de tarefas Celery.
 """

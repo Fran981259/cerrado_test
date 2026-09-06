@@ -1,5 +1,5 @@
 """
-Agente Auditor HORUS — Atualiza Brasil
+Agente Auditor HORUS — Portal Cerrado
 ======================================
 O olho que tudo vê. Monitora todos os agentes e repórteres
 para garantir qualidade, consistência e evolução.
@@ -347,21 +347,50 @@ class HorusAuditor:
     
     def watch_reporter_evolution(self, reporter_slug: str) -> Dict:
         """
-        Acompanha a evolução de um repórter específico.
-        Retorna métricas de amadurecimento.
+        Acompanha a evolução de um repórter específico com dados reais.
+        Segue o mesmo padrão de _audit_reporters(): contagens do DB;
+        métricas sem fonte de dados retornam None + not_implemented.
         """
-        # Lê dados de evolução do repórter
-        return {
-            "reporter": reporter_slug,
-            "evolution_stage": "established",  # Estágio atual
-            "months_active": 8,
-            "articles_published": 480,
-            "style_consistency": 0.94,
-            "voice_distinctiveness": 0.89,
-            "audience_loyalty": 0.78,  # Leitores que voltam
-            "engagement_growth": "+15%",
-            "next_milestone": "becoming_signature",
-        }
+        try:
+            from app.database import get_session
+            from app.schema import NewsArticle, Reporter
+            db = get_session()
+            try:
+                rep = db.query(Reporter).filter(Reporter.slug == reporter_slug).first()
+                if not rep:
+                    return {"reporter": reporter_slug, "status": "not_found",
+                            "articles_published": 0, "note": "reporter not in DB"}
+                total = db.query(NewsArticle).filter(NewsArticle.reporter_id == rep.id).count()
+                first = (db.query(NewsArticle.published_at)
+                           .filter(NewsArticle.reporter_id == rep.id,
+                                   NewsArticle.published_at.isnot(None))
+                           .order_by(NewsArticle.published_at.asc()).first())
+                base_date = (first[0] if first and first[0] else None) or rep.birth_date or rep.created_at
+                now = datetime.utcnow()
+                if base_date:
+                    months_active = max(0, (now.year - base_date.year) * 12 + (now.month - base_date.month))
+                else:
+                    months_active = 0
+                return {
+                    "reporter": reporter_slug,
+                    "status": "not_implemented",
+                    "reason": "no engagement/analytics table for style/audience metrics",
+                    "articles_published": total,
+                    "months_active": months_active,
+                    "evolution_stage": rep.personality_stage if hasattr(rep, "personality_stage") else "unknown",
+                    "style_consistency": None,
+                    "voice_distinctiveness": None,
+                    "audience_loyalty": None,
+                    "engagement_growth": None,
+                    "next_milestone": None,
+                    "source": "DB Reporter+NewsArticle",
+                }
+            finally:
+                db.close()
+        except Exception as e:
+            logger.warning(f"[HORUS] watch_reporter_evolution fallback: {e}")
+            return {"reporter": reporter_slug, "status": "not_implemented",
+                    "reason": str(e)[:200]}
 
 
 # ============================================================

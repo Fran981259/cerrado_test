@@ -70,7 +70,7 @@ class LLMClient:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
-            "HTTP-Referer": "https://portalcerrado.com.br",
+            "HTTP-Referer": os.getenv("SITE_URL", "http://100.95.111.24:3000"),
             "X-Title": "Portal Cerrado",
         }
         

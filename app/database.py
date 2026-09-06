@@ -4,6 +4,7 @@ PostgreSQL via SQLAlchemy
 """
 
 import os
+import time
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -16,25 +17,43 @@ from sqlalchemy.pool import QueuePool
 # URL do banco
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://portal_user:portal_pass@localhost:5432/atualiza_brasil"
+    "postgresql://portal_user:portal_pass@localhost:5432/portal_cerrado"
 )
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
 IS_PRODUCTION = ENVIRONMENT == "production"
 
-try:
-    # Tenta PostgreSQL (produção). create_engine é lazy, então checamos com connect.
-    _engine = create_engine(
-        DATABASE_URL,
+
+def _connect_postgres(url: str):
+    retries = int(os.getenv("DATABASE_CONNECT_RETRIES", "3"))
+    delay = float(os.getenv("DATABASE_CONNECT_RETRY_DELAY", "0.5"))
+    last_error = None
+    engine = create_engine(
+        url,
         poolclass=QueuePool,
         pool_size=5,
         max_overflow=10,
         pool_pre_ping=True,
         echo=False,
     )
-    with _engine.connect() as _c:
-        pass
-    engine = _engine
+
+    for attempt in range(retries):
+        try:
+            with engine.connect() as _c:
+                pass
+            return engine
+        except Exception as exc:
+            last_error = exc
+            if attempt < retries - 1:
+                time.sleep(delay)
+
+    if last_error:
+        raise last_error
+    return engine
+
+try:
+    # Tenta PostgreSQL (produção). Em caso de falha transitória, repete antes de cair.
+    engine = _connect_postgres(DATABASE_URL)
     _using_sqlite = False
 except Exception as e:
     if IS_PRODUCTION:
@@ -45,7 +64,7 @@ except Exception as e:
         raise
     # Fallback local (desenvolvimento sem Postgres): usa SQLite.
     import sqlite3
-    _sqlite_file = os.path.join(os.path.dirname(__file__), "..", "data", "atualiza_brasil.db")
+    _sqlite_file = os.path.join(os.path.dirname(__file__), "..", "data", "portal_cerrado.db")
     _sqlite_file = os.path.abspath(_sqlite_file)
     os.makedirs(os.path.dirname(_sqlite_file), exist_ok=True)
     engine = create_engine(

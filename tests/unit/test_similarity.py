@@ -1,4 +1,4 @@
-"""Tests para similaridade check Lei 9.610/98 (item 5) e fallback rewriter (item 6)."""
+"""Tests para similaridade check Lei 9.610/98 e falha fechada do rewriter."""
 import os
 import pytest
 from app.publisher import ArticlePublisher
@@ -70,25 +70,32 @@ def test_similarity_ignores_curiosity():
     db.commit()
     db.close()
 
-def test_rewriter_fallback_returns_empty_when_short():
+def test_rewriter_returns_empty_without_llm():
     from app.rewriter import ArticleRewriter, load_reporters_config
     reporters = load_reporters_config()
     r = reporters["enzo.bianchi"]
     w = ArticleRewriter(r)
-    # Sem body e sem summary suficiente -> deve retornar vazio para retry (não thin content)
+    # Sem LLM, não deve fabricar texto local
     article = {"title": "Teste sem corpo", "summary": "", "url": "https://example.com/x", "body": ""}
     res = w.rewrite(article)
-    assert res["content"] == ""  # abortou para retry
+    assert res["content"] == ""
 
-def test_rewriter_fallback_uses_body_when_long():
+def test_rewriter_returns_empty_even_with_long_body():
     from app.rewriter import ArticleRewriter, load_reporters_config
     reporters = load_reporters_config()
     r = reporters["enzo.bianchi"]
     w = ArticleRewriter(r)
-    long_body = ("Paragrafo real apurado sobre tecnologia com dados e entrevistas. " * 40)
+    long_body = ("Paragrafo real apurado sobre tecnologia com dados e entrevistas. " * 90)
     article = {"title": "Teste com corpo longo para fallback", "summary": "Resumo curto", "url": "https://example.com/y", "body": long_body}
     res = w.rewrite(article)
-    assert len(res["content"].split()) >= 200
-    assert "Paragrafo real" in res["content"]
-    # Não deve conter boilerplate genérico repetido
-    assert "O tema se insere em um cenário mais amplo" not in res["content"]
+    assert res["content"] == ""
+
+def test_rewriter_returns_empty_below_700():
+    from app.rewriter import ArticleRewriter, load_reporters_config
+    reporters = load_reporters_config()
+    r = reporters["enzo.bianchi"]
+    w = ArticleRewriter(r)
+    mid_body = ("Paragrafo real apurado sobre tecnologia com dados. " * 40)
+    article = {"title": "Teste abaixo do piso", "summary": "Resumo curto", "url": "https://example.com/z", "body": mid_body}
+    res = w.rewrite(article)
+    assert res["content"] == ""

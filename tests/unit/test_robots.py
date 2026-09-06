@@ -1,7 +1,59 @@
 """Tests para robots.txt enforcement (item 8)."""
 import os
 from unittest.mock import patch, MagicMock
-from app.robots import is_allowed, _fetch_and_parse
+from app.robots import is_allowed, _fetch_and_parse, _can_fetch_from_text
+
+CANNED_ROBOTS = """User-agent: *
+Disallow: /busca
+Allow: /
+"""
+
+
+def _temp_db(monkeypatch, tmp_path):
+    """Banco SQLite temporário p/ is_allowed (não toca no DATABASE_URL real)."""
+    import sqlalchemy
+    from sqlalchemy.orm import sessionmaker
+    from app.database import Base
+    import app.schema  # noqa: F401 — registra as tabelas no metadata ANTES do create_all
+    db_file = str(tmp_path / "robots_test.db")
+    engine = sqlalchemy.create_engine(f"sqlite:///{db_file}")
+    Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    monkeypatch.setattr("app.database.get_session", lambda: Session())
+    return Session
+
+
+def test_robots_per_path_cache_granularity(monkeypatch, tmp_path):
+    """Regressão item 2: dois paths do mesmo domínio no mesmo cache window
+    retornam resultados diferentes (antes, o 1º path decidia por todos)."""
+    _temp_db(monkeypatch, tmp_path)
+    import app.robots as robots_mod
+    robots_mod.RESPECT_ROBOTS = True
+    with patch("app.robots._fetch_raw", return_value=CANNED_ROBOTS) as mock_fetch:
+        assert is_allowed("https://example.com/noticias/x", user_agent="*") is True
+        assert is_allowed("https://example.com/busca?q=1", user_agent="*") is False
+        # 2ª chamada usa cache de conteúdo (1 fetch só) e ainda diferencia
+        assert is_allowed("https://example.com/noticias/y", user_agent="*") is True
+        assert is_allowed("https://example.com/busca", user_agent="*") is False
+        assert mock_fetch.call_count == 1
+
+
+def test_robots_legacy_row_without_content_refetches(monkeypatch, tmp_path):
+    """Linha legada (só booleano, sem conteúdo) = cache miss, sem crash."""
+    Session = _temp_db(monkeypatch, tmp_path)
+    from app.schema import SourcePortal
+    from datetime import datetime
+    db = Session()
+    db.add(SourcePortal(url="https://legacy.com", name="legacy",
+                        robots_txt_last_fetched=datetime.utcnow(),
+                        robots_txt_allowed=True, robots_txt_content=None))
+    db.commit()
+    db.close()
+    import app.robots as robots_mod
+    robots_mod.RESPECT_ROBOTS = True
+    with patch("app.robots._fetch_raw", return_value=CANNED_ROBOTS) as mock_fetch:
+        assert is_allowed("https://legacy.com/noticias/x", user_agent="*") is True
+        assert mock_fetch.call_count == 1
 
 def test_robots_respects_env_disable():
     with patch.dict(os.environ, {"RESPECT_ROBOTS_TXT": "0"}):

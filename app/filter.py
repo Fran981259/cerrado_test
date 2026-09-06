@@ -1,5 +1,5 @@
 # ============================================================
-# Filtro de Qualidade — Atualiza Brasil
+# Filtro de Qualidade — Portal Cerrado
 # ============================================================
 # Remove duplicatas, conteúdo de baixa qualidade,
 # conteúdo sensível, etc.
@@ -7,6 +7,7 @@
 
 import os
 import re
+import time
 import hashlib
 import logging
 from datetime import datetime
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 # Redis TTL for dedup (7 dias)
 DEDUP_TTL_SECONDS = int(os.getenv("DEDUP_TTL_SECONDS", "604800"))
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 
 def _get_redis():
     try:
@@ -38,16 +39,17 @@ class ContentFilter:
         self.similarity_threshold = similarity_threshold
         self.seen_hashes: Set[str] = set()
         self.seen_titles: List[str] = []
-        # Tenta Redis para persistência cross-run
+        # Tenta Redis para persistência cross-run (sorted sets com expiração por item)
         self._redis = _get_redis()
         self._redis_hash_key = "dedup:hashes"
         self._redis_titles_key = "dedup:titles"
         if self._redis:
             try:
-                # Carrega hashes existentes
-                for h in self._redis.smembers(self._redis_hash_key) or []:
+                self._prune_redis()
+                # Carrega hashes existentes (já podados)
+                for h in self._redis.zrange(self._redis_hash_key, 0, -1) or []:
                     self.seen_hashes.add(h)
-                for t in self._redis.smembers(self._redis_titles_key) or []:
+                for t in self._redis.zrange(self._redis_titles_key, 0, -1) or []:
                     self.seen_titles.append(t)
                 logger.info(f"[DEDUP] Redis carregado: {len(self.seen_hashes)} hashes, {len(self.seen_titles)} títulos")
             except Exception as e:
@@ -119,14 +121,31 @@ class ContentFilter:
         
         return True
     
+    def _prune_redis(self, now: Optional[float] = None) -> None:
+        """Remove entradas mais antigas que DEDUP_TTL_SECONDS (expiração por item).
+
+        Usa sorted set com score = timestamp de inserção: diferente do EXPIRE
+        na chave (que reiniciava o relógio do SET inteiro a cada SADD), cada
+        entrada expira de forma independente.
+        """
+        if not self._redis:
+            return
+        cutoff = (now if now is not None else time.time()) - DEDUP_TTL_SECONDS
+        try:
+            self._redis.zremrangebyscore(self._redis_hash_key, "-inf", cutoff)
+            self._redis.zremrangebyscore(self._redis_titles_key, "-inf", cutoff)
+        except Exception as e:
+            logger.debug(f"[DEDUP] falha ao podar Redis: {e}")
+
     def _is_duplicate(self, article: Dict) -> bool:
         """Detecta se o artigo é duplicata — com persistência Redis."""
         url = article.get('url', '') or ''
         url_hash = hashlib.md5(url.encode()).hexdigest()
-        # Checa Redis primeiro
+        # Poda antes de checar: entradas expiradas não são duplicatas
         if self._redis:
+            self._prune_redis()
             try:
-                if self._redis.sismember(self._redis_hash_key, url_hash):
+                if self._redis.zscore(self._redis_hash_key, url_hash) is not None:
                     return True
             except Exception:
                 pass
@@ -139,10 +158,10 @@ class ContentFilter:
         titles_to_check = self.seen_titles
         if self._redis:
             try:
-                # Pega até 500 títulos mais recentes do Redis
-                redis_titles = self._redis.smembers(self._redis_titles_key) or set()
+                # Pega até 500 títulos mais recentes do Redis (já podados)
+                redis_titles = self._redis.zrevrange(self._redis_titles_key, 0, 499) or []
                 if redis_titles:
-                    titles_to_check = list(redis_titles)[:500]
+                    titles_to_check = list(redis_titles)
             except Exception:
                 pass
         for seen_title in titles_to_check:
@@ -153,15 +172,14 @@ class ContentFilter:
             except Exception:
                 continue
 
-        # Não é duplicata: persiste
+        # Não é duplicata: persiste (score = timestamp p/ expiração por item)
         self.seen_hashes.add(url_hash)
         self.seen_titles.append(title)
         if self._redis:
             try:
-                self._redis.sadd(self._redis_hash_key, url_hash)
-                self._redis.expire(self._redis_hash_key, DEDUP_TTL_SECONDS)
-                self._redis.sadd(self._redis_titles_key, title)
-                self._redis.expire(self._redis_titles_key, DEDUP_TTL_SECONDS)
+                now = time.time()
+                self._redis.zadd(self._redis_hash_key, {url_hash: now})
+                self._redis.zadd(self._redis_titles_key, {title: now})
             except Exception as e:
                 logger.debug(f"[DEDUP] falha ao persistir no Redis: {e}")
 

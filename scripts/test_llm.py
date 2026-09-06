@@ -70,13 +70,13 @@ expected to revolutionize the technology industry."""
         'category': 'tech',
     }
     
-    reporter_prompt = """Você é Enzo Bianchi, repórter de tecnologia do Atualiza Brasil.
+    reporter_prompt = """Você é Enzo Bianchi, repórter de tecnologia do Portal Cerrado.
 Escreva de forma clara, técnica e acessível. Use dados quando disponíveis."""
     
     result = client.rewrite_article(
         article,
         reporter_prompt,
-        "Por Enzo Bianchi, do Atualiza Brasil",
+        "Por Enzo Bianchi, do Portal Cerrado",
         category="tech"
     )
     

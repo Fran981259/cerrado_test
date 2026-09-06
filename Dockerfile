@@ -1,8 +1,8 @@
-# Dockerfile — Atualiza Brasil
+# Dockerfile — Portal Cerrado
 FROM python:3.11-slim
 
 # Labels
-LABEL maintainer="Atualiza Brasil"
+LABEL maintainer="Portal Cerrado"
 LABEL description="Portal automatizado de notícias"
 
 # Variáveis de ambiente

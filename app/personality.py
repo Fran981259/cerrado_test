@@ -1,5 +1,5 @@
 """
-Sistema de Evolução de Personalidade — Atualiza Brasil
+Sistema de Evolução de Personalidade — Portal Cerrado
 ======================================================
 Repórteres digitais evoluem com o tempo, como pessoas reais.
 """

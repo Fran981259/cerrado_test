@@ -2,6 +2,9 @@ name: build-check
 on:
   push:
     branches: [main]
+permissions:
+  contents: read
+  packages: write
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -23,19 +26,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build backend
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: false
-          tags: botgram-atualiza_brasil:latest
+          push: true
+          tags: |
+            ghcr.io/fran981259/botgram-portal_cerrado:latest
+            ghcr.io/fran981259/botgram-portal_cerrado:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Build frontend
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
-          push: false
-          tags: botgram-frontend:latest
+          push: true
+          tags: |
+            ghcr.io/fran981259/botgram-frontend:latest
+            ghcr.io/fran981259/botgram-frontend:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

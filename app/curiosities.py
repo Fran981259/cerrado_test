@@ -1,5 +1,5 @@
 """
-Curiosidades — Atualiza Brasil
+Curiosidades — Portal Cerrado
 ==============================
 Gerador e classificador de curiosidades para distribuição entre segmentos.
 """
@@ -402,29 +402,5 @@ def mix_with_articles(articles: List[Dict], daily_target: int = 50) -> List[Dict
     """Mistura curiosidades com artigos normais."""
     mixer = CuriosityMixer()
     return mixer.inject_curiosities(articles, daily_target)
-
-
-# Demo
-if __name__ == "__main__":
-    print("=" * 60)
-    print("CURIOSIDADES DO DIA — ATUALIZA BRASIL")
-    print("=" * 60)
-    
-    generator = CuriosityGenerator()
-    
-    print("\n📚 Curiosidades Geradas:\n")
-    
-    for cat in CuriosityCategory:
-        curiosity = generator.generate_curiosity(cat)
-        if curiosity:
-            print(f"🗂️ {cat.value.upper()}")
-            print(f"   📰 {curiosity['title']}")
-            print(f"   ✍️  {curiosity['reporter_slug']}")
-            print()
-    
-    print("-" * 60)
-    print("\n📊 Resumo:")
-    all_curiosities = generator.generate_daily_curiosities()
-    print(f"Total: {len(all_curiosities)} curiosidades (1 por categoria)")
     
     print("\n⚡ Curiosidades têm +30% de engajamento!")

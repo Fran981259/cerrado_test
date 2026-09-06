@@ -1,5 +1,5 @@
 """
-Tarefas de Reescrita — Atualiza Brasil
+Tarefas de Reescrita — Portal Cerrado
 VERSÃO PROFISSIONAL: matérias longas (700-900 palavras) + cruzamento de fontes.
 """
 
@@ -71,7 +71,7 @@ def _find_related_sources(article: dict, max_related: int = 3) -> list:
 )
 def rewrite_pending_articles(self):
     """
-    Reescreve artigos em status 'classified' com LLM (Groq) ou fallback local,
+    Reescreve artigos em status 'classified' com LLM (Groq),
     gravando o conteúdo e marcando-os como 'rewritten'.
     Roda a cada 30 minutos.
     """
@@ -79,7 +79,7 @@ def rewrite_pending_articles(self):
 
     from app.database import get_session
     from app.schema import NewsArticle, Reporter
-    from app.rewriter import load_reporters_config, ArticleRewriter
+    from app.rewriter import load_reporters_config
     from datetime import datetime
 
     db = get_session()
@@ -145,23 +145,8 @@ def rewrite_pending_articles(self):
                         related_sources=related,
                     )
                     candidate = result_groq.get("rewritten_content", "")
-                    if candidate and len(candidate.split()) >= 500:
+                    if candidate and len(candidate.split()) >= 700:
                         content = candidate
-
-                if not content:
-                    # Se LLM está configurado, tenta fallback variado; se LLM não está disponível, mantém para retry (não publica thin content)
-                    if not groq.api_key:
-                        logger.info(f"[REWRITE] LLM não configurado e Groq vazio para '{art.title[:40]}' — mantendo como classified para retry")
-                        failed += 1
-                        continue
-                    fallback_rewriter = ArticleRewriter(reporter)
-                    fallback = fallback_rewriter.rewrite(article_data)
-                    content = fallback.get("content", "")
-                    # Fallback agora retorna "" se muito curto/genérico — trata como falha para retry, não publica
-                    if not content or len(content.split()) < 200:
-                        logger.warning(f"[REWRITE] Fallback vazio/curto para '{art.title[:40]}' — mantendo para retry")
-                        failed += 1
-                        continue
 
                 if not content:
                     art.status = "failed"
@@ -199,10 +184,10 @@ def rewrite_pending_articles(self):
 )
 def rewrite_single_article(self, article: dict):
     """
-    Reescreve um único artigo com padrão PROFISSIONAL:
+    Reescreve um único artigo com padrão de jornal:
     - 700-900 palavras
     - Cruzamento com 2-3 fontes do mesmo fato
-    - Estrutura lead → contexto → desenvolvimento → análise MS → fechamento
+    - Estrutura pirâmide invertida + intertítulos
     """
     title = article.get('title', '')[:60]
     logger.info(f"[REWRITE] Reescrevendo (PROFISSIONAL): {title}...")
@@ -225,15 +210,15 @@ def rewrite_single_article(self, article: dict):
             logger.info(f"[REWRITE] {len(related)} fontes relacionadas encontradas para cruzamento")
             article["related_sources"] = related
 
-        # 2. Tenta Groq com prompt profissional longo
+        # 2. Tenta Groq com prompt profissional enxuto
         groq = GroqClient()
         if groq.api_key:
             system_prompt = reporter.get_system_prompt()
             attribution = reporter.attribution
             result = groq.rewrite_article(article, system_prompt, attribution, related_sources=related)
             rewritten_content = result.get("rewritten_content", "")
-            # valida tamanho mínimo profissional (700 ideal, 500 mínimo aceitável)
-            if rewritten_content and len(rewritten_content.split()) >= 500:
+            # valida tamanho profissional longo (700-900 ideal, 700 mínimo)
+            if rewritten_content and len(rewritten_content.split()) >= 700:
                 logger.info(f"[REWRITE] Groq OK — {len(rewritten_content.split())} palavras")
                 # monta artigo final profissional
                 final = {
@@ -262,19 +247,10 @@ def rewrite_single_article(self, article: dict):
                 logger.info(f"[REWRITE] Publicado (Groq profissional): {pub.get('article_id')}")
                 return pub
             else:
-                logger.warning(f"[REWRITE] Groq gerou conteúdo curto ({len(rewritten_content.split()) if rewritten_content else 0} palavras), usando fallback profissional")
+                logger.warning(f"[REWRITE] Groq gerou conteúdo curto ({len(rewritten_content.split()) if rewritten_content else 0} palavras)")
 
-        # 3. Fallback: rewriter local profissional (sem LLM)
-        from app.rewriter import ArticleRewriter
-        rewriter = ArticleRewriter(reporter)
-        fallback = rewriter.rewrite(article)
-        # garante publicação mesmo sem Groq
-        from app.tasks.publish_tasks import publish_single_article
-        fallback["sources"] = fallback.get("source_urls", [])
-        fallback["content"] = fallback.get("content", "")
-        result = publish_single_article(fallback)
-        logger.info(f"[REWRITE] Publicado (fallback profissional): {result.get('article_id')}")
-        return result
+        logger.warning(f"[REWRITE] Groq indisponivel ou curto demais para '{title}' — falhando sem fallback local")
+        raise RuntimeError("Reescrita indisponível sem LLM")
         
     except Exception as e:
         logger.error(f"[REWRITE] Erro: {e}")

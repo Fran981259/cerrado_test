@@ -1,4 +1,4 @@
-# Schema do Banco de Dados — Atualiza Brasil
+# Schema do Banco de Dados — Portal Cerrado
 # Define as tabelas e modelos para o sistema de notícias.
 
 from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, JSON, Boolean
@@ -101,6 +101,9 @@ class SourcePortal(Base):
     robots_txt_url = Column(String(500), nullable=True)
     robots_txt_last_fetched = Column(DateTime, nullable=True)
     robots_txt_allowed = Column(Boolean, default=True)
+    # Conteúdo bruto do robots.txt p/ avaliar can_fetch() por URL (o booleano
+    # acima serve só p/ dashboard; a decisão usa sempre o conteúdo)
+    robots_txt_content = Column(Text, nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)

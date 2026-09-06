@@ -1,14 +1,12 @@
 /**
- * AdSense — placeholder seguro para aprovação.
- * Só renderiza quando NEXT_PUBLIC_ADSENSE_ENABLED=true e tem CLIENT_ID.
- * Antes da aprovação, mostra espaço reservado sem quebrar layout.
+ * AdSense real: só renderiza quando habilitado e configurado.
  */
 export function AdSlot({
   slot,
   format = "auto",
   responsive = true,
   className = "",
-  label = "Publicidade",
+  label,
 }: {
   slot?: string;
   format?: string;
@@ -20,16 +18,7 @@ export function AdSlot({
   const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID;
 
   if (!enabled || !client) {
-    // Placeholder discreto em dev / antes da aprovação
-    return (
-      <div
-        className={`flex items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-zinc-50 text-[11px] font-semibold tracking-widest text-zinc-400 ${className}`}
-        style={{ minHeight: 90 }}
-        aria-label={label}
-      >
-        {label}
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -40,6 +29,7 @@ export function AdSlot({
       data-ad-slot={slot}
       data-ad-format={format}
       data-full-width-responsive={responsive ? "true" : "false"}
+      aria-label={label}
     />
   );
 }

@@ -32,7 +32,7 @@ export function NewsCard({ article, variant = "default" }: { article: Article; v
             </span>
             <div className="absolute bottom-0 p-6 text-white">
               <h2 className="text-3xl sm:text-4xl font-display font-bold leading-tight line-clamp-3">{article.title}</h2>
-              {article.summary && <p className="mt-3 text-sm opacity-90 line-clamp-2 max-w-3xl">{article.summary}</p>}
+              {article.summary && <p className="mt-3 text-sm opacity-90 line-clamp-2 max-w-3xl">{article.summary.replace(/\*\*/g, "")}</p>}
               <div className="mt-4 flex items-center gap-2 text-xs opacity-90">
                 <span className="font-bold border-r border-white/30 pr-2">{reporter.name}</span>
                 <span>{formatDate(article.published_at)}</span>
@@ -76,7 +76,7 @@ export function NewsCard({ article, variant = "default" }: { article: Article; v
         <Link href={href} target={isExternal ? "_blank" : undefined}>
           <h3 className="line-clamp-3 text-lg font-display font-bold leading-tight text-text-primary group-hover:text-accent-soil">{article.title}</h3>
         </Link>
-        {article.summary && <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-text-muted">{article.summary}</p>}
+        {article.summary && <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-text-muted">{article.summary.replace(/\*\*/g, "")}</p>}
         <div className="mt-auto pt-4 flex items-center justify-between text-xs text-text-muted">
           <span className="font-bold">{reporter.name}</span>
           <span>{formatDate(article.published_at)}</span>

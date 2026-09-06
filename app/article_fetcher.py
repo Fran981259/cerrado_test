@@ -1,5 +1,5 @@
 """
-Fetcher de Artigos de Alta Qualidade — Atualiza Brasil
+Fetcher de Artigos de Alta Qualidade — Portal Cerrado
 Extrai a PÁGINA REAL de cada matéria (não apenas o card da listagem):
 - título limpo (JSON-LD / OG / h1)
 - lead/resumo (meta description / JSON-LD)
@@ -63,6 +63,11 @@ class ArticleFetcher:
         try:
             resp = self.session.get(url, timeout=self.TIMEOUT, allow_redirects=True)
             resp.raise_for_status()
+            # Evita mojibake (Ã£): quando o servidor omite o charset, o requests
+            # assume latin1 e corrompe acentos — usa detecção real nesses casos
+            ctype = resp.headers.get("Content-Type", "")
+            if "charset" not in ctype.lower() or "iso-8859-1" in ctype.lower():
+                resp.encoding = resp.apparent_encoding or "utf-8"
             html = resp.text
             soup = BeautifulSoup(html, "html.parser")
 
@@ -416,7 +421,12 @@ class ArticleFetcher:
             r"Esporte|Cultura|Educação|Agronegócio|Segurança)("
             r"(?=[A-ZÁÉÍÓÚÂÊÔÀ]))", "", text, flags=re.IGNORECASE
         )
-        # remove palavras duplicadas consecutivas (falha de scraping)
+        # remove sufixo de veículo grudado no título ("Notícia - O Estado Online")
+        text = re.sub(
+            r"\s*[-–—|/]\s*(O Estado Online|G1( MS)?|MS News|MS Todo Dia|"
+            r"Agência( de Notícias)? MS|MS Notícias|Correio do Estado|"
+            r"Campo Grande News|UOL)\s*$", "", text, flags=re.IGNORECASE
+        )
         text = re.sub(r"\b(\w{4,})\s+\1\b", r"\1", text, flags=re.IGNORECASE)
         return text.strip()
 

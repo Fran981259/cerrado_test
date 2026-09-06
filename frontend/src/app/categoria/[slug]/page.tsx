@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const cat = getCategory(slug);
   return {
-    title: `${cat.label} | Atualiza Brasil`,
+    title: `${cat.label} | Portal Cerrado`,
     description: `Notícias de ${cat.label} em Mato Grosso do Sul`,
   };
 }

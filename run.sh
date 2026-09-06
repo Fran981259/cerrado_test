@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-# Executa o Atualiza Brasil (dev)
+# Executa o Portal Cerrado (dev)
 # Inicia: API (com agendador local), e opcionalmente Frontend.
 # Celery/Redis são opcionais — sem eles, o agendador embutido
 # mantém as notícias atualizadas a cada 30 min.

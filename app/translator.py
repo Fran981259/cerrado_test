@@ -1,5 +1,5 @@
 """
-Tradutor de Notícias — Atualiza Brasil
+Tradutor de Notícias — Portal Cerrado
 Tradução para Português Brasileiro usando LLM.
 """
 
@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 
 class NewsTranslator:
     """Tradutor de notícias para pt-BR."""
-    
     def __init__(self, llm_client: LLMClient = None):
         self.llm = llm_client or LLMClient()
     
@@ -41,7 +40,7 @@ class NewsTranslator:
             return self._translate_with_llm(article)
         except Exception as e:
             logger.error(f"Erro na tradução: {e}")
-            return self._translate_fallback(article)
+            raise
     
     def _translate_with_llm(self, article: Dict) -> Dict:
         """Traduz usando LLM com prompt especializado."""
@@ -86,16 +85,4 @@ REGRAS:
             'translated_at': article.get('translated_at') or __import__('datetime').datetime.utcnow().isoformat(),
             'translation_method': 'llm',
             'llm_model': self.llm.model,
-        }
-    
-    def _translate_fallback(self, article: Dict) -> Dict:
-        """Fallback quando LLM não disponível."""
-        logger.warning("Usando tradução fallback (sem LLM)")
-        return {
-            **article,
-            'title_pt': article['title'],
-            'summary_pt': article['summary'],
-            'translated_at': __import__('datetime').datetime.utcnow().isoformat(),
-            'translation_method': 'fallback',
-            'needs_review': True,
         }

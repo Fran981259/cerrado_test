@@ -1,5 +1,5 @@
 """
-Teste COMPLETO do Backend — Atualiza Brasil
+Teste COMPLETO do Backend — Portal Cerrado
 Testa TODOS os módulos SEM precisar de DB.
 """
 
@@ -160,7 +160,7 @@ Escreva de forma clara e envolvente."""
             result = client.rewrite_article(
                 article,
                 reporter_prompt,
-                "Por Enzo Bianchi, do Atualiza Brasil"
+                "Por Enzo Bianchi, do Portal Cerrado"
             )
             
             if result.get('rewritten_content'):
@@ -320,7 +320,7 @@ def test_8_auditor():
 
 def main():
     print("\n" + "🧪"*30)
-    print("   TESTE COMPLETO — ATUALIZA BRASIL")
+    print("   TESTE COMPLETO — PORTAL CERRADO")
     print("🧪"*30)
     
     # 1. Scanner

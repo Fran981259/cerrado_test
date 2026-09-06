@@ -22,7 +22,7 @@ orchestrator:
     ttl_seconds: 3600
 
 database:
-  url: "postgresql://portal_user:portal_pass@postgres:5432/atualiza_brasil"
+  url: "postgresql://portal_user:portal_pass@postgres:5432/portal_cerrado"
   pool_size: 5
   echo: false  # True para debug
 

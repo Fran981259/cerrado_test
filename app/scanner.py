@@ -1,5 +1,5 @@
 """
-Scanner REAL de Notícias — Atualiza Brasil
+Scanner REAL de Notícias — Portal Cerrado
 Coleta headlines de portais brasileiros via HTTP.
 """
 
@@ -40,9 +40,9 @@ class RealPortalScanner:
             }
         },
         {
-            "name": "Agência de Notícias MS",
-            "url": "https://www.agenciadenoticias.ms.gov.br",
-            "default_category": "politics",
+            "name": "G1 MS",
+            "url": "https://g1.globo.com/ms/",
+            "default_category": "general",
             "selectors": {
                 "article": "article, .post, .noticia",
                 "title": "h1, h2, h3, .title",
@@ -202,6 +202,10 @@ class RealPortalScanner:
         try:
             response = self.session.get(url, timeout=15, allow_redirects=True)
             response.raise_for_status()
+            # Anti-mojibake: charset ausente => requests chuta latin1 e quebra acentos
+            ctype = response.headers.get("Content-Type", "")
+            if "charset" not in ctype.lower() or "iso-8859-1" in ctype.lower():
+                response.encoding = response.apparent_encoding or "utf-8"
             
             soup = BeautifulSoup(response.content, "html.parser")
             articles = self._extract_articles(soup, portal, url)
@@ -270,10 +274,17 @@ class RealPortalScanner:
             if not title or len(title) < 10:
                 return None
             
-            href = link["href"]
-            if href.startswith("/"):
+            href = link["href"].strip()
+            if href.startswith(("http://", "https://")):
+                pass
+            elif href.startswith("//"):
+                href = "https:" + href
+            elif href.startswith("/"):
                 href = urljoin(base_url, href)
-            elif not href.startswith("http"):
+            elif re.match(r"^[a-zA-Z0-9][a-zA-Z0-9_\-./?=&%#]*$", href):
+                # relativa sem barra inicial ("noticias/123-titulo")
+                href = urljoin(base_url.rstrip("/") + "/", href)
+            else:
                 return None
             
             if any(skip in href.lower() for skip in ["/login", "/cadastro", "/contato", "/sobre", "/privacy", "/termos", "/search", "/feed", "/rss"]):

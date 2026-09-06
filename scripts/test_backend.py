@@ -1,5 +1,5 @@
 """
-Script de Teste — Atualiza Brasil
+Script de Teste — Portal Cerrado
 Testa o pipeline completo: scan → classify → filter → rewrite → publish
 """
 
@@ -325,7 +325,7 @@ def test_curiosities():
 
 def main():
     print("\n" + "="*60)
-    print("🔬 TESTE COMPLETO — ATUALIZA BRASIL")
+    print("🔬 TESTE COMPLETO — PORTAL CERRADO")
     print("="*60)
     
     results = []

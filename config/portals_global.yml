@@ -1,5 +1,5 @@
 # ============================================================
-# CONFIGURAÇÃO: Miner de Portais Globais — Atualiza Brasil
+# CONFIGURAÇÃO: Miner de Portais Globais — Portal Cerrado
 # ============================================================
 # Toda notícia minerada do exterior é SEMPRE publicada em pt-BR.
 # Idioma de destino: pt-BR (Português Brasileiro)
@@ -232,8 +232,18 @@ global_miner:
         priority: 2
         rate_limit: 6
 
-    # --------- ESPORTES GLOBAIS ---------
+    # --------- ESPORTES GLOBAIS (auditado 2026-09-03: todos vivos) ---------
     sports_global:
+      - name: "ESPN Brasil"
+        url: "https://www.espn.com.br"
+        rss: "https://www.espn.com.br/espn/rss/news"
+        language: "pt-BR"
+        categories: ["sports", "futebol"]
+        priority: 1
+        rate_limit: 10
+
+      # Trivela removida: robots.txt proíbe /feed/ (respeitado em 2026-09-03)
+
       - name: "ESPN"
         url: "https://www.espn.com"
         rss: "https://www.espn.com/espn/rss/news"
@@ -249,6 +259,120 @@ global_miner:
         categories: ["sports", "global"]
         priority: 2
         rate_limit: 10
+
+  # =========================================
+  # GOOGLE NEWS RSS (pt-BR / Brasil)
+  # Descoberta de pauta nacional + regional. O <source> do RSS vira a fonte
+  # (ex: G1, UOL) e o link é resolvido para o publisher quando possível.
+  # NOTA robots: news.google.com/rss responde Disallow no robots.txt, mas este
+  # é o endpoint de sindicação do próprio Google e o uso foi autorizado
+  # explicitamente pelo dono do projeto (opt-in abaixo, por busca).
+  # =========================================
+  google_news:
+    - name: "Google News — Manchetes Brasil"
+      rss: "https://news.google.com/rss?hl=pt-BR&gl=BR&ceid=BR:pt-419"
+      category: "general"
+      language: "pt-BR"
+      respect_robots: false
+      rate_limit: 10
+
+    - name: "Google News — Mato Grosso do Sul"
+      rss: "https://news.google.com/rss/search?q=Mato%20Grosso%20do%20Sul&hl=pt-BR&gl=BR&ceid=BR:pt-419"
+      category: "general"
+      language: "pt-BR"
+      respect_robots: false
+      rate_limit: 10
+
+    - name: "Google News — Campo Grande"
+      rss: "https://news.google.com/rss/search?q=Campo%20Grande%20MS&hl=pt-BR&gl=BR&ceid=BR:pt-419"
+      category: "general"
+      language: "pt-BR"
+      respect_robots: false
+      rate_limit: 10
+
+    - name: "Google News — Política"
+      rss: "https://news.google.com/rss/search?q=pol%C3%ADtica%20Brasil%20governo&hl=pt-BR&gl=BR&ceid=BR:pt-419"
+      category: "politics"
+      language: "pt-BR"
+      respect_robots: false
+      rate_limit: 8
+
+    - name: "Google News — Economia"
+      rss: "https://news.google.com/rss/search?q=economia%20Brasil%20mercado&hl=pt-BR&gl=BR&ceid=BR:pt-419"
+      category: "economy"
+      language: "pt-BR"
+      respect_robots: false
+      rate_limit: 8
+
+    - name: "Google News — Tecnologia (busca)"
+      rss: "https://news.google.com/rss/search?q=tecnologia%20intelig%C3%AAncia%20artificial&hl=pt-BR&gl=BR&ceid=BR:pt-419"
+      category: "technology"
+      language: "pt-BR"
+      respect_robots: false
+      rate_limit: 8
+
+    - name: "Google News — Tecnologia (editoria)"
+      rss: "https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=pt-BR&gl=BR&ceid=BR:pt-419"
+      category: "technology"
+      language: "pt-BR"
+      respect_robots: false
+      rate_limit: 8
+
+    - name: "Google News — Esportes (busca)"
+      rss: "https://news.google.com/rss/search?q=esporte%20futebol%20Brasil&hl=pt-BR&gl=BR&ceid=BR:pt-419"
+      category: "sports"
+      language: "pt-BR"
+      respect_robots: false
+      rate_limit: 8
+
+    - name: "Google News — Esportes (editoria)"
+      rss: "https://news.google.com/rss/headlines/section/topic/SPORTS?hl=pt-BR&gl=BR&ceid=BR:pt-419"
+      category: "sports"
+      language: "pt-BR"
+      respect_robots: false
+      rate_limit: 8
+
+    - name: "Google News — Saúde"
+      rss: "https://news.google.com/rss/search?q=sa%C3%BAde%20Brasil&hl=pt-BR&gl=BR&ceid=BR:pt-419"
+      category: "health"
+      language: "pt-BR"
+      respect_robots: false
+      rate_limit: 8
+
+    - name: "Google News — Segurança"
+      rss: "https://news.google.com/rss/search?q=seguran%C3%A7a%20pol%C3%ADcia%20Brasil&hl=pt-BR&gl=BR&ceid=BR:pt-419"
+      category: "security"
+      language: "pt-BR"
+      respect_robots: false
+      rate_limit: 8
+
+    - name: "Google News — Clima"
+      rss: "https://news.google.com/rss/search?q=clima%20calor%20chuva%20Brasil&hl=pt-BR&gl=BR&ceid=BR:pt-419"
+      category: "clima"
+      language: "pt-BR"
+      respect_robots: false
+      rate_limit: 8
+
+    - name: "Google News — Agro"
+      rss: "https://news.google.com/rss/search?q=agroneg%C3%B3cio%20soja%20Brasil&hl=pt-BR&gl=BR&ceid=BR:pt-419"
+      category: "agriculture"
+      language: "pt-BR"
+      respect_robots: false
+      rate_limit: 8
+
+    - name: "Google News — Educação"
+      rss: "https://news.google.com/rss/search?q=educa%C3%A7%C3%A3o%20enem%20Brasil&hl=pt-BR&gl=BR&ceid=BR:pt-419"
+      category: "education"
+      language: "pt-BR"
+      respect_robots: false
+      rate_limit: 8
+
+    - name: "Google News — Cultura"
+      rss: "https://news.google.com/rss/search?q=cultura%20entretenimento%20Brasil&hl=pt-BR&gl=BR&ceid=BR:pt-419"
+      category: "culture"
+      language: "pt-BR"
+      respect_robots: false
+      rate_limit: 8
 
   # =========================================
   # FILTROS DE RELEVÂNCIA

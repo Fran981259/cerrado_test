@@ -1,5 +1,5 @@
 """
-Tarefas de Publicação — Atualiza Brasil
+Tarefas de Publicação — Portal Cerrado
 VERSÃO REAL - Publica artigos no banco de dados.
 """
 

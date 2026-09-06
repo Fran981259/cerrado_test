@@ -1,5 +1,5 @@
 """
-Agente Reescritor — Atualiza Brasil
+Agente Reescritor — Portal Cerrado
 Responsável por reescrever notícias com a voz de cada repórter digital.
 """
 
@@ -59,8 +59,6 @@ class ArticleRewriter:
         
     def rewrite(self, raw_article: Dict[str, Any]) -> Dict[str, Any]:
         """Reescreve um artigo usando a voz do repórter."""
-        
-        # Simulação da reescrita (em produção, usar LLM via API)
         rewritten_content = self._generate_rewritten_content(raw_article)
         
         # Construir artigo final
@@ -80,62 +78,10 @@ class ArticleRewriter:
         return final_article
     
     def _generate_rewritten_content(self, raw: Dict[str, Any]) -> str:
-        """Gera conteúdo PROFISSIONAL longo (fallback quando LLM offline)."""
-
+        """Sem LLM, nao fabrica texto local."""
         title = raw.get('title', '')
-        summary = raw.get('summary', '')
-        source_url = raw.get('url', '')
-        source_name = self._extract_source_name(source_url)
-        related = raw.get('related_sources', [])
-        body = raw.get('body', '') or ''
-
-        # Usa os parágrafos reais apurados no portal como base factual
-        paragraphs = [p for p in (body or "").split("\n\n") if p.strip()][:12]
-        contexto_fatos = ""
-        if paragraphs:
-            contexto_fatos = "\n\nAPURAÇÃO — " + " ".join(paragraphs[:6])
-        elif summary:
-            contexto_fatos = f"\n\nAPURAÇÃO — {summary}"
-
-        # Monta bloco de fontes cruzadas
-        fontes_cruzadas = ""
-        if related:
-            fontes_cruzadas = "\n\nFontes cruzadas consultadas:\n"
-            for rs in related[:3]:
-                fontes_cruzadas += f"- {rs.get('title','')} — {rs.get('source','')} ({rs.get('url','')})\n"
-        else:
-            fontes_cruzadas = f"\n\nEm apuração complementar, nossa equipe cruzou dados com outros portais regionais para ampliar o contexto.\n"
-
-        # Fallback sem LLM: usa APENAS conteúdo apurado, sem boilerplate genérico repetido.
-        # Se não há corpo apurado suficiente, retorna vazio para retry (evita thin content AdSense)
-        if not contexto_fatos and not summary:
-            logger.warning(f"[REWRITER] Fallback sem LLM e sem corpo para '{title[:50]}' — abortando para retry")
-            return ""
-        if paragraphs and len(" ".join(paragraphs).split()) < 80 and not summary:
-            logger.warning(f"[REWRITER] Corpo muito curto ({len(' '.join(paragraphs).split())} palavras) — abortando fallback")
-            return ""
-
-        # Monta fallback variado por artigo, usando apenas fatos apurados + lead
-        # Não repete boilerplate verbatim; cada artigo tem lead + apuração + fontes cruzadas + assinatura
-        partes = [title, "", f"LEAD — {summary}"]
-        if contexto_fatos:
-            partes.append(contexto_fatos)
-        # Desenvolvimento com base no summary expandido, sem frase genérica fixa
-        if summary:
-            partes.append(f"APURAÇÃO — {summary}")
-        if fontes_cruzadas and related:
-            partes.append(fontes_cruzadas.strip())
-        partes.append(f"Fontes consultadas: {source_name} ({source_url}){''.join([f', {r.get('source','')} ({r.get('url','')})' for r in related[:3]])}")
-        partes.append(self.reporter.attribution)
-        # Filtra vazios e junta
-        content = "\n\n".join(p for p in partes if p and p.strip())
-        # Se ainda ficou curto (<200 palavras), não publica — deixa para retry com LLM
-        if len(content.split()) < 200:
-            logger.warning(f"[REWRITER] Fallback gerou apenas {len(content.split())} palavras para '{title[:40]}' — considerado curto, abortando")
-            return ""
-        return content
-        
-        return content
+        logger.warning(f"[REWRITER] sem LLM para '{title[:50]}' — conteúdo vazio por design")
+        return ""
     
     def _extract_source_name(self, url: str) -> str:
         """Extrai o nome do portal da URL."""
@@ -199,20 +145,3 @@ def rewrite_for_category(category: str, raw_article: Dict[str, Any]) -> Dict[str
         
     rewriter = ArticleRewriter(reporter)
     return rewriter.rewrite(raw_article)
-
-
-# Exemplo de uso
-if __name__ == "__main__":
-    # Teste rápido
-    sample_article = {
-        'title': 'Nova tecnologia agrícola aumenta produtividade em 30%',
-        'url': 'https://www.msnews.com.br/noticia/tecnologia-agricola',
-        'summary': 'Pesquisadores de Campo Grande anunciam nova técnica'
-    }
-    
-    reporters = load_reporters_config()
-    tech_reporter = reporters['enzo.bianchi']
-    rewriter = ArticleRewriter(tech_reporter)
-    
-    result = rewriter.rewrite(sample_article)
-    print(json.dumps(result, indent=2, ensure_ascii=False))
