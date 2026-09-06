@@ -45,6 +45,13 @@ VOZ EDITORIAL:
 REGRAS EDITORIAIS:
 {rules_text}
 
+CRITÉRIOS DE REDAÇÃO:
+- Use o gancho apenas como referência, nunca como frase pronta.
+- Evite fórmulas previsíveis como "em meio a", "nessa linha", "vale lembrar" e "diante disso" quando não forem necessárias.
+- Varie a abertura dos parágrafos e a cadência das frases.
+- Prefira cortes de edição naturais a explicações genéricas.
+- Faça o texto soar como repórter humano, não como roteiro de modelo.
+
 ASSINATURA:
 {self.attribution}"""
 

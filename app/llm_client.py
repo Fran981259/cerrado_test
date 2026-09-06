@@ -147,12 +147,13 @@ REQUISITOS EDITORIAIS:
 2. Use o contexto factual para ampliar precisão e densidade.
 3. Cruze com as fontes relacionadas quando existirem.
 4. Escreva 700 a 900 palavras.
-5. Abra com o fato principal + dado + fonte.
+5. Abra com um fato concreto, sem lead genérico.
 6. Use parágrafos curtos, 2 a 3 frases, com ritmo variado.
-7. Evite linguagem engessada, clichês e aparência de texto gerado por IA.
-8. Não invente fatos, não use listas, não use blocos de links, não use URLs no corpo.
-9. Conclua com desdobramento concreto.
-10. Termine com: {attribution}
+7. Alterne frases curtas e médias; corte repetições e lugares-comuns.
+8. Evite linguagem engessada, clichês e aparência de texto gerado por IA.
+9. Não invente fatos, não use listas, não use blocos de links, não use URLs no corpo.
+10. Conclua com desdobramento concreto.
+11. Termine com: {attribution}
 
 REESCRITA:"""
 

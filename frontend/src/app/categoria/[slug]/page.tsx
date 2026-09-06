@@ -15,10 +15,18 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const base = process.env.NEXT_PUBLIC_SITE_URL || "http://100.95.111.24:3000";
   const cat = getCategory(slug);
   return {
     title: `${cat.label} | Portal Cerrado`,
     description: `Notícias de ${cat.label} em Mato Grosso do Sul`,
+    alternates: { canonical: `${base}/categoria/${slug}` },
+    openGraph: {
+      title: `${cat.label} | Portal Cerrado`,
+      description: `Notícias de ${cat.label} em Mato Grosso do Sul`,
+      url: `${base}/categoria/${slug}`,
+      type: "website",
+    },
   };
 }
 

@@ -12,13 +12,21 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
+  const base = process.env.NEXT_PUBLIC_SITE_URL || "http://100.95.111.24:3000";
   try {
     const article = await fetchArticleBySlug(slug);
     if (!article) return { title: "Notícia não encontrada" };
     return {
       title: article.title,
       description: article.summary || article.title,
-      openGraph: { title: article.title, description: article.summary, type: "article" },
+      alternates: { canonical: `${base}/noticia/${slug}` },
+      openGraph: {
+        title: article.title,
+        description: article.summary,
+        type: "article",
+        url: `${base}/noticia/${slug}`,
+      },
+      twitter: { card: "summary_large_image", title: article.title, description: article.summary || article.title },
     };
   } catch {
     return { title: "Portal Cerrado" };
@@ -51,9 +59,26 @@ export default async function NoticiaPage({ params }: { params: Promise<{ slug: 
   const bodyHtml = formatArticleContent(article.content || "", article.summary || "", article.title || "");
   const minutes = readingTimeMinutes(article.content || article.summary || "");
   const reporterSlug = article.reporter_slug || "";
+  const base = process.env.NEXT_PUBLIC_SITE_URL || "http://100.95.111.24:3000";
+  const canonicalUrl = `${base}/noticia/${article.slug || slug}`;
+  const updatedAt = (article as { updated_at?: string }).updated_at;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "NewsArticle",
+    headline: article.title,
+    description: article.summary || article.title,
+    datePublished: article.published_at || article.created_at || undefined,
+    dateModified: updatedAt || article.published_at || article.created_at || undefined,
+    author: reporter ? { "@type": "Person", name: reporter.name } : undefined,
+    publisher: { "@type": "Organization", name: "Portal Cerrado" },
+    mainEntityOfPage: canonicalUrl,
+    image: img,
+    url: canonicalUrl,
+  };
 
   return (
     <div className="container-custom py-8 max-w-6xl">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-zinc-600 hover:text-[#e63946]">← Voltar</Link>
 
       <div className="mt-6 grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">

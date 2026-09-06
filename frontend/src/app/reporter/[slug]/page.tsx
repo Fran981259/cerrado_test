@@ -9,9 +9,20 @@ export const revalidate = 300;
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
+  const base = process.env.NEXT_PUBLIC_SITE_URL || "http://100.95.111.24:3000";
   const r = REPORTERS[slug];
   if (!r) return { title: "Repórter não encontrado" };
-  return { title: `${r.name} — ${r.beat}`, description: r.bio };
+  return {
+    title: `${r.name} — ${r.beat}`,
+    description: r.bio,
+    alternates: { canonical: `${base}/reporter/${slug}` },
+    openGraph: {
+      title: `${r.name} — ${r.beat}`,
+      description: r.bio,
+      url: `${base}/reporter/${slug}`,
+      type: "profile",
+    },
+  };
 }
 
 export default async function ReporterPage({ params }: { params: Promise<{ slug: string }> }) {
