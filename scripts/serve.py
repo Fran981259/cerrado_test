@@ -349,7 +349,7 @@ def generate_html(articles):
     
     <footer class="footer">
         <p>Portal Cerrado — {datetime.now().strftime('%d/%m/%Y %H:%M')}</p>
-        <p>Powered by AI • Groq • Python</p>
+        <p>Powered by AI • Gemini/OpenAI • Python</p>
     </footer>
 </body>
 </html>"""

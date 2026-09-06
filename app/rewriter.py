@@ -1,12 +1,10 @@
-"""
-Agente Reescritor — Portal Cerrado
-Responsável por reescrever notícias com a voz de cada repórter digital.
-"""
+"""Agente Reescritor — Portal Cerrado."""
 
-import json
 import logging
-from typing import Dict, List, Any, Optional
 from datetime import datetime
+from typing import Any, Dict, Optional
+
+from app.llm_client import LLMClient
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -54,8 +52,9 @@ ASSINATURA:
 class ArticleRewriter:
     """Agente que reescreve artigos com a voz do repórter."""
     
-    def __init__(self, reporter: ReporterProfile):
+    def __init__(self, reporter: ReporterProfile, llm_client: Optional[LLMClient] = None):
         self.reporter = reporter
+        self.llm = llm_client or LLMClient()
         
     def rewrite(self, raw_article: Dict[str, Any]) -> Dict[str, Any]:
         """Reescreve um artigo usando a voz do repórter."""
@@ -73,15 +72,50 @@ class ArticleRewriter:
             'attribution': self.reporter.attribution,
             'original_summary': raw_article.get('summary', ''),
             'rewritten_at': datetime.utcnow().isoformat(),
+            'llm_provider': getattr(self.llm, 'provider', None),
+            'llm_model': getattr(self.llm, 'model', None),
         }
         
         return final_article
     
     def _generate_rewritten_content(self, raw: Dict[str, Any]) -> str:
-        """Sem LLM, nao fabrica texto local."""
+        """Reescreve com LLM; sem chave, não inventa texto local."""
+        if not getattr(self.llm, 'api_key', None):
+            title = raw.get('title', '')
+            logger.warning(f"[REWRITER] sem LLM para '{title[:50]}' — conteúdo vazio por design")
+            return ""
+
         title = raw.get('title', '')
-        logger.warning(f"[REWRITER] sem LLM para '{title[:50]}' — conteúdo vazio por design")
-        return ""
+        summary = raw.get('summary', '')
+        body = raw.get('body', '')
+        url = raw.get('url', '')
+        source = raw.get('source', 'Portal de Notícias')
+
+        prompt = f"""Reescreva esta notícia em Português Brasileiro com voz editorial humana, sem cara de IA.
+
+TÍTULO: {title}
+LEAD: {summary}
+FONTE: {source}
+URL: {url}
+CORPO BRUTO:\n{body}
+
+REQUISITOS:
+- Abra com o fato principal e um dado concreto.
+- Use parágrafos curtos e ritmo variado.
+- Evite clichês, fórmulas repetidas e frases genéricas.
+- Não use rótulos de seção, listas ou blocos de links.
+- Não invente fatos.
+- Escreva entre 700 e 900 palavras.
+- Termine com a assinatura da redação.
+
+REESCRITA:"""
+
+        return self.llm.complete(
+            prompt=prompt,
+            system_prompt=self.reporter.get_system_prompt(),
+            max_tokens=3000,
+            temperature=0.65,
+        )
     
     def _extract_source_name(self, url: str) -> str:
         """Extrai o nome do portal da URL."""

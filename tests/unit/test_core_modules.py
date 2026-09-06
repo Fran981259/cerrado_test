@@ -1,4 +1,4 @@
-"""Tests para core modules não cobertos: scanner, miner, article_fetcher, groq, database (P4.12)."""
+"""Tests para core modules não cobertos: scanner, miner, article_fetcher, llm, database (P4.12)."""
 import os
 from unittest.mock import patch, MagicMock
 import pytest
@@ -50,15 +50,15 @@ def test_article_fetcher_extracts_body():
     # Deve extrair algo
     assert "Paragrafo" in body or body == ""
 
-def test_groq_client_complete_without_key():
-    from app.groq_client import GroqClient
-    with patch.dict(os.environ, {"GROQ_API_KEY": ""}):
-        c = GroqClient(api_key="")
+def test_llm_client_complete_without_key():
+    from app.llm_client import LLMClient
+    with patch.dict(os.environ, {"GEMINI_API_KEY": "", "OPENAI_API_KEY": ""}, clear=False):
+        c = LLMClient(api_key="", provider="gemini")
         assert c.complete("hello") == ""
 
-def test_groq_client_rewrite_article_no_api_key():
-    from app.groq_client import GroqClient
-    c = GroqClient(api_key="test")
+def test_llm_client_rewrite_article_no_api_key():
+    from app.llm_client import LLMClient
+    c = LLMClient(api_key="test", provider="gemini")
     c.api_key = ""  # force no key
     res = c.rewrite_article({"title": "T", "summary": "S", "source": "S", "url": "http://ex.com", "body": "b"}, "prompt", "attr")
     # Deve retornar dict com rewritten_content vazio
@@ -75,14 +75,9 @@ def test_database_init_creates_tables():
     assert isinstance(cnt, int)
     db.close()
 
-def test_llm_client_free_models_are_real():
-    from app.llm_client import FREE_MODELS
-    # Verifica que não há mais modelos hallucinated
-    for k, v in FREE_MODELS.items():
-        assert "inclusionai/ling-3.0" not in v
-        assert "dots-studio/dots-3" not in v
-        assert ":free" in v
-        assert "/" in v
+def test_llm_client_supports_only_gemini_and_openai():
+    from app.llm_client import SUPPORTED_PROVIDERS
+    assert SUPPORTED_PROVIDERS == {"gemini", "openai"}
 
 def test_publisher_auth_dependency(monkeypatch):
     # Testa que require_api_key funciona

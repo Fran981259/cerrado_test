@@ -12,8 +12,8 @@ from datetime import datetime
 
 from app.database import get_session
 from app.schema import NewsArticle
+from app.llm_client import LLMClient
 from app.rewriter import load_reporters_config
-from app.groq_client import GroqClient
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 logger = logging.getLogger("rewrite_all")
@@ -47,9 +47,9 @@ def valid(text: str, attribution: str):
 def main():
     db = get_session()
     reporters = load_reporters_config()
-    groq = GroqClient()
-    if not groq.api_key:
-        print("SEM GROQ_API_KEY — abortando")
+    llm = LLMClient()
+    if not llm.api_key:
+        print("SEM GEMINI_API_KEY/OPENAI_API_KEY — abortando")
         return
 
     # 1) categorias + tags
@@ -77,7 +77,7 @@ def main():
         slug = rep.slug if rep else "enzo.bianchi"
         profile = reporters.get(slug) or list(reporters.values())[0]
         attribution = profile.attribution
-        # pula quem já está no padrão novo (economiza Groq)
+        # pula quem já está no padrão novo (economiza LLM)
         cur = (art.content or "").strip()
         if cur.endswith(attribution.strip()) and 700 <= len(cur.split()) <= 1300 and not FORBIDDEN.search(cur):
             ok += 1
@@ -88,7 +88,7 @@ def main():
         name = srcs[0].get("name", "") if srcs and isinstance(srcs[0], dict) else ""
         try:
             body_in = (art.content or "")[:3000]
-            res = groq.rewrite_article(
+            res = llm.rewrite_article(
                 {"title": art.title, "summary": (art.summary or "")[:600], "source": name or "Portal de Notícias",
                  "url": url, "body": body_in},
                 profile.get_system_prompt(), attribution, related_sources=None,

@@ -832,7 +832,7 @@ def generate_html(articles):
             </div>
             <div class="footer-bottom">
                 <p>© {datetime.now().year} Portal Cerrado — Portal automatizado com IA</p>
-                <p>Powered by Groq AI • Python • BeautifulSoup</p>
+                <p>Powered by Gemini/OpenAI AI • Python • BeautifulSoup</p>
             </div>
         </div>
     </footer>

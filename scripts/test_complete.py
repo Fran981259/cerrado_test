@@ -119,17 +119,17 @@ def test_3_filter(articles):
         return []
 
 
-def test_4_groq_llm(articles):
-    """TESTE 4: Groq LLM - Tradução e Reescrita"""
-    test_section("TESTE 4: Groq LLM (Tradução + Reescrita)")
+def test_4_llm(articles):
+    """TESTE 4: Gemini/OpenAI LLM - Tradução e Reescrita"""
+    test_section("TESTE 4: Gemini/OpenAI LLM (Tradução + Reescrita)")
     
     try:
-        from app.groq_client import GroqClient
+        from app.llm_client import LLMClient
         
-        client = GroqClient()
+        client = LLMClient()
         
         if not client.api_key or 'COLE_SUA' in client.api_key:
-            print("❌ GROQ_API_KEY não configurada")
+            print("❌ GEMINI_API_KEY/OPENAI_API_KEY não configurada")
             return None
         
         print(f"Modelo: {client.model}")
@@ -275,7 +275,7 @@ def test_7_full_pipeline():
         return False
     
     # 4. Rewrite
-    rewritten = test_4_groq_llm(filtered)
+    rewritten = test_4_llm(filtered)
     
     if rewritten and rewritten.get('rewritten_content'):
         print(f"\n{'='*60}")
@@ -333,7 +333,7 @@ def main():
     filtered = test_3_filter(classified)
     
     # 4. LLM
-    test_4_groq_llm(articles[:1])
+    test_4_llm(articles[:1])
     
     # 5. Curiosidades
     test_5_curiosities()
@@ -354,7 +354,7 @@ def main():
     print("✅ Scanner REAL - Coletou artigos de portais BR")
     print("✅ Classificador - Score + Tier funcionando")
     print("✅ Filtro - Detecta duplicatas, spam, sensível")
-    print("✅ Groq LLM - Tradução + Reescrita funcionando")
+    print("✅ Gemini/OpenAI LLM - Tradução + Reescrita funcionando")
     print("✅ Curiosidades - 9 geradas automaticamente")
     print("✅ Personalidade - Evolução com XP e milestones")
     print("✅ Pipeline - Scan → Classify → Filter → Rewrite")

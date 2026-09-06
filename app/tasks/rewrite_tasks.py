@@ -1,26 +1,25 @@
-"""
-Tarefas de Reescrita — Portal Cerrado
-VERSÃO PROFISSIONAL: matérias longas (700-900 palavras) + cruzamento de fontes.
-"""
+"""Tarefas de Reescrita — Portal Cerrado."""
 
-from app.celery_app import celery_app
-from app.rewriter import load_reporters_config
-from app.groq_client import GroqClient
-from app.scanner import RealPortalScanner
 import logging
 import re
+from datetime import datetime
+
+from app.celery_app import celery_app
+from app.llm_client import LLMClient
+from app.rewriter import load_reporters_config
+from app.scanner import RealPortalScanner
 
 logger = logging.getLogger(__name__)
 
 
-def groq_client_source_name(url: str) -> str:
+def source_name_from_url(url: str) -> str:
     if 'msnews.com.br' in url:
         return 'MS News'
-    elif 'mstododia.com.br' in url:
+    if 'mstododia.com.br' in url:
         return 'MS Todo Dia'
-    elif 'agenciadenoticias.ms.gov.br' in url:
+    if 'agenciadenoticias.ms.gov.br' in url:
         return 'Agência de Notícias MS'
-    elif 'oestadoonline.com.br' in url:
+    if 'oestadoonline.com.br' in url:
         return 'O Estado Online'
     return 'Portal de Notícias'
 
@@ -51,7 +50,7 @@ def _find_related_sources(article: dict, max_related: int = 3) -> list:
                         "title": a.title,
                         "summary": a.summary or "",
                         "url": urls[0] if urls else "",
-                        "source": groq_client_source_name(urls[0] if urls else ""),
+                        "source": source_name_from_url(urls[0] if urls else ""),
                     }))
             scored.sort(key=lambda x: x[0], reverse=True)
             return [a for _, a in scored[:max_related]]
@@ -71,7 +70,7 @@ def _find_related_sources(article: dict, max_related: int = 3) -> list:
 )
 def rewrite_pending_articles(self):
     """
-    Reescreve artigos em status 'classified' com LLM (Groq),
+    Reescreve artigos em status 'classified' com LLM (Gemini/OpenAI),
     gravando o conteúdo e marcando-os como 'rewritten'.
     Roda a cada 30 minutos.
     """
@@ -79,8 +78,6 @@ def rewrite_pending_articles(self):
 
     from app.database import get_session
     from app.schema import NewsArticle, Reporter
-    from app.rewriter import load_reporters_config
-    from datetime import datetime
 
     db = get_session()
     rewritten = 0
@@ -95,7 +92,7 @@ def rewrite_pending_articles(self):
         )
 
         reporters = load_reporters_config()
-        groq = GroqClient()
+        llm = LLMClient()
 
         for art in articles:
             try:
@@ -106,7 +103,7 @@ def rewrite_pending_articles(self):
                     continue
 
                 main_url = art.sources[0]["url"] if isinstance(art.sources, list) and art.sources else ""
-                main_source = groq_client_source_name(main_url)
+                main_source = source_name_from_url(main_url)
 
                 # corpo real extraído do portal (proveniência) ou, se ausente, o lead
                 raw_body = (art.original_text or art.content or "")[:6000]
@@ -137,14 +134,14 @@ def rewrite_pending_articles(self):
                     article_data["related_sources"] = related
 
                 content = ""
-                if groq.api_key:
-                    result_groq = groq.rewrite_article(
+                if llm.api_key:
+                    result_llm = llm.rewrite_article(
                         article_data,
                         reporter.get_system_prompt(),
                         reporter.attribution,
                         related_sources=related,
                     )
-                    candidate = result_groq.get("rewritten_content", "")
+                    candidate = result_llm.get("rewritten_content", "")
                     if candidate and len(candidate.split()) >= 700:
                         content = candidate
 
@@ -210,23 +207,23 @@ def rewrite_single_article(self, article: dict):
             logger.info(f"[REWRITE] {len(related)} fontes relacionadas encontradas para cruzamento")
             article["related_sources"] = related
 
-        # 2. Tenta Groq com prompt profissional enxuto
-        groq = GroqClient()
-        if groq.api_key:
+        # 2. Tenta Gemini/OpenAI com prompt profissional enxuto
+        llm = LLMClient()
+        if llm.api_key:
             system_prompt = reporter.get_system_prompt()
             attribution = reporter.attribution
-            result = groq.rewrite_article(article, system_prompt, attribution, related_sources=related)
+            result = llm.rewrite_article(article, system_prompt, attribution, related_sources=related)
             rewritten_content = result.get("rewritten_content", "")
             # valida tamanho profissional longo (700-900 ideal, 700 mínimo)
             if rewritten_content and len(rewritten_content.split()) >= 700:
-                logger.info(f"[REWRITE] Groq OK — {len(rewritten_content.split())} palavras")
+                logger.info(f"[REWRITE] LLM OK — {len(rewritten_content.split())} palavras")
                 # monta artigo final profissional
                 final = {
                     "title": article.get("title", ""),
                     "content": rewritten_content,
                     "summary": article.get("summary", "")[:300],
                     "source_urls": [article.get("url", "")] + [r.get("url","") for r in related],
-                    "source_names": [groq_client_source_name(article.get("url",""))] + [groq_client_source_name(r.get("url","")) for r in related],
+                    "source_names": [source_name_from_url(article.get("url",""))] + [source_name_from_url(r.get("url","")) for r in related],
                     "reporter_slug": reporter.slug,
                     "reporter_name": reporter.display_name,
                     "category": reporter.role,
@@ -235,8 +232,8 @@ def rewrite_single_article(self, article: dict):
                     "rewritten_at": result.get("rewritten_at"),
                     "word_count": len(rewritten_content.split()),
                     "related_count": len(related),
-                    "llm_provider": "groq",
-                    "llm_model": groq.model,
+                    "llm_provider": llm.provider,
+                    "llm_model": llm.model,
                 }
                 # publica
                 from app.tasks.publish_tasks import publish_single_article
@@ -244,12 +241,12 @@ def rewrite_single_article(self, article: dict):
                 final["sources"] = final["source_urls"]
                 final["content"] = rewritten_content
                 pub = publish_single_article(final)
-                logger.info(f"[REWRITE] Publicado (Groq profissional): {pub.get('article_id')}")
+                logger.info(f"[REWRITE] Publicado (LLM profissional): {pub.get('article_id')}")
                 return pub
             else:
-                logger.warning(f"[REWRITE] Groq gerou conteúdo curto ({len(rewritten_content.split()) if rewritten_content else 0} palavras)")
+                logger.warning(f"[REWRITE] LLM gerou conteúdo curto ({len(rewritten_content.split()) if rewritten_content else 0} palavras)")
 
-        logger.warning(f"[REWRITE] Groq indisponivel ou curto demais para '{title}' — falhando sem fallback local")
+        logger.warning(f"[REWRITE] LLM indisponivel ou curto demais para '{title}' — falhando sem fallback local")
         raise RuntimeError("Reescrita indisponível sem LLM")
         
     except Exception as e:

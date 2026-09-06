@@ -31,8 +31,11 @@
 ### Backend Obrigatorio em Produção
 - `DATABASE_URL` -> Postgres do stack.
 - `REDIS_URL` -> Redis do stack.
-- `GROQ_API_KEY` -> chave do provider LLM usado em producao hoje.
-- `GROQ_MODEL` -> modelo explicitamente definido.
+- `LLM_PROVIDER` -> provider ativo, `gemini` ou `openai`.
+- `GEMINI_API_KEY` -> chave do provider Gemini.
+- `OPENAI_API_KEY` -> chave do provider OpenAI.
+- `GEMINI_MODEL` -> modelo Gemini em uso.
+- `OPENAI_MODEL` -> modelo OpenAI em uso.
 - `PUBLISH_API_KEY` -> chave para endpoints de escrita.
 - `SITE_URL` -> URL publica do site.
 - `NEXT_PUBLIC_SITE_URL` -> mesma URL publica para o frontend.
@@ -58,8 +61,7 @@
 - `NEXT_PUBLIC_SITE_URL` -> base do metadata, sitemap e robots.
 
 ### LLM Alternativo/Futuro
-- `OPENROUTER_API_KEY` -> fallback tecnico atualmente presente.
-- `LLM_MODEL` -> modelo do OpenRouter.
+- Sem provider terceiro: apenas Gemini e OpenAI.
 - `OPENAI_API_KEY` -> legado/nao usado no caminho atual.
 
 ### Regra de Contrato

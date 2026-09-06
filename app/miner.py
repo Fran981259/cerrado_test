@@ -409,7 +409,7 @@ Use linguagem natural brasileira, mantenha termos técnicos, preserve dados."""
         }
     
     def _translate_simple(self, article: Dict) -> Dict:
-        logger.warning("Tradução simples (sem LLM). Configure OpenRouter para produção.")
+        logger.warning("Tradução simples (sem LLM). Configure Gemini ou OpenAI para produção.")
         return {
             **article,
             'title_pt': article['title'],

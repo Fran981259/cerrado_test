@@ -1,6 +1,4 @@
-"""
-Teste do LLM com modelos FREE do OpenRouter
-"""
+"""Teste do LLM com Gemini/OpenAI."""
 
 import os
 import sys
@@ -15,30 +13,23 @@ if os.path.exists(env_file):
                 key, value = line.split('=', 1)
                 os.environ[key] = value
 
-def test_free_models():
-    """Testa modelos FREE do OpenRouter."""
-    from app.llm_client import LLMClient, FREE_MODELS, test_llm_connection
+def test_llm():
+    """Testa Gemini/OpenAI."""
+    from app.llm_client import LLMClient, SUPPORTED_PROVIDERS, test_llm_connection
     
-    api_key = os.getenv("OPENROUTER_API_KEY")
-    if not api_key:
-        print("❌ OPENROUTER_API_KEY não configurada")
-        print("\nEdite o arquivo .env e adicione:")
-        print("OPENROUTER_API_KEY=sk-or-v1-sua-key-aqui")
-        return False
+    provider = os.getenv("LLM_PROVIDER", "gemini").lower()
+    if provider not in SUPPORTED_PROVIDERS:
+        provider = "gemini"
     
     print("="*60)
-    print("TESTE: OpenRouter com modelos FREE")
+    print(f"TESTE: {provider.upper()}")
     print("="*60)
-    
-    print("\n📋 Modelos FREE disponíveis:")
-    for name, model in FREE_MODELS.items():
-        print(f"   {name:15} → {model}")
-    
+
     print("\n" + "="*60)
     print("TESTE: Conexão básica")
     print("="*60)
     
-    if test_llm_connection():
+    if test_llm_connection(provider=provider):
         print("\n✅ Conexão OK!")
     else:
         print("\n❌ Falha na conexão")
@@ -48,7 +39,7 @@ def test_free_models():
     print("TESTE: Tradução EN→PT")
     print("="*60)
     
-    client = LLMClient()
+    client = LLMClient(provider=provider)
     
     text_en = """OpenAI has announced GPT-5, its most advanced AI model yet.
 The new system shows unprecedented reasoning capabilities and is 
@@ -92,7 +83,7 @@ Escreva de forma clara, técnica e acessível. Use dados quando disponíveis."""
 
 if __name__ == "__main__":
     try:
-        success = test_free_models()
+        success = test_llm()
         sys.exit(0 if success else 1)
     except Exception as e:
         print(f"\n❌ Erro: {e}")
