@@ -48,3 +48,59 @@ def test_guess_topic_uses_keywords_when_category_is_generic():
     })
 
     assert topic == "security"
+
+
+def test_guess_topic_handles_multiword_phrase():
+    from app.ml_editorial import EditorialTrendAnalyzer
+
+    analyzer = EditorialTrendAnalyzer()
+    topic = analyzer.guess_topic({
+        "title": "Inteligência artificial avança nas redações",
+        "summary": "",
+        "category": "general",
+    })
+
+    assert topic == "tech"
+
+
+def test_refresh_trend_signals_uses_real_db_rows():
+    from app.database import get_session
+    from app.schema import NewsArticle, Reporter, EditorialTrendSignal
+    from app.ml_editorial import EditorialTrendAnalyzer
+
+    db = get_session()
+    reporter = db.query(Reporter).first()
+    assert reporter is not None
+
+    slug = f"ml-trend-{datetime.utcnow().timestamp()}"
+    article = NewsArticle(
+        title="Governo e assembleia discutem pacote econômico em MS",
+        slug=slug,
+        summary="A política econômica do estado ganhou novo debate.",
+        content="Conteúdo de teste para tendência.",
+        reporter_id=reporter.id,
+        status="published",
+        category="politics",
+        published_at=datetime.utcnow(),
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
+        visibility="public",
+        final_score=40,
+        priority_tier="TIER_1",
+    )
+
+    try:
+        db.add(article)
+        db.commit()
+
+        before = db.query(EditorialTrendSignal).count()
+        trends = EditorialTrendAnalyzer().refresh_trend_signals(session=db, window_hours=24, limit=20)
+        after = db.query(EditorialTrendSignal).count()
+
+        assert after >= before
+        assert any(t["topic"] == "politics" for t in trends)
+    finally:
+        db.query(EditorialTrendSignal).filter(EditorialTrendSignal.evidence.like(f'%{slug}%')).delete(synchronize_session=False)
+        db.query(NewsArticle).filter(NewsArticle.slug == slug).delete(synchronize_session=False)
+        db.commit()
+        db.close()

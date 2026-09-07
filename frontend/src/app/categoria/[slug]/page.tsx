@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { fetchNews } from "@/lib/api";
+import { fetchNews, fetchTrends } from "@/lib/api";
 import { NewsCard } from "@/components/NewsCard";
 import { getCategory } from "@/lib/categories";
+import { TrendPanel } from "@/components/TrendPanel";
 
 export const revalidate = 60;
 
@@ -34,7 +35,10 @@ export default async function CategoriaPage({ params }: { params: Promise<{ slug
   const { slug } = await params;
   const cat = getCategory(slug);
   // se slug desconhecido, mostra general mas não 404
-  const articles = await fetchNews({ category: slug, limit: 24 });
+  const [articles, trends] = await Promise.all([
+    fetchNews({ category: slug, limit: 24 }),
+    fetchTrends(5),
+  ]);
 
   return (
     <div className="container-custom py-8">
@@ -43,6 +47,11 @@ export default async function CategoriaPage({ params }: { params: Promise<{ slug
         <h1 className="text-2xl font-black text-zinc-900">{cat.label}</h1>
         <span className="text-sm text-zinc-500">— {articles.length} matérias</span>
       </div>
+
+      <div className="mb-8">
+        <TrendPanel trends={trends} title="Temas em alta no portal" compact />
+      </div>
+
       {articles.length === 0 ? (
         <div className="py-16 text-center text-zinc-500">
           Nenhuma matéria em {cat.label} ainda.

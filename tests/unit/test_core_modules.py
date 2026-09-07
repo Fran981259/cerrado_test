@@ -79,6 +79,25 @@ def test_llm_client_supports_only_gemini_and_openai():
     from app.llm_client import SUPPORTED_PROVIDERS
     assert SUPPORTED_PROVIDERS == {"gemini", "openai"}
 
+
+def test_classifier_boosts_real_portal_categories():
+    from app.classifier import NewsClassifier
+
+    c = NewsClassifier()
+    article = {"title": "Teste", "summary": "", "category": "politics"}
+    enriched = c.classify(article)
+    assert enriched["classification"]["importance_score"] > 3.0
+
+
+def test_trends_endpoint_uses_ml_snapshot(monkeypatch):
+    from app.main import list_trends
+
+    monkeypatch.setattr("app.main.get_latest_trend_signals", lambda limit=8: [{"topic": "politics", "category": "politics", "score": 42, "article_count": 3}])
+    result = list_trends(limit=3)
+
+    assert result["total"] == 1
+    assert result["trends"][0]["topic"] == "politics"
+
 def test_publisher_auth_dependency(monkeypatch):
     # Testa que require_api_key funciona
     monkeypatch.setenv("PUBLISH_API_KEY", "secret123")

@@ -18,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from app.database import get_session, init_db
+from app.ml_editorial import get_latest_trend_signals
 from app.schema import NewsArticle, Reporter
 from app.publisher import ArticlePublisher
 
@@ -223,6 +224,16 @@ def list_reporters():
         
         db.close()
         return {"reporters": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/trends")
+def list_trends(limit: int = Query(8, ge=1, le=20)):
+    """Retorna os temas mais quentes detectados pelo ML editorial."""
+    try:
+        trends = get_latest_trend_signals(limit=limit)
+        return {"trends": trends, "total": len(trends)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

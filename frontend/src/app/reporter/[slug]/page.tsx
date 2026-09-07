@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { REPORTERS, reporterInitials } from "@/lib/reporters";
-import { fetchNews } from "@/lib/api";
+import { fetchNews, fetchTrends } from "@/lib/api";
 import { getCategory } from "@/lib/categories";
+import { TrendPanel } from "@/components/TrendPanel";
 
 export const revalidate = 300;
 
@@ -30,7 +31,10 @@ export default async function ReporterPage({ params }: { params: Promise<{ slug:
   const r = REPORTERS[slug];
   if (!r) notFound();
 
-  const all = await fetchNews({ limit: 100 });
+  const [all, trends] = await Promise.all([
+    fetchNews({ limit: 100 }),
+    fetchTrends(5),
+  ]);
   const mine = all.filter((a) => a.reporter_slug === slug).slice(0, 9);
 
   return (
@@ -48,6 +52,10 @@ export default async function ReporterPage({ params }: { params: Promise<{ slug:
           <p className="mt-3 leading-relaxed text-zinc-700">{r.bio}</p>
           <p className="mt-3 text-sm text-zinc-500">🎓 Formação: {r.university} — {r.state}</p>
         </div>
+      </div>
+
+      <div className="mt-8">
+        <TrendPanel trends={trends} title="Temas quentes agora" compact />
       </div>
 
       <h2 className="mt-10 text-xl font-extrabold text-zinc-900">Últimas de {r.name.split(" ")[0]}</h2>

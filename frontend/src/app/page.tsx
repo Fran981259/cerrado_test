@@ -1,26 +1,42 @@
-import { fetchNews } from "@/lib/api";
-import type { Article } from "@/lib/api";
+import { fetchNews, fetchTrends, type Article, type TrendSignal } from "@/lib/api";
 import { NewsCard } from "@/components/NewsCard";
 import Ticker from "@/components/Ticker";
 import Weather from "@/components/Weather";
+import { TrendPanel } from "@/components/TrendPanel";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home({ searchParams }: { searchParams: Promise<{ cat?: string }> }) {
   const { cat } = await searchParams;
   let list: Article[] = [];
+  let trends: TrendSignal[] = [];
   let loadError = "";
   try {
-    const articles = await fetchNews({ category: cat, limit: 24 });
+    const [articles, trendSignals] = await Promise.all([
+      fetchNews({ category: cat, limit: 24 }),
+      fetchTrends(6),
+    ]);
     list = cat ? articles.filter((a) => a.category === cat) : articles;
+    trends = trendSignals;
   } catch {
     loadError = "A API de noticias nao respondeu. O frontend depende do backend real para carregar o conteudo.";
   }
 
+  const trendRank = new Map<string, number>();
+  trends.forEach((trend, index) => {
+    trendRank.set(trend.category || trend.topic, trends.length - index);
+  });
+
   // Destaques randomizados a cada revalidação (60s): hero + 4 sorteados do pool recente.
   // Shuffle intencional no render (ISR) — desabilita regra de pureza só aqui.
   /* eslint-disable react-hooks/purity */
-  const pool = [...list.slice(0, 12)];
+  const ranked = [...list].sort((a, b) => {
+    const aRank = trendRank.get(a.category) || 0;
+    const bRank = trendRank.get(b.category) || 0;
+    if (aRank !== bRank) return bRank - aRank;
+    return 0;
+  });
+  const pool = [...ranked.slice(0, 12)];
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
@@ -37,6 +53,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
 
       <div className="container-custom py-6">
         <Weather />
+      </div>
+
+      <div className="container-custom pb-4">
+        <TrendPanel trends={trends} />
       </div>
 
       <div className="container-custom pb-10">

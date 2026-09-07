@@ -17,6 +17,16 @@ export type Article = {
   source?: string;
 };
 
+export type TrendSignal = {
+  topic: string;
+  category?: string;
+  score: number;
+  article_count: number;
+  window_hours?: number;
+  generated_at?: string | null;
+  evidence?: Array<{ title?: string; slug?: string; category?: string; weight?: number }>;
+};
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://portal_cerrado:8000";
 
 export async function fetchNews(params?: { category?: string; limit?: number; offset?: number }): Promise<Article[]> {
@@ -52,6 +62,20 @@ export async function fetchArticleBySlug(slug: string): Promise<Article | null> 
     return data && data.title ? (data as Article) : null;
   } catch {
     return null;
+  }
+}
+
+export async function fetchTrends(limit?: number): Promise<TrendSignal[]> {
+  try {
+    const search = new URLSearchParams();
+    if (limit) search.set("limit", String(limit));
+    const url = `${API_URL}/api/trends${search.toString() ? `?${search}` : ""}`;
+    const res = await fetch(url, { next: { revalidate: 300 } });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.trends ?? []) as TrendSignal[];
+  } catch {
+    return [];
   }
 }
 

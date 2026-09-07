@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, Dict, Iterable, List, Optional
 
+from sqlalchemy import func
+
 from app.database import get_session
 from app.schema import EditorialTrendSignal, NewsArticle
 
@@ -22,13 +24,13 @@ logger = logging.getLogger(__name__)
 _TOKEN_RE = re.compile(r"[a-zA-ZÀ-ÿ0-9]{3,}")
 
 TOPIC_KEYWORDS = {
-    "politics": {"governo", "prefeito", "governador", "câmara", "assembleia", "eleição", "política", "stf", "stj", "tre", "tse"},
-    "economy": {"economia", "mercado", "emprego", "juros", "inflação", "banco", "investimento", "arrecadação", "salário"},
-    "security": {"polícia", "crime", "prisão", "homicídio", "roubo", "furto", "investigação", "prisos", "suspeito", "flagrante"},
-    "health": {"saúde", "hospital", "vacina", "médico", "paciente", "uti", "sus", "dengue", "tratamento", "exame"},
-    "agriculture": {"agro", "agronegócio", "safra", "soja", "milho", "pecuária", "gado", "colheita", "plantio"},
-    "sports": {"futebol", "esporte", "jogo", "time", "gol", "campeonato", "atleta", "torcida", "vitória"},
-    "tech": {"tecnologia", "ia", "inteligência artificial", "app", "sistema", "software", "startup", "digital", "plataforma"},
+    "politics": {"governo", "prefeito", "governador", "câmara", "assembleia", "eleição", "política", "stf", "stj", "tre", "tse", "câmara dos vereadores", "assembleia legislativa"},
+    "economy": {"economia", "mercado", "emprego", "juros", "inflação", "banco", "investimento", "arrecadação", "salário", "piso salarial"},
+    "security": {"polícia", "crime", "prisão", "homicídio", "roubo", "furto", "investigação", "suspeito", "flagrante", "delegacia"},
+    "health": {"saúde", "hospital", "vacina", "médico", "paciente", "uti", "sus", "dengue", "tratamento", "exame", "pronto-socorro"},
+    "agriculture": {"agro", "agronegócio", "safra", "soja", "milho", "pecuária", "gado", "colheita", "plantio", "produtor rural"},
+    "sports": {"futebol", "esporte", "jogo", "time", "gol", "campeonato", "atleta", "torcida", "vitória", "partida"},
+    "tech": {"tecnologia", "ia", "inteligência artificial", "aprendizado de máquina", "app", "sistema", "software", "startup", "digital", "plataforma"},
 }
 
 
@@ -55,14 +57,33 @@ class EditorialTrendAnalyzer:
         ])
         return _TOKEN_RE.findall(self.normalize_text(text))
 
+    def extract_phrases(self, article: Dict[str, Any]) -> str:
+        return self.normalize_text(" ".join([
+            article.get("title", ""),
+            article.get("summary", ""),
+            article.get("category", ""),
+        ]))
+
+    def _keyword_hits(self, article: Dict[str, Any], keywords: Iterable[str]) -> int:
+        tokens = set(self.extract_tokens(article))
+        text = self.extract_phrases(article)
+        hits = 0
+        for keyword in keywords:
+            kw = self.normalize_text(keyword)
+            if " " in kw:
+                if kw in text:
+                    hits += 1
+            elif kw in tokens:
+                hits += 1
+        return hits
+
     def guess_topic(self, article: Dict[str, Any]) -> str:
         category = (article.get("category") or "general").lower().strip()
         if category in TOPIC_KEYWORDS:
             return category
 
-        tokens = set(self.extract_tokens(article))
         for topic, keywords in TOPIC_KEYWORDS.items():
-            if tokens.intersection(keywords):
+            if self._keyword_hits(article, keywords) > 0:
                 return topic
         return "general"
 
@@ -93,8 +114,9 @@ class EditorialTrendAnalyzer:
         for topic, group in grouped.items():
             category_counter = Counter((a.get("category") or "general").lower() for a in group)
             dominant_category = category_counter.most_common(1)[0][0] if category_counter else "general"
+            keyword_signal = sum(max(1, self._keyword_hits(a, TOPIC_KEYWORDS.get(topic, set()))) for a in group)
             weight_sum = sum(self.article_weight(a) for a in group)
-            score = int(round(weight_sum * 10))
+            score = int(round((weight_sum * 10) + (keyword_signal * 2)))
             evidence = []
             for a in group[:5]:
                 evidence.append({
@@ -116,8 +138,8 @@ class EditorialTrendAnalyzer:
             articles = (
                 db.query(NewsArticle)
                 .filter(NewsArticle.status.in_(["classified", "rewritten", "published"]))
-                .filter(NewsArticle.created_at >= cutoff)
-                .order_by(NewsArticle.created_at.desc())
+                .filter(func.coalesce(NewsArticle.published_at, NewsArticle.created_at) >= cutoff)
+                .order_by(func.coalesce(NewsArticle.published_at, NewsArticle.created_at).desc())
                 .limit(limit)
                 .all()
             )
@@ -127,6 +149,7 @@ class EditorialTrendAnalyzer:
                     "title": art.title,
                     "slug": art.slug,
                     "category": art.category,
+                    "summary": art.summary or "",
                     "final_score": art.final_score or 0,
                     "priority_tier": art.priority_tier or "TIER_3",
                     "created_at": art.created_at,
@@ -170,5 +193,44 @@ class EditorialTrendAnalyzer:
                 db.close()
 
 
+    def latest_trend_signals(self, session=None, limit: int = 8) -> List[Dict[str, Any]]:
+        db = session or get_session()
+        close_db = session is None
+        try:
+            rows = (
+                db.query(EditorialTrendSignal)
+                .order_by(EditorialTrendSignal.generated_at.desc(), EditorialTrendSignal.score.desc())
+                .all()
+            )
+            deduped: List[Dict[str, Any]] = []
+            seen = set()
+            for row in rows:
+                if row.topic in seen:
+                    continue
+                seen.add(row.topic)
+                deduped.append({
+                    "topic": row.topic,
+                    "category": row.category,
+                    "score": row.score,
+                    "article_count": row.article_count,
+                    "window_hours": row.window_hours,
+                    "generated_at": row.generated_at.isoformat() if row.generated_at else None,
+                    "evidence": row.evidence or [],
+                })
+                if len(deduped) >= limit:
+                    break
+
+            if not deduped:
+                return self.refresh_trend_signals(session=db, window_hours=24, limit=limit)
+            return deduped
+        finally:
+            if close_db:
+                db.close()
+
+
 def get_current_trends(window_hours: int = 24, limit: int = 200) -> List[Dict[str, Any]]:
     return EditorialTrendAnalyzer().refresh_trend_signals(window_hours=window_hours, limit=limit)
+
+
+def get_latest_trend_signals(limit: int = 8) -> List[Dict[str, Any]]:
+    return EditorialTrendAnalyzer().latest_trend_signals(limit=limit)

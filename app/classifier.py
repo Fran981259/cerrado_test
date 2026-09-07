@@ -211,7 +211,9 @@ class NewsClassifier:
         
         # Ajustes por categoria
         category = article.get('category', '')
-        if category in ['geopolitics', 'economy', 'science_health']:
+        if category in ['politics', 'economy', 'health', 'agriculture', 'tech', 'security']:
+            score = min(5.0, score + 0.4)  # categorias centrais do portal têm boost
+        elif category in ['geopolitics', 'science_health']:
             score = min(5.0, score + 0.5)  # Categorias globais têm boost
         elif category == 'sports_global':
             score = max(2.0, score - 0.5)  # Esportes têm menos peso
