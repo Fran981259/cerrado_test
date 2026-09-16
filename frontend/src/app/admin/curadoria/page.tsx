@@ -10,11 +10,27 @@ export default function CuradoriaPage() {
   const [pass, setPass] = useState("");
   const [auth, setAuth] = useState(false);
 
-  // Fake auth
+  // Fake auth persistente
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const isAuth = localStorage.getItem("cerrado_admin_auth") === "true";
+      if (isAuth) {
+        setAuth(true);
+        fetchArticles();
+      } else {
+        setLoading(false);
+      }
+    }
+  }, []);
+
   const handleAuth = (e: any) => {
     e.preventDefault();
     if (pass === "cerrado2024") {
       setAuth(true);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("cerrado_admin_auth", "true");
+      }
+      setLoading(true);
       fetchArticles();
     } else {
       setError("Senha incorreta");
