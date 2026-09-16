@@ -10,73 +10,39 @@ type Sub = { label: string; slug: string };
 type MenuItem = { label: string; href?: string; subs?: Sub[] };
 
 const CAPITAL_MENU: MenuItem[] = [
+  { label: "Política", href: "/categoria/politics" },
+  { label: "Segurança", href: "/categoria/security" },
   {
-    label: "Política e Poder",
-    subs: [
-      { label: "Política", slug: "politics" },
-      { label: "Executivo", slug: "politics" },
-      { label: "Judiciário", slug: "politics" },
-      { label: "Legislativo", slug: "politics" },
-      { label: "Tribunal de Contas", slug: "politics" },
-    ],
-  },
-  {
-    label: "Polícia e Justiça",
-    subs: [
-      { label: "Polícia", slug: "security" },
-      { label: "Justiça", slug: "security" },
-      { label: "Investigação", slug: "security" },
-    ],
-  },
-  {
-    label: "Cotidiano",
-    subs: [
-      { label: "Geral", slug: "general" },
-      { label: "Ciência e Tecnologia", slug: "tech" },
-      { label: "Educação", slug: "education" },
-      { label: "Meio Ambiente", slug: "clima" },
-      { label: "Saúde e Bem Estar", slug: "health" },
-      { label: "Trânsito", slug: "general" },
-      { label: "Loteria", slug: "general" },
-    ],
-  },
-  { label: "Esporte", href: "/categoria/sports" },
-  {
-    label: "Economia e Agronegócio",
+    label: "Economia & Agro",
     subs: [
       { label: "Economia", slug: "economy" },
       { label: "Agronegócio", slug: "agriculture" },
     ],
   },
-  { label: "Rural", href: "/categoria/agriculture" },
-  { label: "Reportagem Especial", href: "/categoria/culture" },
+  { label: "Saúde", href: "/categoria/health" },
   {
-    label: "Oportunidades",
+    label: "Ciência & Tech",
     subs: [
-      { label: "Capacitação", slug: "education" },
-      { label: "Concurso", slug: "education" },
-      { label: "Trabalho e Renda", slug: "economy" },
+      { label: "Ciência", slug: "science" },
+      { label: "Tecnologia", slug: "tech" },
     ],
   },
   {
-    label: "Cultura e Entretenimento",
+    label: "Cotidiano",
     subs: [
-      { label: "Cinema", slug: "culture" },
+      { label: "Educação", slug: "education" },
+      { label: "Clima", slug: "clima" },
+      { label: "Geral", slug: "general" },
+    ],
+  },
+  {
+    label: "Cultura",
+    subs: [
       { label: "Cultura", slug: "culture" },
-      { label: "Entretenimento", slug: "culture" },
+      { label: "Entretenimento", slug: "entertainment" },
     ],
   },
-  {
-    label: "Mais",
-    subs: [
-      { label: "Nacional", slug: "general" },
-      { label: "Internacional", slug: "general" },
-      { label: "Opinião", slug: "general" },
-      { label: "Colunistas", slug: "general" },
-      { label: "Capital Play", slug: "general" },
-      { label: "Informe Publicitário", slug: "general" },
-    ],
-  },
+  { label: "Esportes", href: "/categoria/sports" },
 ];
 
 const linkCls = (on: boolean) =>
