@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CATEGORIES } from "@/lib/categories";
+import { CATEGORY_LIST } from "@/lib/categories";
 
 export default function CuradoriaPage() {
   const [articles, setArticles] = useState<any[]>([]);
@@ -122,7 +122,7 @@ export default function CuradoriaPage() {
                       onChange={(e) => handleUpdate(article.slug, { category: e.target.value })}
                       className="w-full p-2 rounded border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-gray-900 dark:text-white"
                     >
-                      {CATEGORIES.map(c => (
+                      {CATEGORY_LIST.map(c => (
                         <option key={c.slug} value={c.slug}>{c.label}</option>
                       ))}
                     </select>
