@@ -110,7 +110,7 @@ services:
     networks:
       - portal_cerrado_net
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import redis; redis.Redis(host='redis').ping()\""]
+      test: ["CMD-SHELL", "python -c \"import os, redis; redis.from_url(os.environ['REDIS_URL']).ping()\""]
       interval: 60s
       timeout: 15s
       retries: 3
@@ -148,7 +148,7 @@ services:
     networks:
       - portal_cerrado_net
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import redis; redis.Redis(host='redis').ping()\""]
+      test: ["CMD-SHELL", "python -c \"import os, redis; redis.from_url(os.environ['REDIS_URL']).ping()\""]
       interval: 60s
       timeout: 15s
       retries: 3
