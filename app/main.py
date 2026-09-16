@@ -298,7 +298,7 @@ def list_articles_for_review(_auth=Depends(require_api_key)):
         db = get_session()
         articles = db.query(NewsArticle).filter(
             NewsArticle.status.in_(["review", "classified", "draft"])
-        ).order_by(NewsArticle.created_at.desc()).limit(50).all()
+        ).order_by(NewsArticle.created_at.desc()).limit(2000).all()
         
         return {"articles": [
             {

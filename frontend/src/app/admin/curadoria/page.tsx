@@ -39,12 +39,10 @@ export default function CuradoriaPage() {
 
   const fetchArticles = async () => {
     try {
-      const res = await fetch(process.env.NEXT_PUBLIC_API_URL + "/editorial/review", {
-        headers: { "X-API-Key": "cerrado123" }
-      });
+      const res = await fetch("/api/curadoria");
       if (!res.ok) throw new Error("Falha ao buscar artigos");
       const data = await res.json();
-      setArticles(data.articles);
+      setArticles(data.articles || []);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -54,11 +52,10 @@ export default function CuradoriaPage() {
 
   const handleUpdate = async (slug: string, updateData: any) => {
     try {
-      const res = await fetch(process.env.NEXT_PUBLIC_API_URL + `/editorial/review/${slug}`, {
+      const res = await fetch(`/api/curadoria/${slug}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "X-API-Key": "cerrado123"
         },
         body: JSON.stringify(updateData)
       });
