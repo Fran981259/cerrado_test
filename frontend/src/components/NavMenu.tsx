@@ -81,7 +81,7 @@ const CAPITAL_MENU: MenuItem[] = [
 
 const linkCls = (on: boolean) =>
   `relative rounded-full px-2.5 py-1.5 text-[11px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-    on ? "bg-white text-accent-soil shadow-sm ring-1 ring-black/5" : "text-text-muted hover:bg-white/70 hover:text-text-primary"
+    on ? "bg-white/10 text-accent-soil shadow-sm ring-1 ring-white/10" : "text-text-muted hover:bg-white/10 hover:text-text-primary"
   }`;
 
 function DesktopLinks() {
@@ -113,14 +113,14 @@ function DesktopLinks() {
                 <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
               </svg>
             </button>
-            <div className={`invisible absolute top-full z-50 w-64 translate-y-2 rounded-2xl border border-black/5 bg-white p-2 opacity-0 shadow-[0_22px_70px_rgba(45,41,38,0.16)] transition-all group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100 ${alignRight ? "right-0" : "left-0"}`}>
+            <div className={`invisible absolute top-full z-50 w-64 translate-y-2 rounded-2xl glass-panel p-2 opacity-0 shadow-[0_22px_70px_rgba(0,0,0,0.5)] transition-all group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100 ${alignRight ? "right-0" : "left-0"}`}>
               {subs.map((s) => {
                 const on = active === s.slug;
                 return (
                   <Link
                     key={s.label}
                     href={`/categoria/${s.slug}`}
-                    className={`block rounded-xl px-3 py-2 text-[12px] font-black uppercase tracking-wider transition-colors ${on ? "bg-canvas text-accent-soil" : "text-text-muted hover:bg-canvas hover:text-text-primary"}`}
+                    className={`block rounded-xl px-3 py-2 text-[12px] font-black uppercase tracking-wider transition-colors ${on ? "bg-white/10 text-accent-soil" : "text-text-muted hover:bg-white/5 hover:text-text-primary"}`}
                   >
                     {s.label}
                   </Link>
@@ -179,7 +179,7 @@ export function DesktopNav() {
 
 export function MobileNav() {
   return (
-    <div className="overflow-x-auto border-t border-black/5 bg-white/45 lg:hidden" aria-label="Editorias">
+    <div className="overflow-x-auto border-t border-white/10 bg-black/20 lg:hidden" aria-label="Editorias">
       <div className="flex gap-4 px-4">
         <Suspense>
           <MobileLinks />
