@@ -166,6 +166,23 @@ def _persist_articles(articles: list, fetch_details: bool = True) -> dict:
                             errors += 1
                             continue
 
+                # Anti-Frankenstein Check (RSS Title vs HTML Body)
+                rss_title_text = _clean_plain_text(a.get("title") or "")
+                if rss_title_text and body:
+                    # check overlap
+                    import re
+                    def get_words(t): 
+                        return set(w for w in re.findall(r'\b\w+\b', t.lower()) if len(w) > 2)
+                    rt_words = get_words(rss_title_text)
+                    b_words = get_words(body)
+                    if rt_words:
+                        overlap = len(rt_words.intersection(b_words)) / len(rt_words)
+                        if overlap < 0.15 and len(rt_words) >= 3:
+                            logger.warning(f"[SCAN] Frankenstein detectado na raiz! Abortando URL {url}")
+                            db.rollback()
+                            errors += 1
+                            continue
+
                 title = _clean_plain_text(a.get("title_pt") or title)[:500]
                 lead = _clean_plain_text(a.get("summary_pt") or lead)[:2000]
                 category = category_name(a.get("category"))
