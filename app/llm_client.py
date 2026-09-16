@@ -53,7 +53,7 @@ class LLMClient:
         if self.provider == "gemini":
             return os.getenv("GEMINI_MODEL", "gemini-flash-lite-latest")
         if self.provider == "groq":
-            return os.getenv("GROQ_MODEL", "llama3-8b-8192")
+            return os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b")
         return os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
     def complete(self, prompt: str, system_prompt: str = "", max_tokens: int = 2000, temperature: float = 0.7) -> str:
