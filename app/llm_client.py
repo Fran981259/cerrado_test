@@ -13,7 +13,7 @@ import requests
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-SUPPORTED_PROVIDERS = {"gemini", "openai"}
+SUPPORTED_PROVIDERS = {"gemini", "openai", "groq"}
 
 
 class LLMClient:
@@ -36,6 +36,8 @@ class LLMClient:
             return value
         if os.getenv("GEMINI_API_KEY"):
             return "gemini"
+        if os.getenv("GROQ_API_KEY"):
+            return "groq"
         if os.getenv("OPENAI_API_KEY"):
             return "openai"
         return "gemini"
@@ -43,11 +45,15 @@ class LLMClient:
     def _resolve_api_key(self) -> Optional[str]:
         if self.provider == "gemini":
             return os.getenv("GEMINI_API_KEY")
+        if self.provider == "groq":
+            return os.getenv("GROQ_API_KEY")
         return os.getenv("OPENAI_API_KEY")
 
     def _resolve_model(self) -> str:
         if self.provider == "gemini":
             return os.getenv("GEMINI_MODEL", "gemini-flash-lite-latest")
+        if self.provider == "groq":
+            return os.getenv("GROQ_MODEL", "llama3-8b-8192")
         return os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
     def complete(self, prompt: str, system_prompt: str = "", max_tokens: int = 2000, temperature: float = 0.7) -> str:
@@ -102,7 +108,8 @@ class LLMClient:
         headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
 
         try:
-            response = self._post_with_backoff("https://api.openai.com/v1/chat/completions", payload, headers=headers)
+            url = "https://api.groq.com/openai/v1/chat/completions" if self.provider == "groq" else "https://api.openai.com/v1/chat/completions"
+            response = self._post_with_backoff(url, payload, headers=headers)
             response.raise_for_status()
             data = response.json()
             return data["choices"][0]["message"]["content"].strip()
