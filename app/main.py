@@ -291,6 +291,67 @@ def publish_article_endpoint(article: dict, _auth=Depends(require_api_key), idem
     finally:
         publisher.close()
 
+@app.get("/api/editorial/review")
+def list_articles_for_review(_auth=Depends(require_api_key)):
+    db = None
+    try:
+        db = get_session()
+        articles = db.query(NewsArticle).filter(
+            NewsArticle.status.in_(["review", "classified", "draft"])
+        ).order_by(NewsArticle.created_at.desc()).limit(50).all()
+        
+        return {"articles": [
+            {
+                "slug": a.slug,
+                "title": a.title,
+                "summary": a.summary,
+                "original_text": a.original_text,
+                "category": a.category,
+                "importance_score": a.importance_score,
+                "engagement_score": a.engagement_score,
+                "status": a.status
+            } for a in articles
+        ]}
+    except Exception as e:
+        logger.error("Falha ao listar matérias para curadoria (%s)", type(e).__name__)
+        raise HTTPException(status_code=503, detail="Erro interno") from None
+    finally:
+        if db is not None:
+            db.close()
+
+
+@app.put("/api/editorial/review/{slug}")
+def update_article_review(slug: str, data: dict, _auth=Depends(require_api_key)):
+    db = None
+    try:
+        db = get_session()
+        article = db.query(NewsArticle).filter(NewsArticle.slug == slug).first()
+        if not article:
+            raise HTTPException(status_code=404, detail="Matéria não encontrada")
+            
+        if "category" in data:
+            article.category = data["category"]
+        if "importance_score" in data:
+            article.importance_score = data["importance_score"]
+        if "engagement_score" in data:
+            article.engagement_score = data["engagement_score"]
+        if "status" in data:
+            article.status = data["status"]
+            if article.status == "published" and not article.published_at:
+                article.published_at = datetime.now(timezone.utc)
+                
+        article.updated_at = datetime.now(timezone.utc)
+        db.commit()
+        return {"status": "success", "slug": slug}
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error("Falha ao atualizar matéria (%s)", type(e).__name__)
+        raise HTTPException(status_code=503, detail="Erro interno") from None
+    finally:
+        if db is not None:
+            db.close()
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
