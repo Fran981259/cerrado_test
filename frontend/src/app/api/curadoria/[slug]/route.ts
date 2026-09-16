@@ -5,7 +5,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ slug
     const { slug } = await params;
     const body = await request.json();
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://portal_cerrado:8000";
-    const res = await fetch(`${backendUrl}/editorial/review/${slug}`, {
+    const res = await fetch(`${backendUrl}/api/editorial/review/${slug}`, {
       method: "PUT",
       headers: { 
         "Content-Type": "application/json",
