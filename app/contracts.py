@@ -31,10 +31,41 @@ class UTCDateTime(TypeDecorator):
 
 
 ALIASES = {
-    "technology": "tech", "tecnologia": "tech",
-    "entertainment": "culture", "science_health": "health",
-    "sports_global": "sports", "geopolitics": "politics",
-    "cultura": "culture"
+    # Tecnologia e Ciência
+    "technology": "tech", "tecnologia": "tech", "inovação": "tech", "informática": "tech",
+    "science": "science", "ciência": "science", "ciências": "science", "espaço": "science", "astronomia": "science",
+    
+    # Cultura e Entretenimento
+    "entertainment": "culture", "cultura": "culture", "cinema": "culture", "música": "culture", "arte": "culture",
+    "famosos": "culture", "celebridades": "culture", "televisão": "culture", "tv": "culture", "shows": "culture",
+    
+    # Saúde
+    "health": "health", "saúde": "health", "bem-estar": "health", "medicina": "health", "science_health": "health",
+    
+    # Esportes
+    "sports": "sports", "esporte": "sports", "esportes": "sports", "futebol": "sports", "brasileirão": "sports", 
+    "sports_global": "sports", "tênis": "sports", "vôlei": "sports", "basquete": "sports", "olimpíadas": "sports",
+    
+    # Política
+    "politics": "politics", "política": "politics", "geopolitics": "politics", "poder": "politics", 
+    "eleições": "politics", "governo": "politics", "legislativo": "politics", "executivo": "politics", "judiciário": "politics",
+    
+    # Economia
+    "economy": "economy", "economia": "economy", "mercado": "economy", "negócios": "economy", "finanças": "economy",
+    "dinheiro": "economy", "bolsa": "economy", "investimentos": "economy", "trabalho e renda": "economy",
+    
+    # Segurança
+    "security": "security", "segurança": "security", "polícia": "security", "crime": "security", "investigação": "security",
+    
+    # Agronegócio
+    "agriculture": "agriculture", "agronegócio": "agriculture", "agro": "agriculture", "rural": "agriculture", "campo": "agriculture",
+    
+    # Educação
+    "education": "education", "educação": "education", "escola": "education", "faculdade": "education", 
+    "enem": "education", "concursos": "education", "capacitação": "education",
+    
+    # Clima e Meio Ambiente
+    "clima": "clima", "meio ambiente": "clima", "natureza": "clima", "sustentabilidade": "clima", "previsão do tempo": "clima",
 }
 CATEGORIES = {"tech", "culture", "health", "science", "sports", "politics", "economy",
               "security", "agriculture", "education", "clima", "general"}
