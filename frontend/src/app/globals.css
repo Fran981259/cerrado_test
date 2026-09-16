@@ -1,32 +1,35 @@
 @import "tailwindcss";
 
 @theme {
-  --color-canvas: #FDFBF7;
-  --color-text-primary: #2D2926;
-  --color-text-muted: #6D6762;
-  --color-accent-soil: #A65E4E;
-  --color-accent-leaf: #4A6741;
+  --color-canvas: #090B0F; /* Deep tech dark blue/black */
+  --color-text-primary: #F3F4F6;
+  --color-text-muted: #9CA3AF;
+  --color-accent-soil: #F97316; /* Vibrant orange/sunset contrast */
+  --color-accent-leaf: #10B981; /* Neon green/emerald */
   --font-display: var(--font-zilla-slab);
   --font-sans: var(--font-inter);
 }
 
-* { scrollbar-width: thin; }
+* { scrollbar-width: thin; scrollbar-color: #374151 transparent; }
 
 body {
   @apply bg-canvas text-text-primary antialiased;
+  background-image: radial-gradient(circle at top right, rgba(249, 115, 22, 0.05), transparent 40%),
+                    radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.05), transparent 40%);
+  background-attachment: fixed;
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--color-accent-soil) 28%, transparent);
+  background: color-mix(in srgb, var(--color-accent-soil) 40%, transparent);
 }
 
 /* Glassmorphism e Premium Utilities */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1), 0 8px 32px rgba(0, 0, 0, 0.25);
 }
 
 .news-card-hover {

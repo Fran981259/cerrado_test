@@ -20,8 +20,8 @@ export default function Header() {
         </div>
 
         <div className="hidden shrink-0 items-center gap-2 text-xs font-bold uppercase tracking-wider text-text-muted md:flex">
-          <Link href="/sobre" className="rounded-full px-3 py-2 hover:bg-white hover:text-text-primary">Sobre</Link>
-          <Link href="/contato" className="rounded-full bg-text-primary px-4 py-2 text-white shadow-sm hover:bg-accent-soil">Contato</Link>
+          <Link href="/sobre" className="rounded-full px-3 py-2 hover:bg-white/10 hover:text-text-primary transition-colors">Sobre</Link>
+          <Link href="/contato" className="rounded-full bg-accent-soil px-4 py-2 text-white shadow-sm hover:bg-white hover:text-text-primary transition-all">Contato</Link>
         </div>
       </div>
 
