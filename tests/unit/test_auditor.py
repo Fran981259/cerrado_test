@@ -4,7 +4,7 @@ Usa SQLite temporário (nunca o DATABASE_URL real). Padrão de fixture:
 importar app.schema ANTES do create_all, senão nenhuma tabela é criada.
 """
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 from app.auditor import HorusAuditor
@@ -47,7 +47,7 @@ def _article(Session, reporter_id, title="Titulo de teste para auditoria",
                       summary="Resumo", content=content, reporter_id=reporter_id,
                       sources=[{"url": "https://ex.com/a", "name": "Ex"}],
                       original_text=original, status=status,
-                      published_at=published_at or datetime.utcnow(),
+                      published_at=published_at or datetime.now(timezone.utc),
                       category="technology", tags=["technology"])
     db.add(art)
     db.commit()

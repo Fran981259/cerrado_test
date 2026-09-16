@@ -1,10 +1,11 @@
 """Agente Reescritor — Portal Cerrado."""
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from app.llm_client import LLMClient
+from app.contracts import category_name
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -78,7 +79,7 @@ class ArticleRewriter:
             'category': self.reporter.role,
             'attribution': self.reporter.attribution,
             'original_summary': raw_article.get('summary', ''),
-            'rewritten_at': datetime.utcnow().isoformat(),
+            'rewritten_at': datetime.now(timezone.utc).isoformat(),
             'llm_provider': getattr(self.llm, 'provider', None),
             'llm_model': getattr(self.llm, 'model', None),
         }
@@ -170,19 +171,7 @@ def get_reporter_for_category(category: str) -> Optional[ReporterProfile]:
     reporters = load_reporters_config()
     
     for reporter in reporters.values():
-        if reporter.role == category:
+        if category_name(reporter.role) == category_name(category):
             return reporter
             
     return None
-
-
-def rewrite_for_category(category: str, raw_article: Dict[str, Any]) -> Dict[str, Any]:
-    """Reescreve um artigo para uma categoria específica."""
-    reporter = get_reporter_for_category(category)
-    
-    if not reporter:
-        logger.warning(f"Nenhum repórter encontrado para categoria: {category}")
-        return {}
-        
-    rewriter = ArticleRewriter(reporter)
-    return rewriter.rewrite(raw_article)

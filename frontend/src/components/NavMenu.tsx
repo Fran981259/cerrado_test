@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense } from "react";
-import { CATEGORY_LIST } from "@/lib/categories";
 
 // Taxonomia Capital News adaptada à paleta Cerrado — mantém slugs existentes, só rótulos mudam
 // Paleta continua Cerrado (rounded-full, bg-white, accent-soil), funcionalidade vem do Capital
@@ -26,6 +25,7 @@ const CAPITAL_MENU: MenuItem[] = [
     subs: [
       { label: "Polícia", slug: "security" },
       { label: "Justiça", slug: "security" },
+      { label: "Investigação", slug: "security" },
     ],
   },
   {
@@ -79,28 +79,8 @@ const CAPITAL_MENU: MenuItem[] = [
   },
 ];
 
-// Compat: mantém PRIMARY/MORE/ALL para fallback, mas derivado do Capital
-const PRIMARY_SLUGS = ["politics", "economy", "security", "sports", "clima", "tech"];
-const PRIMARY = [
-  { href: "/", label: "Início", cat: null as string | null },
-  ...CATEGORY_LIST.filter((c) => PRIMARY_SLUGS.includes(c.slug)).map((c) => ({
-    href: `/categoria/${c.slug}`,
-    label: c.label,
-    cat: c.slug as string | null,
-  })),
-];
-const MORE = CATEGORY_LIST.filter((c) => c.slug !== "general" && !PRIMARY_SLUGS.includes(c.slug)).map((c) => ({ href: `/categoria/${c.slug}`, label: c.label, cat: c.slug as string | null }));
-const ALL = [
-  { href: "/", label: "Início", cat: null as string | null },
-  ...CATEGORY_LIST.filter((c) => c.slug !== "general").map((c) => ({
-    href: `/categoria/${c.slug}`,
-    label: c.label,
-    cat: c.slug as string | null,
-  })),
-];
-
 const linkCls = (on: boolean) =>
-  `relative rounded-full px-3 py-2 text-[12px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+  `relative rounded-full px-2.5 py-1.5 text-[11px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
     on ? "bg-white text-accent-soil shadow-sm ring-1 ring-black/5" : "text-text-muted hover:bg-white/70 hover:text-text-primary"
   }`;
 
@@ -112,7 +92,7 @@ function DesktopLinks() {
       <Link href="/" aria-current={active === null ? "page" : undefined} className={linkCls(active === null)}>
         Início
       </Link>
-      {CAPITAL_MENU.map((item) => {
+      {CAPITAL_MENU.map((item, idx) => {
         if (item.href) {
           const slug = item.href.split("/").pop() || "";
           const on = active === slug;
@@ -124,6 +104,7 @@ function DesktopLinks() {
         }
         const subs = item.subs || [];
         const moreOn = subs.some((s) => s.slug === active);
+        const alignRight = idx >= CAPITAL_MENU.length - 3; // últimos 3 não estouram à direita
         return (
           <div key={item.label} className="group relative">
             <button aria-haspopup="true" className={`${linkCls(moreOn)} inline-flex cursor-pointer items-center gap-1 bg-transparent`}>
@@ -132,7 +113,7 @@ function DesktopLinks() {
                 <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
               </svg>
             </button>
-            <div className="invisible absolute left-0 top-full z-50 w-64 translate-y-2 rounded-2xl border border-black/5 bg-white p-2 opacity-0 shadow-[0_22px_70px_rgba(45,41,38,0.16)] transition-all group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
+            <div className={`invisible absolute top-full z-50 w-64 translate-y-2 rounded-2xl border border-black/5 bg-white p-2 opacity-0 shadow-[0_22px_70px_rgba(45,41,38,0.16)] transition-all group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100 ${alignRight ? "right-0" : "left-0"}`}>
               {subs.map((s) => {
                 const on = active === s.slug;
                 return (
@@ -188,7 +169,7 @@ function MobileLinks() {
 
 export function DesktopNav() {
   return (
-    <nav className="hidden items-center gap-0.5 lg:flex" aria-label="Editorias">
+    <nav className="hidden min-w-0 flex-1 items-center gap-0.5 overflow-x-auto scrollbar-none lg:flex [&::-webkit-scrollbar]:hidden" aria-label="Editorias" style={{ scrollbarWidth: "none" }}>
       <Suspense>
         <DesktopLinks />
       </Suspense>

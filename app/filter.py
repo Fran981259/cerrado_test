@@ -13,13 +13,47 @@ import logging
 from datetime import datetime
 from typing import Dict, List, Optional, Set
 from difflib import SequenceMatcher
+from urllib.parse import urlsplit, urlunsplit
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Redis TTL for dedup (7 dias)
 DEDUP_TTL_SECONDS = int(os.getenv("DEDUP_TTL_SECONDS", "604800"))
-REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
+REDIS_URL = os.getenv("REDIS_URL")
+if not REDIS_URL:
+    if os.getenv("ENVIRONMENT", "development").lower() == "production":
+        raise RuntimeError("REDIS_URL obrigatorio em producao")
+    REDIS_URL = "redis://localhost:6379/0"
+
+
+def _redact_url(value: str) -> str:
+    try:
+        parsed = urlsplit(value)
+        netloc = parsed.hostname or ""
+        if parsed.port:
+            netloc += f":{parsed.port}"
+        return urlunsplit((parsed.scheme, netloc, parsed.path, parsed.query, parsed.fragment))
+    except Exception:
+        return "<invalid-url>"
+
+def _normalize_dedup_url(url: str) -> str:
+    try:
+        from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
+        p = urlsplit((url or "").strip())
+        scheme = (p.scheme or "https").lower()
+        netloc = (p.hostname or "").lower()
+        if netloc.startswith("www."):
+            netloc = netloc[4:]
+        if p.port:
+            netloc += f":{p.port}"
+        path = p.path.rstrip("/") or ""
+        # remove utm_* e fbclid
+        qsl = [(k, v) for k, v in parse_qsl(p.query, keep_blank_values=True) if not k.lower().startswith("utm_") and k.lower() not in ("fbclid", "gclid")]
+        query = urlencode(qsl, doseq=True)
+        return urlunsplit((scheme, netloc, path, query, ""))
+    except Exception:
+        return (url or "").strip().rstrip("/").lower()
 
 def _get_redis():
     try:
@@ -28,19 +62,19 @@ def _get_redis():
         client.ping()
         return client
     except Exception as e:
-        logger.debug(f"[DEDUP] Redis não disponível ({REDIS_URL}): {e} — usando memória")
+        logger.debug(f"[DEDUP] Redis não disponível ({_redact_url(REDIS_URL)}): {e} — usando memória")
         return None
 
 
 class ContentFilter:
     """Filtro de qualidade e duplicatas — com persistência Redis (ou memória fallback)."""
     
-    def __init__(self, similarity_threshold: float = 0.85):
+    def __init__(self, similarity_threshold: float = 0.85, use_redis: bool = True):
         self.similarity_threshold = similarity_threshold
         self.seen_hashes: Set[str] = set()
         self.seen_titles: List[str] = []
         # Tenta Redis para persistência cross-run (sorted sets com expiração por item)
-        self._redis = _get_redis()
+        self._redis = _get_redis() if use_redis else None
         self._redis_hash_key = "dedup:hashes"
         self._redis_titles_key = "dedup:titles"
         if self._redis:
@@ -56,35 +90,10 @@ class ContentFilter:
                 logger.debug(f"[DEDUP] falha ao carregar Redis: {e}")
                 self._redis = None
         
-        # Palavras sensíveis (não publicar)
-        self.blocked_keywords = [
-            # Violência extrema
-            "execution", "execução", "torture", "tortura",
-            "beheading", "decapitação", "massacre",
-            
-            # Conteúdo sexual explícito
-            "pornography", "pornografia",
-            
-            # Discurso de ódio
-            "racism", "racismo",
-            "nazi", "fascist", "fascista",
-            "hate crime",
-            
-            # Substâncias ilegais (em contexto de venda)
-            "drug trafficking", "tráfico de drogas",
-            
-            # Desastres (com vítimas específicas - sensível)
-            # Não bloquear completamente, mas filtrar com cuidado
-        ]
-        
-        # Palavras que indicam baixa qualidade
-        self.low_quality_keywords = [
-            "click here", "clique aqui",
-            "buy now", "compre agora",
-            "limited time", "tempo limitado",
-            "make money fast", "ganhe dinheiro rápido",
-            "weight loss miracle", "emagrecimento milagroso",
-        ]
+        # Filtro de palavras desativado: portal de notícias publica os fatos sem censura de termos.
+        # Mantido vazio por determinação editorial — nenhum termo bloqueia publicação.
+        self.blocked_keywords: List[str] = []
+        self.low_quality_keywords: List[str] = []
     
     def is_valid(self, article: Dict) -> bool:
         """Verifica se o artigo é válido para publicação."""
@@ -102,17 +111,8 @@ class ContentFilter:
         summary_lower = article.get('summary', '').lower()
         combined = title_lower + ' ' + summary_lower
         
-        # Verifica palavras sensíveis
-        for keyword in self.blocked_keywords:
-            if keyword in combined:
-                logger.warning(f"Artigo rejeitado por palavra sensível: {keyword}")
-                return False
-        
-        # Verifica baixa qualidade
-        for keyword in self.low_quality_keywords:
-            if keyword in combined:
-                logger.warning(f"Artigo rejeitado por baixa qualidade: {keyword}")
-                return False
+        # Filtro de palavras desativado — nenhum termo rejeita artigo (portal publica fatos sem censura)
+        # Verificação mantida apenas para compatibilidade, mas listas estão vazias.
         
         # Verifica duplicatas
         if self._is_duplicate(article):
@@ -138,8 +138,8 @@ class ContentFilter:
             logger.debug(f"[DEDUP] falha ao podar Redis: {e}")
 
     def _is_duplicate(self, article: Dict) -> bool:
-        """Detecta se o artigo é duplicata — com persistência Redis."""
-        url = article.get('url', '') or ''
+        """Detecta se o artigo é duplicata — com persistência Redis (URL normalizada)."""
+        url = _normalize_dedup_url(article.get('url', '') or '')
         url_hash = hashlib.md5(url.encode()).hexdigest()
         # Poda antes de checar: entradas expiradas não são duplicatas
         if self._redis:
@@ -153,8 +153,8 @@ class ContentFilter:
             if url_hash in self.seen_hashes:
                 return True
 
-        # Similaridade de título — busca títulos do Redis se disponível
-        title = article.get('title', '').lower()
+        # Similaridade de título — busca títulos do Redis se disponível (normalizado)
+        title = re.sub(r"\s+", " ", (article.get('title', '') or "").strip().lower())
         titles_to_check = self.seen_titles
         if self._redis:
             try:
@@ -166,7 +166,8 @@ class ContentFilter:
                 pass
         for seen_title in titles_to_check:
             try:
-                similarity = SequenceMatcher(None, title, seen_title.lower()).ratio()
+                norm_seen = re.sub(r"\s+", " ", (seen_title or "").strip().lower())
+                similarity = SequenceMatcher(None, title, norm_seen).ratio()
                 if similarity >= self.similarity_threshold:
                     return True
             except Exception:
@@ -283,61 +284,11 @@ class DuplicateDetector:
 
 
 class SensitiveContentFilter:
-    """Filtro de conteúdo sensível."""
-    
-    SENSITIVE_TOPICS = {
-        'children': {
-            'keywords': ['child victim', 'criança vítima', 'minor', 'menor'],
-            'action': 'block',  # Bloquear por padrão — prioridade máxima
-        },
-        'violence': {
-            'keywords': ['murder', 'assassinato', 'killing', 'homicídio'],
-            'action': 'review',  # Revisar antes de publicar
-        },
-        'accidents': {
-            'keywords': ['accident', 'acidente', 'crash', 'colisão'],
-            'action': 'review',
-        },
-        'tragedy': {
-            'keywords': ['tragedy', 'tragédia', 'disaster', 'desastre'],
-            'action': 'review',
-        },
-    }
-    
+    """Filtro de conteúdo sensível — desativado: portal publica fatos sem censura."""
+
+    SENSITIVE_TOPICS: Dict[str, Dict] = {}
+
     @staticmethod
     def check(article: Dict) -> Dict:
-        """Verifica conteúdo sensível."""
-        combined = (
-            article.get('title', '') + ' ' + 
-            article.get('summary', '')
-        ).lower()
-        
-        for topic, config in SensitiveContentFilter.SENSITIVE_TOPICS.items():
-            for keyword in config['keywords']:
-                if keyword in combined:
-                    return {
-                        'is_sensitive': True,
-                        'topic': topic,
-                        'action': config['action'],
-                        'keyword_found': keyword,
-                    }
-        
-        return {'is_sensitive': False}
-
-
-# Funções de conveniência
-def filter_articles(articles: List[Dict]) -> List[Dict]:
-    """Filtra uma lista de artigos."""
-    content_filter = ContentFilter()
-    return content_filter.filter_batch(articles)
-
-
-def calculate_quality(article: Dict) -> float:
-    """Calcula qualidade de um artigo."""
-    content_filter = ContentFilter()
-    return content_filter.calculate_quality_score(article)
-
-
-def check_sensitive(article: Dict) -> Dict:
-    """Verifica conteúdo sensível."""
-    return SensitiveContentFilter.check(article)
+        """Desativado: sempre retorna não sensível (nenhum termo filtra)."""
+        return {"is_sensitive": False}

@@ -1,10 +1,10 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 def test_trend_analyzer_prioritizes_repeated_topics():
     from app.ml_editorial import EditorialTrendAnalyzer
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     articles = [
         {
             "title": "Governo anuncia nova medida na política estadual",
@@ -72,7 +72,7 @@ def test_refresh_trend_signals_uses_real_db_rows():
     reporter = db.query(Reporter).first()
     assert reporter is not None
 
-    slug = f"ml-trend-{datetime.utcnow().timestamp()}"
+    slug = f"ml-trend-{datetime.now(timezone.utc).timestamp()}"
     article = NewsArticle(
         title="Governo e assembleia discutem pacote econômico em MS",
         slug=slug,
@@ -81,9 +81,9 @@ def test_refresh_trend_signals_uses_real_db_rows():
         reporter_id=reporter.id,
         status="published",
         category="politics",
-        published_at=datetime.utcnow(),
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        published_at=datetime.now(timezone.utc),
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
         visibility="public",
         final_score=40,
         priority_tier="TIER_1",

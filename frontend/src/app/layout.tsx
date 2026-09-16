@@ -41,6 +41,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" className={`${zilla.variable} ${inter.variable} h-full`}>
+      <head>
+        <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/3.0.0/uicons-regular-rounded/css/uicons-regular-rounded.css" />
+        <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/3.0.0/uicons-solid-rounded/css/uicons-solid-rounded.css" />
+      </head>
       <body className="min-h-full flex flex-col font-sans antialiased">
         <Header />
         <main className="flex-1">{children}</main>

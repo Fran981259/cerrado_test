@@ -8,7 +8,11 @@ from celery.schedules import crontab
 import os
 
 # Configuração do broker
-REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
+REDIS_URL = os.getenv("REDIS_URL")
+if not REDIS_URL:
+    if os.getenv("ENVIRONMENT", "development").lower() == "production":
+        raise RuntimeError("REDIS_URL obrigatorio em producao")
+    REDIS_URL = "redis://localhost:6379/0"
 
 # Criação do app Celery
 celery_app = Celery(
@@ -45,8 +49,8 @@ celery_app.conf.update(
     # Configurações de task
     task_acks_late=True,  # Confirma após executar
     task_reject_on_worker_lost=True,
-    task_time_limit=300,  # 5 minutos por task
-    task_soft_time_limit=240,  # 4 minutos soft limit
+    task_time_limit=1500,  # pipeline completo pode levar ate 25 minutos
+    task_soft_time_limit=1380,
 
     # Retry
     task_default_retry_delay=60,  # 1 minuto entre retries
@@ -90,10 +94,6 @@ celery_app.conf.update(
         # ================================
         # SITEMAP (1x ao dia)
         # ================================
-        "update-sitemap": {
-            "task": "app.tasks.maintenance.update_sitemap",
-            "schedule": crontab(hour=4, minute=0),  # 04:00 todo dia
-        },
 
         # ================================
         # HEALTH CHECK (a cada 5 min)
@@ -128,10 +128,3 @@ celery_app.conf.update(
         },
     },
 )
-
-
-@celery_app.task(bind=True)
-def debug_task(self):
-    """Task de debug para verificar se o Celery está rodando."""
-    print(f"Request: {self.request!r}")
-    return True

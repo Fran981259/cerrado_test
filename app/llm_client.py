@@ -5,7 +5,7 @@ Suporta apenas Gemini e OpenAI.
 
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Optional
 
 import requests
@@ -47,7 +47,7 @@ class LLMClient:
 
     def _resolve_model(self) -> str:
         if self.provider == "gemini":
-            return os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+            return os.getenv("GEMINI_MODEL", "gemini-flash-lite-latest")
         return os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
     def complete(self, prompt: str, system_prompt: str = "", max_tokens: int = 2000, temperature: float = 0.7) -> str:
@@ -58,6 +58,34 @@ class LLMClient:
         if self.provider == "gemini":
             return self._complete_gemini(prompt, system_prompt, max_tokens, temperature)
         return self._complete_openai(prompt, system_prompt, max_tokens, temperature)
+
+    RETRYABLE_STATUS = {429, 500, 502, 503}
+    MAX_ATTEMPTS = 4
+
+    def _post_with_backoff(self, url: str, payload: Dict, headers: Optional[Dict] = None, params: Optional[Dict] = None) -> requests.Response:
+        """POST com retry e backoff exponencial para erros transientes (429/5xx)."""
+        import random
+        import time
+
+        last_exc = None
+        for attempt in range(1, self.MAX_ATTEMPTS + 1):
+            try:
+                response = requests.post(url, json=payload, headers=headers, params=params, timeout=self.timeout)
+                if response.status_code in self.RETRYABLE_STATUS and attempt < self.MAX_ATTEMPTS:
+                    wait = 2 ** attempt + random.uniform(0, 1)
+                    logger.warning("LLM HTTP %s (tentativa %d/%d). Aguardando %.1fs...", response.status_code, attempt, self.MAX_ATTEMPTS, wait)
+                    time.sleep(wait)
+                    continue
+                return response
+            except (requests.ConnectionError, requests.Timeout) as e:
+                last_exc = e
+                if attempt < self.MAX_ATTEMPTS:
+                    wait = 2 ** attempt + random.uniform(0, 1)
+                    logger.warning("LLM erro de rede %s (tentativa %d/%d). Aguardando %.1fs...", type(e).__name__, attempt, self.MAX_ATTEMPTS, wait)
+                    time.sleep(wait)
+                    continue
+                raise
+        raise last_exc if last_exc else requests.HTTPError("LLM sem resposta após retries")
 
     def _complete_openai(self, prompt: str, system_prompt: str, max_tokens: int, temperature: float) -> str:
         messages = []
@@ -74,15 +102,15 @@ class LLMClient:
         headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
 
         try:
-            response = requests.post("https://api.openai.com/v1/chat/completions", json=payload, headers=headers, timeout=self.timeout)
+            response = self._post_with_backoff("https://api.openai.com/v1/chat/completions", payload, headers=headers)
             response.raise_for_status()
             data = response.json()
             return data["choices"][0]["message"]["content"].strip()
         except requests.HTTPError as e:
-            logger.error("Erro OpenAI %s: %s", e.response.status_code, e.response.text[:200])
+            logger.error("Erro OpenAI HTTP %s", e.response.status_code if e.response is not None else "?")
             return ""
         except Exception as e:
-            logger.error("Erro ao chamar OpenAI: %s", e)
+            logger.error("Erro ao chamar OpenAI (%s)", type(e).__name__)
             return ""
 
     def _complete_gemini(self, prompt: str, system_prompt: str, max_tokens: int, temperature: float) -> str:
@@ -94,11 +122,10 @@ class LLMClient:
             payload["systemInstruction"] = {"parts": [{"text": system_prompt}]}
 
         try:
-            response = requests.post(
+            response = self._post_with_backoff(
                 f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent",
+                payload,
                 params={"key": self.api_key},
-                json=payload,
-                timeout=self.timeout,
             )
             response.raise_for_status()
             data = response.json()
@@ -109,13 +136,13 @@ class LLMClient:
             text = "".join(part.get("text", "") for part in parts).strip()
             return text
         except requests.HTTPError as e:
-            logger.error("Erro Gemini %s: %s", e.response.status_code, e.response.text[:200])
+            logger.error("Erro Gemini HTTP %s", e.response.status_code if e.response is not None else "?")
             return ""
         except Exception as e:
-            logger.error("Erro ao chamar Gemini: %s", e)
+            logger.error("Erro ao chamar Gemini (%s)", type(e).__name__)
             return ""
 
-    def rewrite_article(self, article: Dict, reporter_prompt: str, attribution: str, related_sources: list = None) -> Dict:
+    def rewrite_article(self, article: Dict, reporter_prompt: str, attribution: str, related_sources: list = None, **_: object) -> Dict:
         title = article.get("title_pt") or article.get("title", "")
         summary = article.get("summary_pt") or article.get("summary", "")
         source = article.get("source", "Portal de Notícias")
@@ -157,8 +184,8 @@ REQUISITOS EDITORIAIS:
 
 REESCRITA:"""
 
-        rewritten = self.complete(prompt=user_prompt, system_prompt=reporter_prompt, max_tokens=3000, temperature=0.65)
-        return {**article, "rewritten_content": rewritten, "rewritten_at": datetime.utcnow().isoformat(), "llm_provider": self.provider, "llm_model": self.model}
+        rewritten = self.complete(prompt=user_prompt, system_prompt=reporter_prompt, max_tokens=5000, temperature=0.65)
+        return {**article, "rewritten_content": rewritten, "rewritten_at": datetime.now(timezone.utc).isoformat(), "llm_provider": self.provider, "llm_model": self.model}
 
     def translate_to_pt_br(self, text: str, source_lang: str = "en") -> str:
         system_prompt = f"Você é um tradutor especializado em jornalismo. Traduza de {source_lang} para Português Brasileiro (pt-BR) com fluidez natural e tom jornalístico."
@@ -199,14 +226,9 @@ class TranslationGlossary:
 
 
 def test_llm_connection(provider: Optional[str] = None) -> bool:
+    """Helper manual usado por scripts/test_llm.py; não é parte da suíte pytest."""
     client = LLMClient(provider=provider)
     if not client.api_key:
-        print(f"❌ API key não configurada para {client.provider}")
         return False
-
-    response = client.complete(prompt="Responda em UMA frase: o que é jornalismo local?", system_prompt="Seja conciso.", max_tokens=100, temperature=0.3)
-    if response:
-        print(f"✅ {client.provider}: {response}")
-        return True
-    print(f"❌ Sem resposta de {client.provider}")
-    return False
+    text = client.complete("Responda apenas: ok", max_tokens=10, temperature=0)
+    return bool(text.strip())

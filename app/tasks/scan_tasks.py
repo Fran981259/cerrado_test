@@ -4,15 +4,31 @@ VERSÃO REAL - Coleta de portais brasileiros e PERSISTE no banco de dados.
 """
 
 from app.celery_app import celery_app
-from app.scanner import RealPortalScanner, scan_all_portals
+from app.scanner import RealPortalScanner
 from app.database import get_session
 from app.schema import NewsArticle, Reporter
 from typing import Optional
 import hashlib
 import re
 import logging
+from datetime import datetime, timezone
+from app.contracts import as_utc, category_name, sources_list
+from app.schema import ArticleIdentity
+from sqlalchemy.exc import IntegrityError
 
 logger = logging.getLogger(__name__)
+
+
+def _clean_plain_text(value: str) -> str:
+    if not value:
+        return ""
+    try:
+        from bs4 import BeautifulSoup
+        value = BeautifulSoup(value, "html.parser").get_text(" ", strip=True)
+    except Exception:
+        value = re.sub(r"<[^>]+>", " ", value)
+    value = re.sub(r"[\r\n\t]+", " ", value)
+    return re.sub(r"\s{2,}", " ", value).strip()
 
 
 def _url_hash(url: str) -> str:
@@ -28,7 +44,7 @@ def _parse_iso_datetime(value) -> Optional[object]:
         dt = _parser.isoparse(value.strip())
         # SQLite via SQLAlchemy espera datetime naive; remove tzinfo
         if dt.tzinfo is not None:
-            dt = dt.replace(tzinfo=None)
+            dt = as_utc(dt).replace(tzinfo=None)
         return dt
     except Exception:
         try:
@@ -59,7 +75,7 @@ def _persist_articles(articles: list, fetch_details: bool = True) -> dict:
     Persiste artigos coletados no banco com status 'draft'.
     Se `fetch_details`, baixa a página real de cada matéria nova para
     extrair título limpo, lead, corpo completo, data, autor e imagem.
-    Pula artigos já existentes (deduplicação pela URL de origem).
+    Pula artigos já existentes (deduplicação por URL hash + similaridade de título).
     """
     db = get_session()
     inserted = 0
@@ -67,19 +83,35 @@ def _persist_articles(articles: list, fetch_details: bool = True) -> dict:
     errors = 0
     fetched = 0
     fetch_miss = 0
+    seen = set()
+    recent_titles = []
     try:
         from app.rewriter import get_reporter_for_category
         from app.article_fetcher import ArticleFetcher
+        from app.filter import DuplicateDetector
         from datetime import datetime as _dt
         fetcher = ArticleFetcher() if fetch_details else None
+
+        # Carrega títulos recentes para dedup por similaridade
+        try:
+            recent = db.query(NewsArticle.title).filter(
+                NewsArticle.status.in_(["draft", "classified", "rewritten", "published"])
+            ).order_by(NewsArticle.created_at.desc()).limit(200).all()
+            recent_titles = [r[0] for r in recent if r[0]]
+        except Exception:
+            recent_titles = []
 
         for a in articles:
             try:
                 url = a.get("url", "")
-                h = _url_hash(url)
-                if not url:
+                h = _url_hash(a.get("identity_key") or url)
+                if not url and not (a.get("needs_review") and a.get("identity_key")):
                     errors += 1
                     continue
+                if h in seen:
+                    duplicates += 1
+                    continue
+                seen.add(h)
 
                 exists = (
                     db.query(NewsArticle)
@@ -90,10 +122,27 @@ def _persist_articles(articles: list, fetch_details: bool = True) -> dict:
                     duplicates += 1
                     continue
 
+                # Dedup por similaridade de título (85% threshold)
+                new_title = (a.get("title") or "")[:500]
+                is_title_dup = False
+                if new_title and recent_titles:
+                    dummy = {"title": new_title}
+                    for existing_title in recent_titles[-50:]:
+                        if DuplicateDetector.are_duplicates(dummy, {"title": existing_title}, threshold=0.85):
+                            is_title_dup = True
+                            break
+                if is_title_dup:
+                    duplicates += 1
+                    continue
+
+                identity = ArticleIdentity(key="source:" + h)
+                db.add(identity)
+                db.flush()
+
                 # ---- Extração de alta qualidade da página real ----
-                title = (a.get("title") or "")[:500]
-                lead = (a.get("summary") or "")[:2000]
-                body = ""
+                title = _clean_plain_text(a.get("title") or "")[:500]
+                lead = _clean_plain_text(a.get("summary") or "")[:2000]
+                body = a.get("body") or ""
                 published_at = None
                 author = None
                 image_url = None
@@ -103,17 +152,23 @@ def _persist_articles(articles: list, fetch_details: bool = True) -> dict:
                     if detail.get("status") == "success":
                         fetched += 1
                         if detail.get("title"):
-                            title = detail["title"][:500]
+                            title = _clean_plain_text(detail["title"])[:500]
                         if detail.get("lead"):
-                            lead = detail["lead"][:2000]
+                            lead = _clean_plain_text(detail["lead"])[:2000]
                         body = detail.get("content") or ""
                         published_at = _parse_iso_datetime(detail.get("published_at"))
                         author = (detail.get("author") or "")[:200]
                         image_url = (detail.get("image_url") or "")[:500]
                     else:
                         fetch_miss += 1
+                        if detail.get("status") == "blocked":
+                            db.rollback()
+                            errors += 1
+                            continue
 
-                category = a.get("category") or "general"
+                title = _clean_plain_text(a.get("title_pt") or title)[:500]
+                lead = _clean_plain_text(a.get("summary_pt") or lead)[:2000]
+                category = category_name(a.get("category"))
                 reporter_profile = get_reporter_for_category(category) or list(
                     __import__("app.rewriter", fromlist=["load_reporters_config"])
                     .load_reporters_config()
@@ -136,9 +191,8 @@ def _persist_articles(articles: list, fetch_details: bool = True) -> dict:
                     db.flush()
 
                 slug = _make_draft_slug(title, h)
-                dt_now = _dt.utcnow()
-                db.add(
-                    NewsArticle(
+                dt_now = datetime.now(timezone.utc)
+                article = NewsArticle(
                         title=title,
                         slug=slug,
                         summary=lead,
@@ -146,21 +200,32 @@ def _persist_articles(articles: list, fetch_details: bool = True) -> dict:
                         author=author,
                         image_url=image_url,
                         reporter_id=reporter.id,
-                        sources=[{"url": url, "name": a.get("source", ""), "title": title}],
+                        sources=sources_list([{"url": url, "name": a.get("source", ""), "title": title}]),
                         original_text=body or lead,
                         compliance_hash=h,
-                        status="draft",
+                        status="review" if a.get("needs_review") else "draft",
                         category=category,
                         tags=[category],
+                        is_curiosity=bool(a.get("is_curiosity")),
                         published_at=published_at,
                         created_at=dt_now,
                         updated_at=dt_now,
                     )
-                )
+                db.add(article)
+                db.flush()
+                identity.article_id = article.id
+                db.commit()
                 inserted += 1
-            except Exception:
+            except IntegrityError:
+                db.rollback()
+                if db.get(ArticleIdentity, "source:" + h):
+                    duplicates += 1
+                else:
+                    errors += 1
+            except Exception as exc:
+                db.rollback()
                 errors += 1
-                logger.exception("[SCAN] erro ao persistir artigo")
+                logger.error("[SCAN] erro ao persistir artigo (%s)", type(exc).__name__)
         db.commit()
     except Exception as e:
         db.rollback()
@@ -182,7 +247,8 @@ def _persist_articles(articles: list, fetch_details: bool = True) -> dict:
     name="app.tasks.scan_tasks.scan_brazil_news",
     bind=True,
     max_retries=3,
-    time_limit=300
+    time_limit=600,
+    soft_time_limit=540
 )
 def scan_brazil_news(self):
     """
@@ -213,34 +279,11 @@ def scan_brazil_news(self):
 
 
 @celery_app.task(
-    name="app.tasks.scan_tasks.scan_specific_portal",
-    bind=True,
-    max_retries=3,
-    time_limit=60
-)
-def scan_specific_portal(self, portal_url: str):
-    """Escaneia um portal específico."""
-    logger.info(f"[SCAN] Portal: {portal_url}")
-    
-    try:
-        scanner = RealPortalScanner()
-        for portal in scanner.PORTALS:
-            if portal["url"] == portal_url:
-                result = scanner._scan_portal(portal)
-                return result
-        
-        return {"status": "error", "message": "Portal não encontrado"}
-        
-    except Exception as e:
-        logger.error(f"[SCAN] Erro: {e}")
-        raise self.retry(exc=e)
-
-
-@celery_app.task(
     name="app.tasks.scan_tasks.scan_and_queue",
     bind=True,
     max_retries=3,
-    time_limit=300
+    time_limit=600,
+    soft_time_limit=540
 )
 def scan_and_queue(self):
     """
@@ -273,8 +316,8 @@ def scan_and_queue(self):
     name="app.tasks.scan_tasks.run_full_pipeline",
     bind=True,
     max_retries=3,
-    time_limit=900,
-    soft_time_limit=820
+    time_limit=1500,
+    soft_time_limit=1380
 )
 def run_full_pipeline(self):
     """
@@ -282,15 +325,55 @@ def run_full_pipeline(self):
     scan -> persistir drafts -> classificar -> reescrever -> publicar.
     É o gatilho principal do agendamento.
     """
-    logger.info("[PIPELINE] Iniciando pipeline completo")
+    MIN_ARTICLES_PER_DAY = 50
+    # lock distribuído para evitar sobreposição beat 1800s
+    lock_acquired = False
+    lock_key = "lock:run_full_pipeline"
+    redis_client = None
     try:
+        import os
+        if os.getenv("REDIS_URL"):
+            import redis as _r
+            try:
+                redis_client = _r.from_url(os.getenv("REDIS_URL"), socket_connect_timeout=2, socket_timeout=2)
+                lock_acquired = bool(redis_client.set(lock_key, "1", nx=True, ex=1500))
+                if not lock_acquired:
+                    logger.warning("[PIPELINE] Pipeline já em execução — pulando esta janela")
+                    return {"status": "skipped", "reason": "pipeline already running"}
+            except Exception:
+                lock_acquired = False
+                redis_client = None
+        logger.info("[PIPELINE] Iniciando pipeline completo")
         from app.tasks.classify_tasks import classify_pending_articles
         from app.tasks.rewrite_tasks import rewrite_pending_articles
         from app.tasks.publish_tasks import publish_ready_articles
+        from app.database import get_session
+        from app.schema import NewsArticle
+        from datetime import datetime, timezone, timedelta
+
         scan_result = scan_and_queue()
         classify_result = classify_pending_articles()
         rewrite_result = rewrite_pending_articles()
         publish_result = publish_ready_articles()
+
+        # Volume enforcement: conta artigos publicados hoje
+        try:
+            db = get_session()
+            today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+            published_today = db.query(NewsArticle).filter(
+                NewsArticle.status == "published",
+                NewsArticle.published_at >= today_start
+            ).count()
+            db.close()
+
+            if published_today < MIN_ARTICLES_PER_DAY:
+                logger.warning(
+                    f"[PIPELINE] Volume abaixo da meta: {published_today}/{MIN_ARTICLES_PER_DAY} artigos publicados hoje"
+                )
+            else:
+                logger.info(f"[PIPELINE] Volume ok: {published_today}/{MIN_ARTICLES_PER_DAY} artigos publicados hoje")
+        except Exception as vol_err:
+            logger.warning(f"[PIPELINE] Não foi possível verificar volume: {vol_err}")
 
         logger.info("[PIPELINE] Pipeline completo finalizado")
         return {
@@ -303,3 +386,9 @@ def run_full_pipeline(self):
     except Exception as e:
         logger.error(f"[PIPELINE] Erro: {e}")
         raise self.retry(exc=e)
+    finally:
+        if redis_client and lock_acquired:
+            try:
+                redis_client.delete(lock_key)
+            except Exception:
+                pass

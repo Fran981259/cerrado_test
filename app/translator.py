@@ -5,6 +5,7 @@ Tradução para Português Brasileiro usando LLM.
 
 from app.llm_client import LLMClient, TranslationGlossary
 import logging
+from datetime import datetime, timezone
 from typing import Dict
 
 logging.basicConfig(level=logging.INFO)
@@ -73,6 +74,8 @@ REGRAS:
             max_tokens=2000,
             temperature=0.3,
         )
+        if (title and not title_pt) or (summary and not summary_pt):
+            raise RuntimeError("Traducao temporariamente indisponivel")
         
         # Aplica glossário
         title_pt = TranslationGlossary.apply(title_pt)
@@ -82,7 +85,7 @@ REGRAS:
             **article,
             'title_pt': title_pt or title,
             'summary_pt': summary_pt or summary,
-            'translated_at': article.get('translated_at') or __import__('datetime').datetime.utcnow().isoformat(),
+            'translated_at': article.get('translated_at') or datetime.now(timezone.utc).isoformat(),
             'translation_method': 'llm',
             'llm_model': self.llm.model,
         }

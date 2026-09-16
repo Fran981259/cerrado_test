@@ -6,7 +6,7 @@ Gerador e classificador de curiosidades para distribuição entre segmentos.
 
 import random
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
 from enum import Enum
 
@@ -281,8 +281,8 @@ class CuriosityGenerator:
             'source_lang': 'pt-BR',
             'category': category.value,
             'image_url': None,
-            'published_at': datetime.utcnow().isoformat(),
-            'mined_at': datetime.utcnow().isoformat(),
+            'published_at': datetime.now(timezone.utc).isoformat(),
+            'mined_at': datetime.now(timezone.utc).isoformat(),
             'hash': f"curiosity_{category.value}_{random.randint(1000, 9999)}",
             'requires_translation': False,
             'is_curiosity': True,
@@ -296,7 +296,7 @@ class CuriosityGenerator:
                 'engagement_level': 'VIRAL',
                 'priority_tier': 'TIER_2',
                 'is_curiosity': True,
-                'classified_at': datetime.utcnow().isoformat(),
+                'classified_at': datetime.now(timezone.utc).isoformat(),
             },
         }
         
@@ -369,29 +369,6 @@ class CuriosityMixer:
         return result
 
 
-# Funções de conveniência
-def detect_curiosity(article: Dict) -> bool:
-    """Detecta se um artigo é curiosidade."""
-    generator = CuriosityGenerator()
-    return generator.detect_curiosity(article)
-
-
-def boost_article(article: Dict) -> Dict:
-    """Aplica boost de engajamento em curiosidade."""
-    generator = CuriosityGenerator()
-    return generator.boost_engagement(article)
-
-
-def generate_curiosity_for_category(category: str) -> Optional[Dict]:
-    """Gera curiosidade para uma categoria específica."""
-    generator = CuriosityGenerator()
-    try:
-        cat_enum = CuriosityCategory(category)
-        return generator.generate_curiosity(cat_enum)
-    except ValueError:
-        return None
-
-
 def generate_all_daily_curiosities() -> List[Dict]:
     """Gera curiosidades para todas as categorias."""
     generator = CuriosityGenerator()
@@ -402,5 +379,3 @@ def mix_with_articles(articles: List[Dict], daily_target: int = 50) -> List[Dict
     """Mistura curiosidades com artigos normais."""
     mixer = CuriosityMixer()
     return mixer.inject_curiosities(articles, daily_target)
-    
-    print("\n⚡ Curiosidades têm +30% de engajamento!")

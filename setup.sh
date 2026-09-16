@@ -25,10 +25,12 @@ if command -v systemctl >/dev/null 2>&1; then
       sudo apt-get update
       sudo apt-get install -y postgresql redis-server
       sudo systemctl enable --now postgresql redis-server 2>/dev/null || true
-      sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='portal_user'" | grep -q 1 || \
-        sudo -u postgres psql -c "CREATE USER portal_user WITH PASSWORD 'portal_pass';"
+      : "${POSTGRES_USER:?Defina POSTGRES_USER antes de criar o banco}"
+      : "${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD antes de criar o banco}"
+      sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='${POSTGRES_USER}'" | grep -q 1 || \
+        sudo -u postgres psql -c "CREATE USER ${POSTGRES_USER} WITH PASSWORD '${POSTGRES_PASSWORD}';"
       sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='portal_cerrado'" | grep -q 1 || \
-        sudo -u postgres psql -c "CREATE DATABASE portal_cerrado OWNER portal_user;"
+        sudo -u postgres psql -c "CREATE DATABASE portal_cerrado OWNER ${POSTGRES_USER};"
       echo "==> PostgreSQL e Redis prontos."
     else
       echo "    Sem Postgres/Redis. O sistema usará fallback SQLite (funciona, porém SQLite <> Postgres em produção)."

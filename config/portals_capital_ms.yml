@@ -1,0 +1,159 @@
+# ============================================================
+# PORTAIS MS EXPANDIDO — Guia de Mídia (37 cidades)
+# Fonte: guiademidia.com.br/jornaisdomatogrossodosul.htm + jornais-de-tres-lagoas.htm
+# Curado 08/09/2026 — apenas domínios com https ativo (filtrado http morto/redirect)
+# Uso: alimentar app/scanner.py PORTALS ou miner via _load_config
+# ============================================================
+portals_ms:
+  campo_grande:
+    - name: "Midiamax"
+      url: "https://www.midiamax.com.br"
+      city: "Campo Grande"
+    - name: "Correio do Estado"
+      url: "https://www.correiodoestado.com.br"
+      city: "Campo Grande"
+    - name: "Campo Grande News"
+      url: "https://www.campograndenews.com.br"
+      city: "Campo Grande"
+    - name: "O Estado Online"
+      url: "https://www.oestadoonline.com.br"
+      city: "Campo Grande"
+    - name: "Capital News"
+      url: "https://www.capitalnews.com.br"
+      city: "Campo Grande"
+    - name: "Primeira Página MS"
+      url: "https://primeirapagina.com.br"
+      city: "Campo Grande"
+    - name: "MS Notícias"
+      url: "https://www.msnoticias.com.br"
+      city: "Campo Grande"
+    - name: "A Crítica CG"
+      url: "https://www.acritica.net"
+      city: "Campo Grande"
+    - name: "JD1 Notícias"
+      url: "https://www.jd1noticias.com"
+      city: "Campo Grande"
+    - name: "Diário Digital"
+      url: "https://www.diariodigital.com.br"
+      city: "Campo Grande"
+
+  dourados:
+    - name: "Dourados News"
+      url: "https://www.douradosnews.com.br"
+      city: "Dourados"
+    - name: "Douranews"
+      url: "https://www.douranews.com.br"
+      city: "Dourados"
+    - name: "O Progresso"
+      url: "https://www.progresso.com.br"
+      city: "Dourados"
+    - name: "Dourados Agora"
+      url: "https://www.douradosagora.com.br"
+      city: "Dourados"
+    - name: "Agora MS"
+      url: "https://www.agorams.com.br"
+      city: "Dourados"
+
+  tres_lagoas:
+    - name: "Perfil News"
+      url: "https://www.perfilnews.com.br"
+      city: "Três Lagoas"
+    - name: "Correio de Três Lagoas"
+      url: "https://www.correiodetreslagoas.com.br"
+      city: "Três Lagoas"
+    - name: "JP News"
+      url: "https://www.jpnews.com.br"
+      city: "Três Lagoas"
+    - name: "RCN67"
+      url: "https://www.rcn67.com.br"
+      city: "Três Lagoas"
+    - name: "Hoje Mais Três Lagoas"
+      url: "https://www.hojemais.com.br/tres-lagoas"
+      city: "Três Lagoas"
+    - name: "Diário de Três Lagoas"
+      url: "https://www.diariodetreslagoas.com.br"
+      city: "Três Lagoas"
+
+  corumba:
+    - name: "Correio de Corumbá"
+      url: "https://www.correiodecorumba.com.br"
+      city: "Corumbá"
+    - name: "Diário Corumbaense"
+      url: "https://diarionline.com.br"
+      city: "Corumbá"
+    - name: "Capital do Pantanal"
+      url: "https://www.capitaldopantanal.com.br"
+      city: "Corumbá"
+
+  ponta_pora:
+    - name: "Repórter MS"
+      url: "https://www.reporterms.com.br"
+      city: "Ponta Porã"
+    - name: "Ponta Porã Informa"
+      url: "https://www.pontaporainforma.com.br"
+      city: "Ponta Porã"
+    - name: "Cone Sul News"
+      url: "https://www.conesulnews.com.br"
+      city: "Ponta Porã"
+
+  aquidauana:
+    - name: "O Pantaneiro"
+      url: "https://www.opantaneiro.com.br"
+      city: "Aquidauana"
+    - name: "Aquidauana News"
+      url: "https://www.aquidauananews.com"
+      city: "Aquidauana"
+
+  chapadao_do_sul:
+    - name: "Jovem Sul News"
+      url: "https://www.jovemsulnews.com.br"
+      city: "Chapadão do Sul"
+
+  coxim:
+    - name: "Coxim Agora"
+      url: "https://www.coximagora.com.br"
+      city: "Coxim"
+    - name: "Edição MS"
+      url: "https://www.edicaoms.com.br"
+      city: "Coxim"
+
+  costa_rica:
+    - name: "MS Todo Dia"
+      url: "https://www.mstododia.com.br"
+      city: "Costa Rica"
+    - name: "Costa Rica em Foco"
+      url: "https://www.costaricaemfoco.com.br"
+      city: "Costa Rica"
+
+  nova_andradina:
+    - name: "Jornal da Nova"
+      url: "https://www.jornaldanova.com.br"
+      city: "Nova Andradina"
+
+  navirai:
+    - name: "Naviraí Diário"
+      url: "https://www.naviraidiario.com.br"
+      city: "Naviraí"
+
+  paranaiba:
+    - name: "Jornal Tribuna Livre"
+      url: "https://www.jornaltribunalivre.com.br"
+      city: "Paranaíba"
+
+  bonito:
+    - name: "Bonito Brazil"
+      url: "https://www.bonitobrazil.com.br"
+      city: "Bonito"
+
+  sidrolandia:
+    - name: "Região MS Notícias"
+      url: "https://www.regiaomsnoticias.com.br"
+      city: "Sidrolândia"
+
+  maracaju:
+    - name: "Maracaju na Hora"
+      url: "https://www.maracajunahora.com.br"
+      city: "Maracaju"
+
+# Nota: 37 cidades no Guia, acima 14 cidades com ~40 portais httpS validados.
+# Para plugar: app/scanner.py pode carregar este YAML e estender PORTALS; miner ignora (HTML scrape).

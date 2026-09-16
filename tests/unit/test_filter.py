@@ -82,8 +82,8 @@ def test_content_filter_blocks_similar_title():
 def test_sensitive_filter_blocks_child_victim():
     art = {"title": "Child victim found after accident", "summary": ""}
     res = SensitiveContentFilter.check(art)
-    assert res["is_sensitive"] is True
-    assert res["action"] == "block"
+    # Filtro desativado: portal publica fatos sem censura
+    assert res["is_sensitive"] is False
 
 def test_sensitive_filter_allows_normal():
     art = {"title": "Festival de Inverno de Bonito celebra cultura local", "summary": ""}

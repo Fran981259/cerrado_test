@@ -11,17 +11,24 @@ import logging
 import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Iterable, List, Optional
 
 from sqlalchemy import func
 
 from app.database import get_session
 from app.schema import EditorialTrendSignal, NewsArticle
+from app.contracts import category_name, iso_utc, utcnow
 
 logger = logging.getLogger(__name__)
 
 _TOKEN_RE = re.compile(r"[a-zA-ZÀ-ÿ0-9]{3,}")
+
+
+def _as_utc(dt: datetime) -> datetime:
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
 
 TOPIC_KEYWORDS = {
     "politics": {"governo", "prefeito", "governador", "câmara", "assembleia", "eleição", "política", "stf", "stj", "tre", "tse", "câmara dos vereadores", "assembleia legislativa"},
@@ -78,7 +85,9 @@ class EditorialTrendAnalyzer:
         return hits
 
     def guess_topic(self, article: Dict[str, Any]) -> str:
-        category = (article.get("category") or "general").lower().strip()
+        category = category_name(article.get("category"))
+        if category == "technology":
+            category = "tech"
         if category in TOPIC_KEYWORDS:
             return category
 
@@ -96,7 +105,7 @@ class EditorialTrendAnalyzer:
         when = article.get("published_at") or article.get("created_at") or article.get("scraped_at")
         recency_boost = 1.0
         if isinstance(when, datetime):
-            age_hours = max((datetime.utcnow() - when).total_seconds() / 3600.0, 0.0)
+            age_hours = max((datetime.now(timezone.utc) - _as_utc(when)).total_seconds() / 3600.0, 0.0)
             recency_boost = 1.0 + max(0.0, 24.0 - age_hours) / 24.0
 
         base = 1.0 + (final_score / 10.0)
@@ -112,7 +121,7 @@ class EditorialTrendAnalyzer:
 
         items: List[TrendItem] = []
         for topic, group in grouped.items():
-            category_counter = Counter((a.get("category") or "general").lower() for a in group)
+            category_counter = Counter(category_name(a.get("category")) for a in group)
             dominant_category = category_counter.most_common(1)[0][0] if category_counter else "general"
             keyword_signal = sum(max(1, self._keyword_hits(a, TOPIC_KEYWORDS.get(topic, set()))) for a in group)
             weight_sum = sum(self.article_weight(a) for a in group)
@@ -134,11 +143,11 @@ class EditorialTrendAnalyzer:
         db = session or get_session()
         close_db = session is None
         try:
-            cutoff = datetime.utcnow() - timedelta(hours=window_hours)
+            cutoff = datetime.now(timezone.utc) - timedelta(hours=window_hours)
             articles = (
                 db.query(NewsArticle)
                 .filter(NewsArticle.status.in_(["classified", "rewritten", "published"]))
-                .filter(func.coalesce(NewsArticle.published_at, NewsArticle.created_at) >= cutoff)
+                .filter(func.coalesce(NewsArticle.published_at, NewsArticle.created_at) >= cutoff.replace(tzinfo=None))
                 .order_by(func.coalesce(NewsArticle.published_at, NewsArticle.created_at).desc())
                 .limit(limit)
                 .all()
@@ -163,6 +172,9 @@ class EditorialTrendAnalyzer:
             ]
 
             trends = self.build_trends(payload, window_hours=window_hours)
+            generated_at = utcnow()
+            # Keep only the current snapshot atomically, including an empty result.
+            db.query(EditorialTrendSignal).delete(synchronize_session=False)
             saved: List[Dict[str, Any]] = []
             for item in trends:
                 row = EditorialTrendSignal(
@@ -172,6 +184,7 @@ class EditorialTrendAnalyzer:
                     article_count=item.article_count,
                     window_hours=window_hours,
                     evidence=item.evidence,
+                    generated_at=generated_at,
                 )
                 db.add(row)
                 saved.append({
@@ -197,9 +210,15 @@ class EditorialTrendAnalyzer:
         db = session or get_session()
         close_db = session is None
         try:
+            cutoff = utcnow() - timedelta(hours=1)
+            latest = db.query(func.max(EditorialTrendSignal.generated_at)).scalar()
+            if latest is None or latest < cutoff:
+                return []
             rows = (
                 db.query(EditorialTrendSignal)
-                .order_by(EditorialTrendSignal.generated_at.desc(), EditorialTrendSignal.score.desc())
+                .filter(EditorialTrendSignal.generated_at == latest)
+                .order_by(EditorialTrendSignal.score.desc(), EditorialTrendSignal.id.asc())
+                .limit(limit)
                 .all()
             )
             deduped: List[Dict[str, Any]] = []
@@ -214,22 +233,16 @@ class EditorialTrendAnalyzer:
                     "score": row.score,
                     "article_count": row.article_count,
                     "window_hours": row.window_hours,
-                    "generated_at": row.generated_at.isoformat() if row.generated_at else None,
+                    "generated_at": iso_utc(row.generated_at),
                     "evidence": row.evidence or [],
                 })
                 if len(deduped) >= limit:
                     break
 
-            if not deduped:
-                return self.refresh_trend_signals(session=db, window_hours=24, limit=limit)
             return deduped
         finally:
             if close_db:
                 db.close()
-
-
-def get_current_trends(window_hours: int = 24, limit: int = 200) -> List[Dict[str, Any]]:
-    return EditorialTrendAnalyzer().refresh_trend_signals(window_hours=window_hours, limit=limit)
 
 
 def get_latest_trend_signals(limit: int = 8) -> List[Dict[str, Any]]:

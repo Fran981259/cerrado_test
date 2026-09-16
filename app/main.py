@@ -4,6 +4,7 @@ API FastAPI REAL - consulta banco de dados.
 """
 
 import logging
+import secrets
 import os
 try:
     from dotenv import load_dotenv
@@ -12,7 +13,8 @@ except Exception:
     pass
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
@@ -21,16 +23,27 @@ from app.database import get_session, init_db
 from app.ml_editorial import get_latest_trend_signals
 from app.schema import NewsArticle, Reporter
 from app.publisher import ArticlePublisher
+from fastapi.responses import JSONResponse
+from app.contracts import iso_utc
+from sqlalchemy import func
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+import sentry_sdk
+from loguru import logger
+import sys
 
-app = FastAPI(
-    title="Portal Cerrado",
-    description="Sistema automatizado de notícias com repórteres digitais",
-    version="1.0.0"
-)
+# Configurar Loguru
+logger.remove()
+logger.add(sys.stdout, format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>")
 
+# Sentry
+SENTRY_DSN = os.getenv("SENTRY_DSN")
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        traces_sample_rate=1.0,
+        profiles_sample_rate=1.0,
+    )
+    logger.info("Sentry configurado e ativo.")
 
 def _run_pipeline_once() -> None:
     """Executa o pipeline completo uma vez (scan -> classify -> rewrite -> publish -> export)."""
@@ -52,13 +65,12 @@ def _local_scheduler(interval_seconds: int = 1800) -> None:
         time.sleep(interval_seconds)
 
 
-@app.on_event("startup")
-def _start_scheduler():
-    """Inicia o agendador local se habilitado (padrão: sim, quando Celery não está no comando)."""
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Inicializa banco e scheduler local durante o ciclo de vida da aplicação."""
     init_db()
     enabled = os.getenv("ENABLE_LOCAL_SCHEDULER", "1") == "1"
     celery_active = os.getenv("CELERY_SCHEDULER", "0") == "1"
-    # Desliga o local scheduler quando o beat do Celery assume
     if celery_active:
         enabled = False
     if enabled:
@@ -69,6 +81,15 @@ def _start_scheduler():
     else:
         reason = "CELERY_SCHEDULER=1 (Beat assume)" if celery_active else "ENABLE_LOCAL_SCHEDULER=0"
         logger.info(f"[SCHEDULER] Agendador LOCAL desativado ({reason}) — pipeline via Celery Beat")
+    yield
+
+
+app = FastAPI(
+    title="Portal Cerrado",
+    description="Sistema automatizado de notícias com repórteres digitais",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 
 
 # --- Auth dependency for write endpoints ---
@@ -76,14 +97,9 @@ from fastapi import Header, Depends
 
 def require_api_key(x_api_key: str = Header(None)):
     expected = os.getenv("PUBLISH_API_KEY") or os.getenv("API_KEY")
-    # If no key configured, deny in production, allow in dev with warning
     if not expected:
-        if os.getenv("ENVIRONMENT", "development") == "production":
-            logger.error("[AUTH] PUBLISH_API_KEY not set in production — denying write")
-            raise HTTPException(status_code=503, detail="Server misconfigured: publish auth not set")
-        logger.warning("[AUTH] PUBLISH_API_KEY not set — allowing write in dev (set it in production!)")
-        return
-    if x_api_key != expected:
+        raise HTTPException(status_code=503, detail="Publicacao indisponivel: autenticacao nao configurada")
+    if not isinstance(x_api_key, str) or not secrets.compare_digest(x_api_key, expected):
         raise HTTPException(status_code=401, detail="Invalid or missing X-API-Key")
 
 
@@ -118,55 +134,68 @@ def root():
         "portal": "Portal Cerrado",
         "version": "1.0.0",
         "status": "operacional",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
 @app.get("/health")
 def health_check():
     """Verifica saúde do sistema."""
+    db = None
     try:
         db = get_session()
         count = db.query(NewsArticle).count()
-        db.close()
         return {
             "status": "healthy",
             "database": "connected",
             "articles_count": count,
         }
-    except Exception as e:
-        return {
-            "status": "unhealthy",
-            "error": str(e),
-        }
+    except Exception:
+        return JSONResponse(status_code=503, content={"status": "unhealthy", "database": "unavailable"})
+    finally:
+        if db is not None:
+            db.close()
+
+
+@app.get("/live")
+def liveness():
+    return {"status": "alive"}
 
 
 @app.get("/api/news")
 def list_news(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    category: str = Query(None)
+    category: str = Query(None),
+    reporter_slug: str = Query(None),
+    sort_by: str = Query("recent", pattern="^(recent|trend)$")
 ):
     """Lista as notícias publicadas (do banco REAL)."""
+    publisher = ArticlePublisher()
     try:
-        publisher = ArticlePublisher()
-        articles = publisher.get_published_articles(limit=limit, category=category)
-        publisher.close()
+        total = publisher.count_published_articles(category=category, reporter_slug=reporter_slug)
+        articles = publisher.get_published_articles(limit=limit, offset=offset, category=category, reporter_slug=reporter_slug, sort_by=sort_by)
         
         return {
-            "total": len(articles),
+            "total": total,
             "limit": limit,
             "offset": offset,
             "category": category,
+            "reporter_slug": reporter_slug,
+            "sort_by": sort_by,
             "news": articles,
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Listagem indisponivel (%s)", type(e).__name__)
+        raise HTTPException(status_code=503, detail="Noticias temporariamente indisponiveis") from None
+    finally:
+        publisher.close()
 
 
 @app.get("/api/news/{slug}")
 def get_article(slug: str):
     """Busca uma matéria por slug."""
+    db = None
     try:
         db = get_session()
         article = db.query(NewsArticle).filter(
@@ -175,38 +204,43 @@ def get_article(slug: str):
         ).first()
         
         if not article:
-            db.close()
             raise HTTPException(status_code=404, detail="Matéria não encontrada")
         
-        result = {
-            "id": article.id,
-            "title": article.title,
-            "slug": article.slug,
-            "summary": article.summary,
-            "content": article.content,
-            "category": article.category,
-            "reporter": article.reporter.display_name if article.reporter else None,
-            "reporter_slug": article.reporter.slug if article.reporter else None,
-            "author": article.author,
-            "image_url": article.image_url,
-            "sources": article.sources,
-            "tags": article.tags,
-            "published_at": article.published_at.isoformat() if article.published_at else None,
-            "is_curiosity": article.is_curiosity,
-        }
-        
-        db.close()
-        return result
+        return ArticlePublisher(db)._article_to_dict(article)
         
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Materia indisponivel (%s)", type(e).__name__)
+        raise HTTPException(status_code=503, detail="Materia temporariamente indisponivel") from None
+    finally:
+        if db is not None:
+            db.close()
+
+
+@app.get("/api/sitemap")
+def sitemap_articles(after_id: int = Query(0, ge=0), through_id: int = Query(None, ge=0), limit: int = Query(1000, ge=1, le=1000)):
+    db = None
+    try:
+        db = get_session()
+        upper = through_id if through_id is not None else (db.query(func.max(NewsArticle.id)).scalar() or 0)
+        rows = db.query(NewsArticle.id, NewsArticle.slug, NewsArticle.updated_at, NewsArticle.published_at).filter(
+            NewsArticle.status == "published", NewsArticle.visibility == "public",
+            NewsArticle.id > after_id, NewsArticle.id <= upper, NewsArticle.slug.isnot(None),
+        ).order_by(NewsArticle.id).limit(limit).all()
+        return {"through_id": upper, "articles": [{"id": row.id, "slug": row.slug,
+                "updated_at": iso_utc(row.updated_at), "published_at": iso_utc(row.published_at)} for row in rows]}
+    except Exception:
+        raise HTTPException(status_code=503, detail="Sitemap temporariamente indisponivel") from None
+    finally:
+        if db is not None:
+            db.close()
 
 
 @app.get("/api/reporters")
 def list_reporters():
     """Lista os repórteres digitais."""
+    db = None
     try:
         db = get_session()
         reporters = db.query(Reporter).filter(Reporter.active == True).all()
@@ -222,10 +256,13 @@ def list_reporters():
             for r in reporters
         ]
         
-        db.close()
         return {"reporters": result}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Reporteres indisponiveis (%s)", type(e).__name__)
+        raise HTTPException(status_code=503, detail="Reporteres temporariamente indisponiveis") from None
+    finally:
+        if db is not None:
+            db.close()
 
 
 @app.get("/api/trends")
@@ -235,19 +272,24 @@ def list_trends(limit: int = Query(8, ge=1, le=20)):
         trends = get_latest_trend_signals(limit=limit)
         return {"trends": trends, "total": len(trends)}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Tendencias indisponiveis (%s)", type(e).__name__)
+        raise HTTPException(status_code=503, detail="Tendencias temporariamente indisponiveis") from None
 
 
 @app.post("/api/publish")
-def publish_article_endpoint(article: dict, _auth=Depends(require_api_key)):
+def publish_article_endpoint(article: dict, _auth=Depends(require_api_key), idempotency_key: str = Header(None)):
     """Publica uma matéria manualmente. Requer X-API-Key."""
+    publisher = ArticlePublisher()
     try:
-        publisher = ArticlePublisher()
-        result = publisher.publish_article(article)
-        publisher.close()
+        result = publisher.publish_article(article, idempotency_key=idempotency_key)
         return result
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from None
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Publicacao indisponivel (%s)", type(e).__name__)
+        raise HTTPException(status_code=503, detail="Publicacao temporariamente indisponivel") from None
+    finally:
+        publisher.close()
 
 
 if __name__ == "__main__":

@@ -2,7 +2,6 @@
 Tarefas de Classificação de Artigos
 """
 from app.celery_app import celery_app
-from app.classifier import classify_articles
 import logging
 
 logger = logging.getLogger(__name__)
@@ -23,7 +22,7 @@ def classify_pending_articles(self):
         from app.database import get_session
         from app.schema import NewsArticle
         from app.classifier import NewsClassifier
-        from datetime import datetime
+        from datetime import datetime, timezone
 
         logger.info("[CLASSIFY] Iniciando classificação de drafts")
         db = get_session()
@@ -49,8 +48,8 @@ def classify_pending_articles(self):
                 art.engagement_score = int((cls.get("engagement_score", 0) or 0) * 10)
                 art.final_score = int((cls.get("final_score", 0) or 0) * 10)
                 art.priority_tier = cls.get("priority_tier") or "TIER_2"
-                art.status = "classified"
-                art.updated_at = datetime.utcnow()
+                art.status = "review" if art.priority_tier == "REJECT" else "classified"
+                art.updated_at = datetime.now(timezone.utc)
                 classified += 1
             db.commit()
 
@@ -71,21 +70,4 @@ def classify_pending_articles(self):
         return {"status": "success", "classified": classified}
     except Exception as e:
         logger.error(f"[CLASSIFY] Erro: {e}")
-        raise self.retry(exc=e)
-
-
-@celery_app.task(
-    name="app.tasks.classify_tasks.classify_single_article",
-    bind=True,
-    max_retries=3
-)
-def classify_single_article(self, article: dict):
-    """Classifica um único artigo."""
-    try:
-        from app.classifier import NewsClassifier
-        classifier = NewsClassifier()
-        classified = classifier.classify(article)
-        return {"status": "success", "article": classified}
-    except Exception as e:
-        logger.error(f"[CELERY] Erro em classify_single_article: {e}")
         raise self.retry(exc=e)

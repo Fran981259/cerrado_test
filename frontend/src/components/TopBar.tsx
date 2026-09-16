@@ -7,21 +7,49 @@ function formatTopDate() {
       day: "2-digit",
       month: "long",
       year: "numeric",
+      timeZone: "America/Campo_Grande",
     });
   } catch {
     return "";
   }
 }
 
-export default function TopBar() {
+async function MiniWeather() {
+  let t: number | null = null;
+  let label = "";
+  try {
+    const r = await fetch(
+      "https://api.open-meteo.com/v1/forecast?latitude=-20.4697&longitude=-54.6201&current=temperature_2m,weather_code&timezone=America%2FCampo_Grande&forecast_days=1",
+      { next: { revalidate: 900 } }
+    );
+    if (!r.ok) return null;
+    const d = await r.json();
+    t = Math.round(d.current.temperature_2m);
+    const code = d.current.weather_code as number;
+    label = ({ 0: "Céu limpo", 1: "Quase limpo", 2: "Parc. nublado", 3: "Nublado", 45: "Nevoeiro", 51: "Garoa", 61: "Chuva leve", 95: "Tempestade" } as Record<number, string>)[code] || "";
+  } catch {
+    return null;
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 text-[11px] text-text-muted">
+      <span className="h-1 w-1 rounded-full bg-accent-leaf" aria-hidden />
+      <span className="font-black text-text-primary">{t}°</span>
+      {label && <span className="hidden sm:inline">· {label}</span>}
+    </span>
+  );
+}
+
+export default async function TopBar() {
   const date = formatTopDate();
   return (
     <div className="hidden border-b border-black/5 bg-[#f7f1e8] text-xs md:block">
-      <div className="container-custom flex items-center justify-between gap-4 py-2">
-        <div className="flex items-center gap-3 text-text-muted">
+      <div className="container-custom flex items-center justify-between gap-4 py-1.5">
+        <div className="flex items-center gap-2.5 text-text-muted">
           <span className="hidden font-semibold uppercase tracking-wider text-accent-soil sm:inline">Campo Grande — MS</span>
           <span className="hidden h-3 w-px bg-black/10 sm:block" aria-hidden />
           <span className="capitalize text-text-muted">{date}</span>
+          <span className="hidden h-3 w-px bg-black/10 sm:block" aria-hidden />
+          <MiniWeather />
         </div>
         <div className="flex items-center gap-3">
           <span className="hidden text-[11px] font-bold uppercase tracking-wider text-text-muted lg:inline">Siga:</span>

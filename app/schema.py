@@ -1,9 +1,9 @@
 # Schema do Banco de Dados — Portal Cerrado
 # Define as tabelas e modelos para o sistema de notícias.
 
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, JSON, Boolean
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, JSON, Boolean
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from app.contracts import UTCDateTime as DateTime, utcnow
 from app.database import Base
 
 
@@ -47,8 +47,8 @@ class NewsArticle(Base):
     is_curiosity = Column(Boolean, default=False)
 
     # Timestamps
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
 
     # Relacionamento
     reporter = relationship("Reporter", back_populates="articles")
@@ -74,11 +74,11 @@ class Reporter(Base):
     articles_published = Column(Integer, default=0)
     experience_points = Column(Integer, default=0)
     personality_stage = Column(String(20), default="newborn")
-    birth_date = Column(DateTime, default=datetime.utcnow, nullable=False)
+    birth_date = Column(DateTime, default=utcnow, nullable=False)
 
     active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
 
     # Relacionamentos
     articles = relationship("NewsArticle", back_populates="reporter", cascade="all, delete-orphan")
@@ -105,8 +105,8 @@ class SourcePortal(Base):
     # acima serve só p/ dashboard; a decisão usa sempre o conteúdo)
     robots_txt_content = Column(Text, nullable=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
 
 
 class ScrapingTask(Base):
@@ -124,7 +124,7 @@ class ScrapingTask(Base):
     result_json = Column(JSON, nullable=True)
     error_message = Column(Text, nullable=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
 
 
 class PublicationLog(Base):
@@ -137,7 +137,7 @@ class PublicationLog(Base):
     reporter_id = Column(Integer, ForeignKey("reporters.id"), nullable=True)
     details = Column(Text, nullable=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
 
 
 class EditorialTrendSignal(Base):
@@ -152,5 +152,12 @@ class EditorialTrendSignal(Base):
     window_hours = Column(Integer, nullable=False, default=24)
     evidence = Column(JSON, nullable=True)
 
-    generated_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    generated_at = Column(DateTime, default=utcnow, nullable=False, index=True)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
+
+
+class ArticleIdentity(Base):
+    """Additive uniqueness ledger for retries, without changing legacy article rows."""
+    __tablename__ = "article_identities"
+    key = Column(String(100), primary_key=True)
+    article_id = Column(Integer, ForeignKey("news_articles.id", ondelete="CASCADE"), nullable=True)

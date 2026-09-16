@@ -15,14 +15,14 @@ import logging
 import hashlib
 import random
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Any
 from urllib.parse import urlparse
 
 import httpx
 import yaml
 
-from app.classifier import NewsClassifier, classify_articles
+from app.classifier import NewsClassifier
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -220,7 +220,7 @@ class GlobalNewsMiner:
                 'category': category,
                 'image_url': self._extract_image(entry),
                 'published_at': self._parse_date(published),
-                'mined_at': datetime.utcnow().isoformat(),
+                'mined_at': datetime.now(timezone.utc).isoformat(),
                 'hash': hashlib.md5(link.encode()).hexdigest(),
                 'requires_translation': False,
                 'origin': 'google_news',
@@ -286,7 +286,7 @@ class GlobalNewsMiner:
                 'category': category,
                 'image_url': image_url,
                 'published_at': self._parse_date(published),
-                'mined_at': datetime.utcnow().isoformat(),
+                'mined_at': datetime.now(timezone.utc).isoformat(),
                 'hash': hashlib.md5(link.encode()).hexdigest(),
                 'requires_translation': source_lang != 'pt-BR',
             }
@@ -327,7 +327,7 @@ class GlobalNewsMiner:
     
     def _parse_date(self, date_str: str) -> str:
         if not date_str:
-            return datetime.utcnow().isoformat()
+            return datetime.now(timezone.utc).isoformat()
         
         formats = [
             '%Y-%m-%dT%H:%M:%S%z',
@@ -342,7 +342,7 @@ class GlobalNewsMiner:
             except ValueError:
                 continue
         
-        return datetime.utcnow().isoformat()
+        return datetime.now(timezone.utc).isoformat()
     
     def _is_relevant(self, article: Dict) -> bool:
         filters = self.config.get('global_miner', {}).get('relevance_filters', {})
@@ -363,61 +363,14 @@ class GlobalNewsMiner:
         category = article['category']
         if category in ['technology', 'economy', 'geopolitics', 'health', 'science_health']:
             cat_kw = filters.get('global_keywords', {}).get(category, [])
-            for kw_list in cat_kw:
-                for kw in kw_list:
-                    if kw.lower() in combined:
-                        return True
+            for kw in cat_kw:
+                if re.search(r"\b" + re.escape(kw.lower()) + r"\b", combined):
+                    return True
         
         if category == 'sports_global':
             return True
         
         return False
-
-
-class NewsTranslator:
-    """Tradutor para pt-BR."""
-    
-    def __init__(self, llm_client=None):
-        self.llm_client = llm_client
-    
-    def translate(self, article: Dict) -> Dict:
-        if article.get('source_lang') == 'pt-BR':
-            article['title_pt'] = article['title']
-            article['summary_pt'] = article['summary']
-            return article
-        
-        if self.llm_client:
-            return self._translate_with_llm(article)
-        return self._translate_simple(article)
-    
-    def _translate_with_llm(self, article: Dict) -> Dict:
-        prompt = f"""Traduza para Português Brasileiro (pt-BR):
-
-TÍTULO: {article['title']}
-CONTEÚDO: {article['summary']}
-
-Use linguagem natural brasileira, mantenha termos técnicos, preserve dados."""
-        
-        response = self.llm_client.complete(prompt)
-        
-        return {
-            **article,
-            'title_pt': response.get('title', article['title']),
-            'summary_pt': response.get('summary', article['summary']),
-            'translated_at': datetime.utcnow().isoformat(),
-            'translation_method': 'llm',
-        }
-    
-    def _translate_simple(self, article: Dict) -> Dict:
-        logger.warning("Tradução simples (sem LLM). Configure Gemini ou OpenAI para produção.")
-        return {
-            **article,
-            'title_pt': article['title'],
-            'summary_pt': article['summary'],
-            'translated_at': datetime.utcnow().isoformat(),
-            'translation_method': 'simple',
-            'needs_review': True,
-        }
 
 
 class VolumeManager:
@@ -498,7 +451,8 @@ class MinerPipeline:
     
     def __init__(self):
         self.miner = GlobalNewsMiner()
-        self.translator = NewsTranslator()
+        from app.translator import NewsTranslator as LLMTranslator
+        self.translator = LLMTranslator()
         self.volume = VolumeManager()
         self._load_routing()
     
@@ -519,7 +473,8 @@ class MinerPipeline:
         logger.info(f"Coletados: {len(articles)} artigos")
         
         # 2. Classificação (importância + engajamento)
-        articles = classify_articles(articles)
+        for article in articles:
+            self.miner.classifier.classify(article)
         
         # 3. Filtra por prioridade mínima
         articles = self.miner.classifier.filter_by_priority(articles, min_tier="TIER_3")
@@ -528,8 +483,10 @@ class MinerPipeline:
         # 4. Tradução para pt-BR
         translated = []
         for article in articles:
-            article = self.translator.translate(article)
-            translated.append(article)
+            try:
+                translated.append(self.translator.translate(article))
+            except RuntimeError:
+                translated.append({**article, "needs_review": True})
         
         # 5. Roteamento para repórteres
         for article in translated:
@@ -545,7 +502,7 @@ class MinerPipeline:
         category = article.get('category', '')
         # Mapeia categoria minerada para categoria de repórter
         cat_map = {
-            'technology': 'technology',
+            'technology': 'tech',
             'geopolitics': 'politics',
             'economy': 'economy',
             'science_health': 'health',
@@ -554,21 +511,5 @@ class MinerPipeline:
         }
         mapped = cat_map.get(category, 'general')
         article['reporter_slug'] = self.reporter_map.get(mapped, 'enzo.bianchi')
-        article['routed_at'] = datetime.utcnow().isoformat()
+        article['routed_at'] = datetime.now(timezone.utc).isoformat()
         return article
-
-
-# ============================================================
-# SCHEDULER (executa a cada 30 min)
-# ============================================================
-def run_scheduled_mining():
-    """Função chamada pelo scheduler a cada 30 minutos."""
-    pipeline = MinerPipeline()
-    articles = pipeline.run(target_volume=MIN_ARTICLES_PER_DAY)
-    return articles
-
-
-def mine_global_news() -> List[Dict]:
-    """Função principal."""
-    pipeline = MinerPipeline()
-    return pipeline.run()

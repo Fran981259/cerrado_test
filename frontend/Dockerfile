@@ -9,10 +9,15 @@ ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
 
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm ci --include=dev
 
 COPY . .
 RUN npm run build
+RUN npm prune --omit=dev
+
+# Configuração de non-root user
+RUN chown -R node:node /app
+USER node
 
 EXPOSE 3000
 

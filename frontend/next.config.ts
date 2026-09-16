@@ -6,6 +6,11 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "picsum.photos" },
       { protocol: "https", hostname: "**.picsum.photos" },
+      { protocol: "https", hostname: "**.midiamax.com.br" },
+      { protocol: "https", hostname: "**.campograndenews.com.br" },
+      { protocol: "https", hostname: "**.correiodoestado.com.br" },
+      { protocol: "https", hostname: "**.capitalnews.com.br" },
+      { protocol: "https", hostname: "**" },
     ],
   },
   async rewrites() {

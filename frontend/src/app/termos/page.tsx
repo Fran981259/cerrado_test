@@ -3,9 +3,14 @@ export const metadata: Metadata = { title: "Termos de Uso" };
 
 export default function TermosPage() {
   return (
-    <div className="container-custom py-10 max-w-3xl">
-      <h1 className="text-3xl font-black text-zinc-900">Termos de Uso</h1>
-      <div className="mt-8 prose prose-zinc max-w-none prose-p:leading-relaxed prose-headings:font-bold">
+    <div className="bg-[linear-gradient(180deg,#fdfbf7_0%,#f7f1e8_100%)] py-14">
+      <div className="container-custom max-w-4xl">
+        <section className="overflow-hidden rounded-[2rem] border border-black/5 bg-white shadow-[0_28px_90px_rgba(45,41,38,0.12)]">
+          <div className="bg-text-primary p-8 text-white sm:p-12">
+            <p className="text-xs font-black uppercase tracking-[0.28em] text-white/55">Regras editoriais e de uso</p>
+            <h1 className="mt-4 font-display text-5xl font-black leading-none tracking-tight sm:text-7xl">Termos de Uso</h1>
+          </div>
+      <div className="content-page p-8 sm:p-12">
         <h2>Uso do conteúdo</h2>
         <p>
           O conteúdo é protegido por direitos autorais. É permitido compartilhar trechos com crédito e link para a matéria original. Reprodução
@@ -19,6 +24,8 @@ export default function TermosPage() {
         <p>Comentários ofensivos, discriminatórios ou com desinformação podem ser removidos.</p>
         <h2>Foro</h2>
         <p>Fica eleito o foro de Campo Grande/MS para dirimir dúvidas destes termos.</p>
+      </div>
+        </section>
       </div>
     </div>
   );

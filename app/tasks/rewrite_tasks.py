@@ -2,12 +2,13 @@
 
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.celery_app import celery_app
 from app.llm_client import LLMClient
 from app.rewriter import load_reporters_config
 from app.scanner import RealPortalScanner
+from app.contracts import category_name, sources_list
 
 logger = logging.getLogger(__name__)
 
@@ -40,12 +41,12 @@ def _find_related_sources(article: dict, max_related: int = 3) -> list:
             ).limit(300).all()
             scored = []
             for a in candidates:
-                urls = [s.get("url", "") for s in (a.sources or [])] if isinstance(a.sources, list) else []
+                urls = [s["url"] for s in sources_list(a.sources)]
                 if article.get("url") in urls:
                     continue
                 t = (a.title or "").lower()
                 score = sum(1 for kw in keywords if kw in t)
-                if score >= 1:
+                if score >= 2:
                     scored.append((score, {
                         "title": a.title,
                         "summary": a.summary or "",
@@ -87,7 +88,8 @@ def rewrite_pending_articles(self):
             db.query(NewsArticle)
             .filter(NewsArticle.status == "classified")
             .order_by(NewsArticle.final_score.desc())
-            .limit(50)
+            .with_for_update(skip_locked=True)
+            .limit(5)
             .all()
         )
 
@@ -98,11 +100,16 @@ def rewrite_pending_articles(self):
             try:
                 if not art.sources:
                     art.status = "failed"
-                    art.updated_at = datetime.utcnow()
+                    art.updated_at = datetime.now(timezone.utc)
                     failed += 1
                     continue
 
-                main_url = art.sources[0]["url"] if isinstance(art.sources, list) and art.sources else ""
+                sources = sources_list(art.sources)
+                if not sources:
+                    art.status = "review"
+                    failed += 1
+                    continue
+                main_url = sources[0]["url"]
                 main_source = source_name_from_url(main_url)
 
                 # corpo real extraído do portal (proveniência) ou, se ausente, o lead
@@ -123,7 +130,7 @@ def rewrite_pending_articles(self):
                 # repórter pela categoria
                 reporter = None
                 for r in reporters.values():
-                    if r.role == article_data["category"]:
+                    if category_name(r.role) == category_name(article_data["category"]):
                         reporter = r
                         break
                 if not reporter:
@@ -135,6 +142,10 @@ def rewrite_pending_articles(self):
 
                 content = ""
                 if llm.api_key:
+                    import time as _time
+
+                    # Espaçamento p/ respeitar RPM do tier gratuito do Gemini (flash-lite: ~10 RPM)
+                    _time.sleep(12)
                     result_llm = llm.rewrite_article(
                         article_data,
                         reporter.get_system_prompt(),
@@ -142,24 +153,25 @@ def rewrite_pending_articles(self):
                         related_sources=related,
                     )
                     candidate = result_llm.get("rewritten_content", "")
-                    if candidate and len(candidate.split()) >= 700:
+                    if candidate and len(candidate.split()) >= 350:
                         content = candidate
 
                 if not content:
-                    art.status = "failed"
-                    art.updated_at = datetime.utcnow()
+                    # An upstream outage or a short answer must not delete the source.
+                    art.status = "classified"
+                    art.updated_at = datetime.now(timezone.utc)
                     failed += 1
                     continue
 
                 art.content = content
                 art.summary = (art.summary or "")[:2000]
                 art.status = "rewritten"
-                art.updated_at = datetime.utcnow()
+                art.updated_at = datetime.now(timezone.utc)
                 rewritten += 1
             except Exception as e:
-                logger.error(f"[REWRITE] erro num artigo: {e}")
-                art.status = "failed"
-                art.updated_at = datetime.utcnow()
+                logger.error("[REWRITE] erro num artigo (%s)", type(e).__name__)
+                art.status = "classified"
+                art.updated_at = datetime.now(timezone.utc)
                 failed += 1
         db.commit()
     except Exception as e:
@@ -171,84 +183,3 @@ def rewrite_pending_articles(self):
 
     logger.info(f"[REWRITE] Reescritos: {rewritten}, falhas: {failed}")
     return {"status": "success", "rewritten": rewritten, "failed": failed}
-
-
-@celery_app.task(
-    name="app.tasks.rewrite_tasks.rewrite_single_article",
-    bind=True,
-    max_retries=3,
-    time_limit=300
-)
-def rewrite_single_article(self, article: dict):
-    """
-    Reescreve um único artigo com padrão de jornal:
-    - 700-900 palavras
-    - Cruzamento com 2-3 fontes do mesmo fato
-    - Estrutura pirâmide invertida + intertítulos
-    """
-    title = article.get('title', '')[:60]
-    logger.info(f"[REWRITE] Reescrevendo (PROFISSIONAL): {title}...")
-    
-    try:
-        category = article.get('category', 'general')
-        reporters = load_reporters_config()
-        # encontra repórter pela role ou fallback
-        reporter = None
-        for r in reporters.values():
-            if r.role == category:
-                reporter = r
-                break
-        if not reporter:
-            reporter = list(reporters.values())[0]
-
-        # 1. Busca fontes relacionadas para cruzamento
-        related = _find_related_sources(article, max_related=3)
-        if related:
-            logger.info(f"[REWRITE] {len(related)} fontes relacionadas encontradas para cruzamento")
-            article["related_sources"] = related
-
-        # 2. Tenta Gemini/OpenAI com prompt profissional enxuto
-        llm = LLMClient()
-        if llm.api_key:
-            system_prompt = reporter.get_system_prompt()
-            attribution = reporter.attribution
-            result = llm.rewrite_article(article, system_prompt, attribution, related_sources=related)
-            rewritten_content = result.get("rewritten_content", "")
-            # valida tamanho profissional longo (700-900 ideal, 700 mínimo)
-            if rewritten_content and len(rewritten_content.split()) >= 700:
-                logger.info(f"[REWRITE] LLM OK — {len(rewritten_content.split())} palavras")
-                # monta artigo final profissional
-                final = {
-                    "title": article.get("title", ""),
-                    "content": rewritten_content,
-                    "summary": article.get("summary", "")[:300],
-                    "source_urls": [article.get("url", "")] + [r.get("url","") for r in related],
-                    "source_names": [source_name_from_url(article.get("url",""))] + [source_name_from_url(r.get("url","")) for r in related],
-                    "reporter_slug": reporter.slug,
-                    "reporter_name": reporter.display_name,
-                    "category": reporter.role,
-                    "attribution": attribution,
-                    "original_summary": article.get("summary", ""),
-                    "rewritten_at": result.get("rewritten_at"),
-                    "word_count": len(rewritten_content.split()),
-                    "related_count": len(related),
-                    "llm_provider": llm.provider,
-                    "llm_model": llm.model,
-                }
-                # publica
-                from app.tasks.publish_tasks import publish_single_article
-                # garante compatibilidade com publisher
-                final["sources"] = final["source_urls"]
-                final["content"] = rewritten_content
-                pub = publish_single_article(final)
-                logger.info(f"[REWRITE] Publicado (LLM profissional): {pub.get('article_id')}")
-                return pub
-            else:
-                logger.warning(f"[REWRITE] LLM gerou conteúdo curto ({len(rewritten_content.split()) if rewritten_content else 0} palavras)")
-
-        logger.warning(f"[REWRITE] LLM indisponivel ou curto demais para '{title}' — falhando sem fallback local")
-        raise RuntimeError("Reescrita indisponível sem LLM")
-        
-    except Exception as e:
-        logger.error(f"[REWRITE] Erro: {e}")
-        raise self.retry(exc=e)

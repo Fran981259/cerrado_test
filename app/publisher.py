@@ -1,235 +1,181 @@
-"""
-Agente Publicador — Portal Cerrado
-Publica as matérias no banco de dados REAL.
-"""
-
-import os
-import re
+"""Transactional publication and bounded public article queries."""
+import hashlib
+import json
 import logging
-from difflib import SequenceMatcher
-from datetime import datetime
-from typing import Dict, List, Optional
-from sqlalchemy.orm import Session
+import re
+import unicodedata
 
+from sqlalchemy import case
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload
+
+from app.contracts import category_name, category_values, iso_utc, sources_list, utcnow
 from app.database import get_session
-from app.schema import NewsArticle, Reporter, PublicationLog
+from app.editorial import validate_publication
+from app.ml_editorial import get_latest_trend_signals
+from app.schema import ArticleIdentity, NewsArticle, PublicationLog, Reporter
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Threshold de similaridade para Lei 9.610/98 Art. 46/47 (paráfrase)
-DEFAULT_SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", "0.35"))
 
 
 class ArticlePublisher:
-    """Publica artigos no banco de dados REAL."""
-    
-    def __init__(self, db_session: Session = None):
+    def __init__(self, db_session=None):
         self._db_session = db_session
-    
+
     @property
-    def db(self) -> Session:
+    def db(self):
         if self._db_session is None:
             self._db_session = get_session()
         return self._db_session
-    
-    def publish_article(self, article_data: Dict) -> Dict:
-        """Publica um artigo no banco de dados REAL."""
-        
-        logger.info(f"Publicando: {article_data.get('title', '')[:50]}...")
-        
-        # Valida campos obrigatórios
-        required = ['title', 'content', 'reporter_slug', 'category']
-        for field in required:
-            if not article_data.get(field):
-                raise ValueError(f"Campo obrigatório: {field}")
 
-        # --- Lei 9.610/98 Art. 46/47: verifica paráfrase (similaridade) ---
-        threshold = float(os.getenv("SIMILARITY_THRESHOLD", str(DEFAULT_SIMILARITY_THRESHOLD)))
-        content = article_data.get('content', '') or ''
-        original = article_data.get('original_text') or article_data.get('body') or ''
-        # Só verifica se temos ambos e se não é curiosidade (is_curiosity pode ter original vazio)
-        if content and original and not article_data.get('is_curiosity'):
-            # compara até 4000 chars para performance, case-insensitive
-            sim = SequenceMatcher(None, content[:4000].lower(), original[:4000].lower()).ratio()
-            if sim > threshold:
-                logger.warning(f"[COMPLIANCE] Similaridade {sim:.2%} > {threshold:.0%} para '{article_data.get('title','')[:60]}' — bloqueado (Art. 46/47)")
-                raise ValueError(f"Conteúdo muito similar ao original ({sim:.1%} > {threshold:.0%} threshold) — reescreva com paráfrase própria")
-            logger.info(f"[COMPLIANCE] Similaridade {sim:.1%} OK para '{article_data.get('title','')[:40]}'")
-        
-        # Busca repórter
-        reporter = self._get_or_create_reporter(article_data['reporter_slug'])
-        
-        # Gera slug único
-        slug = self._generate_slug(article_data['title'])
-        
-        # Cria artigo
-        article = NewsArticle(
-            title=article_data['title'],
-            slug=slug,
-            summary=article_data.get('summary', ''),
-            content=article_data['content'],
-            reporter_id=reporter.id,
-            
-            sources=article_data.get('sources', []),
-            original_text=article_data.get('original_text', ''),
-            compliance_hash=article_data.get('hash', ''),
-            
-            status='published',
-            published_at=datetime.utcnow(),
-            visibility='public',
-            
-            category=article_data['category'],
-            tags=article_data.get('tags', []),
-            
-            importance_score=int(article_data.get('importance_score', 0) * 10),
-            engagement_score=int(article_data.get('engagement_score', 0) * 10),
-            final_score=int(article_data.get('final_score', 0) * 10),
-            priority_tier=article_data.get('priority_tier', 'TIER_2'),
-            is_curiosity=article_data.get('is_curiosity', False),
-        )
-        
-        try:
-            self.db.add(article)
-            self.db.commit()
-            self.db.refresh(article)
-            
-            # Log de auditoria
-            self._log_publication(article, article_data)
-            
-            # Atualiza contador do repórter
-            reporter.articles_published += 1
-            self.db.commit()
-            
-            logger.info(f"Publicado com ID {article.id}: {slug}")
-            
-            return {
-                'success': True,
-                'article_id': article.id,
-                'slug': slug,
-                'published_at': article.published_at.isoformat(),
-            }
-            
-        except Exception as e:
-            self.db.rollback()
-            logger.error(f"Erro ao publicar: {e}")
-            raise
-    
-    def _get_or_create_reporter(self, slug: str) -> Reporter:
-        """Busca ou cria repórter."""
+    def publish_article(self, article_data, idempotency_key=None):
+        validate_publication(article_data)
+        if not isinstance(article_data.get("reporter_slug"), str) or not article_data["reporter_slug"].strip():
+            raise ValueError("reporter_slug obrigatorio")
+        if len(article_data["reporter_slug"]) > 100:
+            raise ValueError("reporter_slug excede 100 caracteres")
+        payload = json.dumps(article_data, sort_keys=True, ensure_ascii=True)
+        key = "publish:" + hashlib.sha256((idempotency_key or payload).encode()).hexdigest()
+        # A unique ledger reservation serializes concurrent retries on PostgreSQL.
+        for attempt in range(3):
+            try:
+                identity = self.db.get(ArticleIdentity, key)
+                if identity and identity.article_id:
+                    article = self.db.get(NewsArticle, identity.article_id)
+                    if article:
+                        return self._publication_result(article)
+                if identity is None:
+                    identity = ArticleIdentity(key=key)
+                    self.db.add(identity)
+                    self.db.flush()
+                reporter = self._get_or_create_reporter(article_data["reporter_slug"])
+                article = NewsArticle(
+                    title=article_data["title"].strip(), slug=self._generate_slug(article_data["title"]),
+                    summary=article_data.get("summary") or "", content=article_data["content"],
+                    reporter_id=reporter.id, sources=sources_list(article_data.get("sources")),
+                    original_text=article_data.get("original_text") or article_data.get("body") or "",
+                    compliance_hash=article_data.get("hash") or "", category=category_name(article_data["category"]),
+                    tags=article_data.get("tags") or [], image_url=article_data.get("image_url"),
+                    importance_score=int((article_data.get("importance_score") or 0) * 10),
+                    engagement_score=int((article_data.get("engagement_score") or 0) * 10),
+                    final_score=int((article_data.get("final_score") or 0) * 10),
+                    priority_tier=article_data.get("priority_tier") or "TIER_2",
+                    is_curiosity=bool(article_data.get("is_curiosity")), status="rewritten",
+                )
+                self.db.add(article)
+                self.db.flush()
+                identity.article_id = article.id
+                self.publish_existing(article)
+                self.db.commit()
+                return self._publication_result(article)
+            except IntegrityError:
+                self.db.rollback()
+                if attempt == 2:
+                    raise
+            except Exception:
+                self.db.rollback()
+                raise
+
+    def publish_existing(self, article):
+        """Caller owns transaction and must lock existing rows before publication."""
+        if article.status == "published":
+            return
+        validate_publication({
+            "title": article.title, "content": article.content, "summary": article.summary,
+            "category": article.category, "sources": article.sources,
+            "original_text": article.original_text, "priority_tier": article.priority_tier,
+            "is_curiosity": article.is_curiosity,
+        })
+        article.slug = article.slug or self._generate_slug(article.title)
+        article.category = category_name(article.category)
+        article.sources = sources_list(article.sources)
+        article.status = "published"
+        article.visibility = "public"
+        article.published_at = utcnow()
+        article.updated_at = utcnow()
+        self._log_publication(article, {})
+        self.db.query(Reporter).filter(Reporter.id == article.reporter_id).update(
+            {Reporter.articles_published: Reporter.articles_published + 1,
+             Reporter.experience_points: Reporter.experience_points + 10}, synchronize_session=False)
+
+    @staticmethod
+    def _publication_result(article):
+        return {"success": True, "article_id": article.id, "slug": article.slug,
+                "published_at": iso_utc(article.published_at)}
+
+    def _get_or_create_reporter(self, slug):
         reporter = self.db.query(Reporter).filter(Reporter.slug == slug).first()
-        
-        if not reporter:
-            # Cria repórter com dados básicos
-            reporter = Reporter(
-                slug=slug,
-                display_name=slug.replace('.', ' ').title(),
-                role='general',
-                email=f"{slug}@portalcerrado.com.br",
-            )
+        if reporter is None:
+            from app.rewriter import load_reporters_config
+            profile = load_reporters_config().get(slug)
+            reporter = Reporter(slug=slug, display_name=profile.display_name if profile else slug.replace(".", " ").title(),
+                                role=category_name(profile.role) if profile else "general")
             self.db.add(reporter)
-            self.db.commit()
-            self.db.refresh(reporter)
-            logger.info(f"Criado repórter: {slug}")
-        
+            self.db.flush()
         return reporter
-    
-    def _generate_slug(self, title: str) -> str:
-        """Gera slug URL-friendly único (sem colisão)."""
-        import unicodedata
-        # normaliza acentos
-        slug = unicodedata.normalize("NFKD", title or "").encode("ascii", "ignore").decode("ascii")
-        slug = slug.lower()
-        slug = re.sub(r'[^a-z0-9\s-]', '', slug)
-        slug = re.sub(r'\s+', '-', slug)
-        slug = slug.strip('-')
-        base_slug = (slug[:180].strip('-') or "artigo")
-        
-        # 1) tenta base sem sufixo
-        if not self.db.query(NewsArticle).filter(NewsArticle.slug == base_slug).first():
-            return base_slug
-        # 2) base-2, base-3...
-        counter = 2
-        while True:
-            candidate = f"{base_slug}-{counter}"
-            exists = self.db.query(NewsArticle).filter(NewsArticle.slug == candidate).first()
-            if not exists:
-                return candidate
+
+    def _generate_slug(self, title):
+        slug = unicodedata.normalize("NFKD", title or "").encode("ascii", "ignore").decode("ascii").lower()
+        slug = re.sub(r"[^a-z0-9\s-]", "", slug)
+        base = re.sub(r"\s+", "-", slug).strip("-")[:180].strip("-") or "artigo"
+        candidate, counter = base, 1
+        while self.db.query(NewsArticle.id).filter(NewsArticle.slug == candidate).first():
             counter += 1
-    
-    def _log_publication(self, article: NewsArticle, article_data: Dict):
-        """Registra log de auditoria."""
-        log = PublicationLog(
-            article_id=article.id,
-            action='published',
-            reporter_id=article.reporter_id,
-            details=f"Publicado: {article.title[:100]}",
-        )
-        self.db.add(log)
-        self.db.commit()
-    
-    def publish_batch(self, articles: List[Dict]) -> List[Dict]:
-        """Publica múltiplos artigos."""
+            candidate = f"{base}-{counter}"
+        return candidate
+
+    def _log_publication(self, article, article_data):
+        self.db.add(PublicationLog(article_id=article.id, action="published", reporter_id=article.reporter_id,
+                                   details="Publicacao aprovada pelo gate editorial"))
+
+    def publish_batch(self, articles):
         results = []
         for article in articles:
             try:
-                result = self.publish_article(article)
-                results.append(result)
-            except Exception as e:
-                logger.error(f"Erro: {e}")
-                results.append({
-                    'success': False,
-                    'error': str(e),
-                    'title': article.get('title', 'Sem título'),
-                })
+                results.append(self.publish_article(article))
+            except ValueError as exc:
+                results.append({"success": False, "error": str(exc)})
+            except Exception as exc:
+                logger.error("Publicacao falhou (%s)", type(exc).__name__)
+                results.append({"success": False, "error": "Falha interna de publicacao"})
         return results
-    
-    def get_published_articles(self, limit: int = 20, 
-                                category: str = None) -> List[Dict]:
-        """Busca artigos publicados."""
-        query = self.db.query(NewsArticle).filter(
-            NewsArticle.status == 'published'
-        )
-        
+
+    def _public_query(self, category=None, reporter_slug=None):
+        query = self.db.query(NewsArticle).filter(NewsArticle.status == "published", NewsArticle.visibility == "public")
         if category:
-            query = query.filter(NewsArticle.category == category)
-        
-        articles = query.order_by(
-            NewsArticle.published_at.desc()
-        ).limit(limit).all()
-        
+            query = query.filter(NewsArticle.category.in_(category_values(category)))
+        if reporter_slug:
+            query = query.join(NewsArticle.reporter).filter(Reporter.slug == reporter_slug)
+        return query
+
+    def get_published_articles(self, limit=20, offset=0, category=None, reporter_slug=None, sort_by="recent"):
+        query = self._public_query(category, reporter_slug).options(joinedload(NewsArticle.reporter))
+        if sort_by == "trend":
+            trends = get_latest_trend_signals(limit=8)
+            weights = {}
+            for index, trend in enumerate(trends):
+                for value in category_values(trend.get("category") or trend.get("topic")):
+                    weights[value] = max(weights.get(value, 0), len(trends) - index)
+            if weights:
+                query = query.order_by(case(weights, value=NewsArticle.category, else_=0).desc())
+        articles = query.order_by(NewsArticle.published_at.desc().nullslast(), NewsArticle.id.desc()).offset(offset).limit(limit).all()
         return [self._article_to_dict(a) for a in articles]
-    
-    def _article_to_dict(self, article: NewsArticle) -> Dict:
-        """Converte artigo para dict."""
+
+    def count_published_articles(self, category=None, reporter_slug=None):
+        return self._public_query(category, reporter_slug).count()
+
+    def _article_to_dict(self, article):
         return {
-            'id': article.id,
-            'title': article.title,
-            'slug': article.slug,
-            'summary': article.summary,
-            'content': article.content,
-            'category': article.category,
-            'reporter': article.reporter.display_name if article.reporter else None,
-            'reporter_slug': article.reporter.slug if article.reporter else None,
-            'author': article.author,
-            'image_url': article.image_url,
-            'sources': article.sources,
-            'tags': article.tags,
-            'published_at': article.published_at.isoformat() if article.published_at else None,
-            'is_curiosity': article.is_curiosity,
+            "id": article.id, "title": article.title, "slug": article.slug, "summary": article.summary,
+            "content": article.content, "category": category_name(article.category),
+            "reporter": article.reporter.display_name if article.reporter else None,
+            "reporter_slug": article.reporter.slug if article.reporter else None,
+            "author": article.author, "image_url": article.image_url, "sources": sources_list(article.sources),
+            "tags": article.tags, "published_at": iso_utc(article.published_at),
+            "created_at": iso_utc(article.created_at), "updated_at": iso_utc(article.updated_at),
+            "is_curiosity": article.is_curiosity,
         }
-    
+
     def close(self):
-        """Fecha sessão do banco."""
-        if self._db_session:
+        if self._db_session is not None:
             self._db_session.close()
-
-
-# Função para usar com Celery
-def publish_article_task(article_data: Dict) -> Dict:
-    """Publica um artigo (para uso em tasks)."""
-    publisher = ArticlePublisher()
-    try:
-        return publisher.publish_article(article_data)
-    finally:
-        publisher.close()

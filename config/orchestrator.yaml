@@ -22,12 +22,12 @@ orchestrator:
     ttl_seconds: 3600
 
 database:
-  url: "postgresql://portal_user:portal_pass@postgres:5432/portal_cerrado"
+  url_env: "DATABASE_URL"
   pool_size: 5
   echo: false  # True para debug
 
 redis:
-  url: "redis://redis:6379/0"
+  url_env: "REDIS_URL"
   session_ttl: 86400
 
 openai:

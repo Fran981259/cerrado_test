@@ -48,25 +48,25 @@ export default function Ticker() {
 
   if (quotes === null) {
     return (
-      <div className="bg-[#e63946] text-white overflow-hidden">
-        <div className="px-6 py-2 text-sm font-semibold whitespace-nowrap">• Carregando cotações do mercado…</div>
+      <div className="overflow-hidden bg-text-primary text-white">
+        <div className="px-6 py-2 text-sm font-bold tracking-wide whitespace-nowrap">Carregando cotações do mercado...</div>
       </div>
     );
   }
   if (!quotes.length) {
     return (
-      <div className="bg-[#e63946] text-white overflow-hidden">
-        <div className="px-6 py-2 text-sm font-semibold whitespace-nowrap">• Cotações indisponíveis no momento</div>
+      <div className="overflow-hidden bg-text-primary text-white">
+        <div className="px-6 py-2 text-sm font-bold tracking-wide whitespace-nowrap">Cotações indisponíveis no momento</div>
       </div>
     );
   }
   const items = [...quotes, ...quotes];
   return (
-    <div className="bg-[#e63946] text-white overflow-hidden">
+    <div className="overflow-hidden bg-text-primary text-white shadow-inner">
       <div className="flex animate-[ticker_30s_linear_infinite] whitespace-nowrap">
         {items.map((q, i) => (
-          <span key={i} className="px-6 py-2 text-sm font-semibold">
-            • {q.label} {q.value}
+          <span key={i} className="px-6 py-2 text-sm font-bold tracking-wide">
+            <span className="text-accent-soil">●</span> {q.label} {q.value}
             {q.pct !== null && (
               <span className={q.pct >= 0 ? "text-emerald-200" : "text-amber-200"}>
                 {" "}{q.pct >= 0 ? "▲" : "▼"} {Math.abs(q.pct).toLocaleString("pt-BR")}%

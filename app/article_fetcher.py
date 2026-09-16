@@ -72,9 +72,8 @@ class ArticleFetcher:
             soup = BeautifulSoup(html, "html.parser")
 
             # remove elementos de ruído antes de qualquer extração
-            self._strip_noise(soup)
-
             jsonld = self._extract_jsonld(soup)
+            self._strip_noise(soup)
             title = self._clean_text(
                 self._pick_first(
                     self._meta(soup, ["og:title"]),
@@ -403,6 +402,7 @@ class ArticleFetcher:
     def _clean_text(self, text: str) -> str:
         if not text:
             return ""
+        text = BeautifulSoup(text, "html.parser").get_text(" ", strip=True)
         # remove espaços duplicados, quebras e normaliza pontuação
         text = re.sub(r"[\r\n\t]+", " ", text)
         text = re.sub(r"\s{2,}", " ", text)

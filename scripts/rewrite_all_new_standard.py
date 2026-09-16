@@ -8,7 +8,7 @@ Uso: .venv/bin/python scripts/rewrite_all_new_standard.py
 import logging
 import re
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.database import get_session
 from app.schema import NewsArticle
@@ -108,7 +108,7 @@ def main():
                 art.content = text
                 paras = [p.strip() for p in text.split("\n\n") if p.strip()]
                 art.summary = (paras[0][:300].rsplit(" ", 1)[0] + "...") if paras and len(paras[0]) > 300 else (paras[0] if paras else art.summary)
-                art.updated_at = datetime.utcnow()
+                art.updated_at = datetime.now(timezone.utc)
                 ok += 1
                 logger.info(f"[{art.id}] reescrita ({why}): {art.title[:50]}")
             db.commit()

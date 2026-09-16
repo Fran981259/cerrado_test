@@ -12,12 +12,12 @@ except Exception:
     pass
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy.pool import QueuePool
+from sqlalchemy.pool import QueuePool, NullPool
 
 # URL do banco
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://portal_user:portal_pass@localhost:5432/portal_cerrado"
+    "sqlite:///data/portal_cerrado.db"
 )
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
@@ -25,8 +25,16 @@ IS_PRODUCTION = ENVIRONMENT == "production"
 
 
 def _connect_postgres(url: str):
-    retries = int(os.getenv("DATABASE_CONNECT_RETRIES", "3"))
-    delay = float(os.getenv("DATABASE_CONNECT_RETRY_DELAY", "0.5"))
+    # Se URL é sqlite, não usa QueuePool
+    if url.strip().startswith("sqlite"):
+        return create_engine(
+            url,
+            poolclass=NullPool,
+            connect_args={"check_same_thread": False},
+            echo=False,
+        )
+    retries = int(os.getenv("DATABASE_CONNECT_RETRIES", "10"))
+    delay = float(os.getenv("DATABASE_CONNECT_RETRY_DELAY", "1"))
     last_error = None
     engine = create_engine(
         url,
@@ -34,6 +42,7 @@ def _connect_postgres(url: str):
         pool_size=5,
         max_overflow=10,
         pool_pre_ping=True,
+        pool_timeout=30,
         echo=False,
     )
 
@@ -59,7 +68,7 @@ except Exception as e:
     if IS_PRODUCTION:
         import logging
         logging.getLogger(__name__).error(
-            f"PostgreSQL indisponível em produção ({DATABASE_URL}): {e} — falhando (sem fallback SQLite)"
+            "Banco indisponivel em producao; sem fallback (%s)", type(e).__name__
         )
         raise
     # Fallback local (desenvolvimento sem Postgres): usa SQLite.
@@ -69,13 +78,14 @@ except Exception as e:
     os.makedirs(os.path.dirname(_sqlite_file), exist_ok=True)
     engine = create_engine(
         f"sqlite:///{_sqlite_file}",
+        poolclass=NullPool,
         connect_args={"check_same_thread": False},
         echo=False,
     )
     _using_sqlite = True
     import logging
     logging.getLogger(__name__).warning(
-        f"PostgreSQL indisponível ({DATABASE_URL}); usando SQLite em {_sqlite_file} (ENVIRONMENT={ENVIRONMENT})"
+        "Banco indisponivel; usando SQLite local (ENVIRONMENT=%s)", ENVIRONMENT
     )
 
 # Session factory
@@ -85,25 +95,10 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
-def get_db():
-    """Dependency para FastAPI - retorna sessão do DB."""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
 def init_db():
     """Inicializa o banco de dados (cria tabelas)."""
     from app.schema import NewsArticle, Reporter, SourcePortal, ScrapingTask, PublicationLog
     Base.metadata.create_all(bind=engine)
-
-
-def drop_db():
-    """Remove todas as tabelas (USE COM CUIDADO)."""
-    from app.schema import NewsArticle, Reporter, SourcePortal, ScrapingTask, PublicationLog
-    Base.metadata.drop_all(bind=engine)
 
 
 def get_session():

@@ -3,7 +3,7 @@ Tarefas de Manutenção do Sistema — Portal Cerrado
 VERSÃO REAL: cleanup, sitemap, health e métricas com DB/Redis.
 """
 from app.celery_app import celery_app
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 import os
 
@@ -25,12 +25,13 @@ def cleanup_old_content(self):
     try:
         logger.info("[MAINTENANCE] Iniciando cleanup_old_content")
         from app.database import get_session
-        from app.schema import NewsArticle, PublicationLog, ScrapingTask
+        from app.schema import NewsArticle, PublicationLog, ScrapingTask, EditorialTrendSignal
 
         db = get_session()
         cleaned = 0
         try:
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
+            db.query(EditorialTrendSignal).filter(EditorialTrendSignal.generated_at < now - timedelta(days=2)).delete(synchronize_session=False)
             # drafts com mais de 7 dias sem evoluir
             cutoff_draft = now - timedelta(days=7)
             q1 = db.query(NewsArticle).filter(
@@ -83,85 +84,10 @@ def cleanup_old_content(self):
             "status": "success",
             "cleaned": cleaned,
             "archived": archived,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
     except Exception as e:
         logger.error(f"[MAINTENANCE] Erro em cleanup_old_content: {e}")
-        raise self.retry(exc=e)
-
-
-@celery_app.task(
-    name="app.tasks.maintenance.update_sitemap",
-    bind=True,
-    max_retries=3
-)
-def update_sitemap(self):
-    """
-    Atualiza sitemap.xml com matérias publicadas (DB real).
-    Gera frontend/public/sitemap.xml e frontend/src/data/sitemap.json para debug.
-    Roda 1x ao dia às 04:00.
-    """
-    try:
-        logger.info("[MAINTENANCE] Iniciando update_sitemap")
-        from app.database import get_session
-        from app.schema import NewsArticle
-        import xml.etree.ElementTree as ET
-
-        db = get_session()
-        try:
-            arts = db.query(NewsArticle).filter(
-                NewsArticle.status == "published",
-                NewsArticle.visibility == "public"
-            ).order_by(NewsArticle.published_at.desc()).limit(500).all()
-        finally:
-            db.close()
-
-        base = os.getenv("NEXT_PUBLIC_SITE_URL") or os.getenv("SITE_URL") or "http://100.95.111.24:3000"
-        base = base.rstrip("/")
-
-        # monta XML
-        urlset = ET.Element("urlset", xmlns="http://www.sitemaps.org/schemas/sitemap/0.9")
-        static = [
-            (f"{base}/", "hourly", "1.0"),
-            (f"{base}/sobre", "monthly", "0.6"),
-            (f"{base}/privacidade", "yearly", "0.3"),
-            (f"{base}/termos", "yearly", "0.3"),
-            (f"{base}/contato", "yearly", "0.5"),
-        ]
-        for url, freq, prio in static:
-            url_el = ET.SubElement(urlset, "url")
-            ET.SubElement(url_el, "loc").text = url
-            ET.SubElement(url_el, "changefreq").text = freq
-            ET.SubElement(url_el, "priority").text = prio
-
-        for a in arts:
-            if not a.slug:
-                continue
-            url_el = ET.SubElement(urlset, "url")
-            ET.SubElement(url_el, "loc").text = f"{base}/noticia/{a.slug}"
-            lastmod = (a.published_at or a.updated_at or datetime.utcnow()).date().isoformat()
-            ET.SubElement(url_el, "lastmod").text = lastmod
-            ET.SubElement(url_el, "changefreq").text = "daily"
-            ET.SubElement(url_el, "priority").text = "0.8"
-
-        # escreve em frontend/public/sitemap.xml
-        root = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
-        public_dir = os.path.join(root, "frontend", "public")
-        os.makedirs(public_dir, exist_ok=True)
-        out_path = os.path.join(public_dir, "sitemap.xml")
-        tree = ET.ElementTree(urlset)
-        ET.indent(tree, space="  ")
-        tree.write(out_path, encoding="utf-8", xml_declaration=True)
-
-        logger.info(f"[MAINTENANCE] Sitemap gerado: {len(arts)} notícias + 5 estáticas -> {out_path}")
-        return {
-            "status": "success",
-            "sitemap_updated": True,
-            "articles_in_sitemap": len(arts),
-            "path": out_path
-        }
-    except Exception as e:
-        logger.error(f"[MAINTENANCE] Erro em update_sitemap: {e}")
         raise self.retry(exc=e)
 
 
@@ -205,13 +131,14 @@ def system_health_check(self):
         except Exception as e:
             checks["redis"] = f"fail: {e}"
             # não marca unhealthy se for local fallback sem Redis
-            if os.getenv("ENABLE_LOCAL_SCHEDULER", "1") == "1":
+            if os.getenv("ENABLE_LOCAL_SCHEDULER", "0") == "1" and os.getenv("CELERY_SCHEDULER", "0") != "1":
                 checks["redis"] += " (local scheduler ativo, tolerado)"
             else:
-                status = "degraded"
+                if status != "unhealthy":
+                    status = "degraded"
 
         # Celery (se estamos aqui, está ok)
-        checks["celery"] = "ok"
+        checks["celery"] = "task_executed; worker/beat heartbeat requires external monitoring"
 
         # publicação recente (alerta se parada há >2h)
         try:
@@ -219,7 +146,7 @@ def system_health_check(self):
             from app.schema import NewsArticle
             db = get_session()
             try:
-                cutoff = datetime.utcnow() - timedelta(hours=2)
+                cutoff = datetime.now(timezone.utc) - timedelta(hours=2)
                 recent = db.query(NewsArticle).filter(
                     NewsArticle.status == "published",
                     NewsArticle.published_at >= cutoff
@@ -234,13 +161,13 @@ def system_health_check(self):
             checks["publication"] = f"check fail: {e}"
 
         return {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "status": status,
             "checks": checks
         }
     except Exception as e:
         logger.error(f"[MAINTENANCE] Erro em system_health_check: {e}")
-        return {"status": "unhealthy", "error": str(e), "timestamp": datetime.utcnow().isoformat()}
+        return {"status": "unhealthy", "error": str(e), "timestamp": datetime.now(timezone.utc).isoformat()}
 
 
 @celery_app.task(
@@ -261,7 +188,7 @@ def report_metrics(self):
 
         db = get_session()
         try:
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
             hour_start = now.replace(minute=0, second=0, microsecond=0)
 

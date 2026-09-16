@@ -23,8 +23,7 @@ function inline(md: string): string {
 
 export function formatArticleContent(raw: string, summary?: string, title?: string): string {
   if (!raw || !raw.trim()) return "";
-  // Se já vier com <p> do banco, devolve como está
-  if (/<p[\s>]|<h2[\s>]|<ul[\s>]/i.test(raw)) return raw;
+  // Stored content is untrusted text, including legacy HTML and LLM output.
 
   const lines = raw.replace(/\r\n/g, "\n").split("\n");
   const out: string[] = [];
@@ -64,7 +63,7 @@ export function formatArticleContent(raw: string, summary?: string, title?: stri
     // Muro de texto (>60 palavras)? quebra por orçamento de ~55 palavras
     const words = text.split(/\s+/).length;
     if (words > 60) {
-      const sentences = text.match(/[^.!?…]+[.!?…]+["“”)]?/g) || [text];
+      const sentences = text.match(/[^.!?…]+(?:[.!?…]+["“”)]?|$)/g) || [text];
       let buf = "";
       let bufWords = 0;
       const flush = () => {
@@ -194,4 +193,8 @@ export function formatArticleContent(raw: string, summary?: string, title?: stri
 export function readingTimeMinutes(raw: string): number {
   const words = (raw || "").split(/\s+/).filter(Boolean).length;
   return Math.max(1, Math.round(words / 200));
+}
+
+export function serializeJsonLd(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, "\\u003c");
 }

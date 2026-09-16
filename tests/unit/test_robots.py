@@ -42,10 +42,10 @@ def test_robots_legacy_row_without_content_refetches(monkeypatch, tmp_path):
     """Linha legada (só booleano, sem conteúdo) = cache miss, sem crash."""
     Session = _temp_db(monkeypatch, tmp_path)
     from app.schema import SourcePortal
-    from datetime import datetime
+    from datetime import datetime, timezone
     db = Session()
     db.add(SourcePortal(url="https://legacy.com", name="legacy",
-                        robots_txt_last_fetched=datetime.utcnow(),
+                        robots_txt_last_fetched=datetime.now(timezone.utc),
                         robots_txt_allowed=True, robots_txt_content=None))
     db.commit()
     db.close()

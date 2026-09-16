@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next";
-import { fetchNews } from "@/lib/api";
+import { getAllRealArticles } from "@/lib/api";
+
+export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = process.env.NEXT_PUBLIC_SITE_URL || "http://100.95.111.24:3000";
@@ -11,18 +13,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/contato`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.5 },
   ];
 
+  let articles: Awaited<ReturnType<typeof getAllRealArticles>> = [];
   try {
-    const articles = await fetchNews({ limit: 100 });
-    const news = articles
-      .filter((a) => a.slug)
-      .map((a) => ({
-        url: `${base}/noticia/${a.slug}`,
-        lastModified: a.published_at ? new Date(a.published_at) : new Date(),
-        changeFrequency: "daily" as const,
-        priority: 0.8,
-      }));
-    return [...staticPages, ...news];
+    articles = await getAllRealArticles();
   } catch {
     return staticPages;
   }
+  const news = articles
+    .filter((a) => a.slug)
+    .map((a) => ({
+      url: `${base}/noticia/${a.slug}`,
+      lastModified: a.updated_at || a.published_at ? new Date(a.updated_at || a.published_at!) : undefined,
+      changeFrequency: "daily" as const,
+      priority: 0.8,
+    }));
+  return [...staticPages, ...news];
 }

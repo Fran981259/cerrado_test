@@ -1,0 +1,82 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: portal_cerrado_postgres_local
+    environment:
+      POSTGRES_DB: portal_cerrado
+      POSTGRES_USER: ${POSTGRES_USER:-portal_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-portal_pass}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_local:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-portal_user} -d portal_cerrado"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: portal_cerrado_redis_local
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-portal_redis_pass}
+
+  portal_cerrado:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: portal_cerrado_app_local
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-portal_user}:${POSTGRES_PASSWORD:-portal_pass}@postgres:5432/portal_cerrado
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-portal_redis_pass}@redis:6379/0
+    env_file:
+      - .env
+    volumes:
+      - ./app:/app/app
+    depends_on:
+      - postgres
+      - redis
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: portal_cerrado_worker_local
+    command: celery -A app.celery_app worker -l info --pool=solo
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-portal_user}:${POSTGRES_PASSWORD:-portal_pass}@postgres:5432/portal_cerrado
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-portal_redis_pass}@redis:6379/0
+    env_file:
+      - .env
+    volumes:
+      - ./app:/app/app
+    depends_on:
+      - postgres
+      - redis
+      - portal_cerrado
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: portal_cerrado_frontend_local
+    # Sobrescreve o CMD do Dockerfile para rodar o servidor de desenvolvimento
+    command: npm run dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - portal_cerrado
+
+volumes:
+  postgres_data_local:

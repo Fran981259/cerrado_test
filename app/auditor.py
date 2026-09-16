@@ -7,7 +7,7 @@ para garantir qualidade, consistência e evolução.
 
 import logging
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 from enum import Enum
 
@@ -67,13 +67,14 @@ class HorusAuditor:
         logger.info("👁️ HORUS iniciando auditoria completa")
         
         report = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "auditor": "HORUS",
             "agents": self._audit_agents(),
             "reporters": self._audit_reporters(),
             "content_quality": self._audit_content_quality(),
             "compliance": self._audit_compliance(),
             "performance": self._audit_performance(),
+            "categories": self._audit_categories(),
             "alerts": [],
             "overall_status": "healthy",
         }
@@ -98,7 +99,7 @@ class HorusAuditor:
             from app.schema import NewsArticle, ScrapingTask
             db = get_session()
             try:
-                today = datetime.utcnow().date()
+                today = datetime.now(timezone.utc).date()
                 for agent_name in self.agents_monitored:
                     # Mapeia agente para tabela/fonte real
                     if agent_name == "scanner":
@@ -132,7 +133,7 @@ class HorusAuditor:
             from app.schema import NewsArticle, Reporter
             db = get_session()
             try:
-                today = datetime.utcnow().date()
+                today = datetime.now(timezone.utc).date()
                 for reporter_slug in self.reporters_monitored:
                     rep = db.query(Reporter).filter(Reporter.slug == reporter_slug).first()
                     if not rep:
@@ -168,7 +169,7 @@ class HorusAuditor:
             from app.filter import ContentFilter
             db = get_session()
             try:
-                today = datetime.utcnow().date()
+                today = datetime.now(timezone.utc).date()
                 arts = db.query(NewsArticle).filter(NewsArticle.published_at >= datetime.combine(today, datetime.min.time())).all()
                 if not arts:
                     return {"status": "not_implemented", "reason": "no articles today", "articles_audited_today": 0, "quality_score_avg": None, "plagiarism_detected": None, "issues_found": ["no data"]}
@@ -261,7 +262,7 @@ class HorusAuditor:
             from datetime import timedelta
             db = get_session()
             try:
-                now = datetime.utcnow()
+                now = datetime.now(timezone.utc)
                 today = now.date()
                 start_today = datetime.combine(today, datetime.min.time())
                 start_24h = now - timedelta(hours=24)
@@ -288,6 +289,69 @@ class HorusAuditor:
             logger.warning(f"[HORUS] _audit_performance not_implemented: {e}")
             return {"status": "not_implemented", "reason": str(e)[:200], "uptime_24h": None, "articles_per_hour": None, "daily_produced": None}
     
+    def _audit_categories(self) -> Dict:
+        """Audita distribuição de categorias e detecta artigos com categorias inválidas."""
+        try:
+            from app.database import get_session
+            from app.schema import NewsArticle
+            from app.contracts import CATEGORIES, category_name
+            db = get_session()
+            try:
+                all_arts = db.query(NewsArticle).all()
+                if not all_arts:
+                    return {"status": "no_data", "total_articles": 0, "distribution": {},
+                            "invalid_categories": [], "general_ratio": 0}
+
+                dist = {}
+                invalid = []
+                general_count = 0
+
+                for a in all_arts:
+                    raw_cat = a.category or "general"
+                    normalized = category_name(raw_cat)
+
+                    if raw_cat not in CATEGORIES and normalized not in CATEGORIES:
+                        invalid.append({"id": a.id, "raw": raw_cat, "normalized": normalized,
+                                        "title": (a.title or "")[:80]})
+
+                    cat = normalized
+                    dist[cat] = dist.get(cat, 0) + 1
+                    if cat == "general":
+                        general_count += 1
+
+                total = len(all_arts)
+                general_ratio = round(general_count / total, 3) if total else 0
+
+                # Estatísticas de equilíbrio
+                counts = list(dist.values())
+                avg = sum(counts) / len(counts) if counts else 0
+                variance = sum((c - avg) ** 2 for c in counts) / len(counts) if counts else 0
+                std_dev = round(variance ** 0.5, 2)
+                max_cat = max(dist, key=dist.get) if dist else None
+                min_cat = min(dist, key=dist.get) if dist else None
+
+                return {
+                    "total_articles": total,
+                    "distribution": dict(sorted(dist.items(), key=lambda x: -x[1])),
+                    "invalid_categories": invalid,
+                    "invalid_count": len(invalid),
+                    "general_ratio": general_ratio,
+                    "general_ratio_warning": general_ratio > 0.3,
+                    "balance_stats": {
+                        "mean": round(avg, 2),
+                        "std_dev": std_dev,
+                        "most_populated": {"category": max_cat, "count": dist.get(max_cat, 0)} if max_cat else None,
+                        "least_populated": {"category": min_cat, "count": dist.get(min_cat, 0)} if min_cat else None,
+                    },
+                    "valid_categories": sorted(CATEGORIES),
+                    "source": "DB+contracts.CATEGORIES",
+                }
+            finally:
+                db.close()
+        except Exception as e:
+            logger.warning(f"[HORUS] _audit_categories error: {e}")
+            return {"status": "error", "reason": str(e)[:300]}
+
     def _consolidate_alerts(self, report: Dict) -> List[Dict]:
         """Consolida alertas de todos os módulos auditados."""
         alerts = []
@@ -324,6 +388,24 @@ class HorusAuditor:
                     "type": "target_not_met",
                     "message": f"Meta diária não atingida: {perf.get('daily_produced')}/{perf.get('daily_target')}",
                     "action": "aumentar_coleta",
+                })
+        
+        # Verifica categorias
+        cats = report.get("categories", {})
+        if cats.get("status") not in ("not_implemented", "no_data", "error"):
+            if cats.get("invalid_count", 0) > 0:
+                alerts.append({
+                    "severity": ReportSeverity.HIGH.value,
+                    "type": "invalid_categories",
+                    "message": f"{cats['invalid_count']} artigos com categorias inválidas",
+                    "action": "reclassificar_artigos",
+                })
+            if cats.get("general_ratio_warning"):
+                alerts.append({
+                    "severity": ReportSeverity.MEDIUM.value,
+                    "type": "general_overflow",
+                    "message": f"Categoria 'general' com {cats['general_ratio']:.0%} dos artigos (>30%)",
+                    "action": "refinar_heuristica_classificacao",
                 })
         
         return alerts
@@ -366,7 +448,7 @@ class HorusAuditor:
                                    NewsArticle.published_at.isnot(None))
                            .order_by(NewsArticle.published_at.asc()).first())
                 base_date = (first[0] if first and first[0] else None) or rep.birth_date or rep.created_at
-                now = datetime.utcnow()
+                now = datetime.now(timezone.utc)
                 if base_date:
                     months_active = max(0, (now.year - base_date.year) * 12 + (now.month - base_date.month))
                 else:
@@ -391,9 +473,3 @@ class HorusAuditor:
             logger.warning(f"[HORUS] watch_reporter_evolution fallback: {e}")
             return {"reporter": reporter_slug, "status": "not_implemented",
                     "reason": str(e)[:200]}
-
-
-# ============================================================
-# Classe principal para uso
-# ============================================================
-horus = HorusAuditor()

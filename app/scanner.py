@@ -5,14 +5,28 @@ Coleta headlines de portais brasileiros via HTTP.
 
 import re
 import logging
+import threading
 import requests
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
 from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+def _normalize_url(u: str) -> str:
+    try:
+        p = urlparse((u or "").strip())
+        netloc = (p.netloc or "").lower()
+        scheme = (p.scheme or "https").lower()
+        path = p.path.rstrip("/") or ""
+        # remove www. for dedup? keep but normalize www vs non-www as same
+        if netloc.startswith("www."):
+            netloc = netloc[4:]
+        return f"{scheme}://{netloc}{path}"
+    except Exception:
+        return (u or "").strip().rstrip("/").lower()
 
 
 class RealPortalScanner:
@@ -60,6 +74,53 @@ class RealPortalScanner:
             }
         },
     ]
+
+    _ms_lock = threading.Lock()
+    @classmethod
+    def _load_ms_portals(cls):
+        """Carrega portais expandidos de config/portals_capital_ms.yml (40 portais, 14 cidades) — thread-safe e normalizado."""
+        import os
+        import yaml
+        with cls._ms_lock:
+            if getattr(cls, "_ms_loaded", False):
+                return
+            cfg = os.path.join(os.path.dirname(__file__), "..", "config", "portals_capital_ms.yml")
+            cfg = os.path.abspath(cfg)
+            if not os.path.exists(cfg):
+                cls._ms_loaded = True
+                return
+            try:
+                with open(cfg, "r", encoding="utf-8") as f:
+                    data = yaml.safe_load(f) or {}
+                added = 0
+                seen = {_normalize_url(p["url"]) for p in cls.PORTALS}
+                for city, lst in (data.get("portals_ms") or {}).items():
+                    for p in lst or []:
+                        url = (p.get("url") or "").strip()
+                        norm = _normalize_url(url)
+                        if not url or norm in seen:
+                            continue
+                        if not isinstance(p.get("name"), str) or not p.get("url"):
+                            continue
+                        cls.PORTALS.append({
+                            "name": p.get("name") or url,
+                            "url": url,
+                            "default_category": "general",
+                            "city": p.get("city") or city,
+                            "selectors": {
+                                "article": "article, .post, .noticia, .news-item",
+                                "title": "h1, h2, h3, .title, .titulo",
+                                "link": "a",
+                            }
+                        })
+                        seen.add(norm)
+                        added += 1
+                if added:
+                    logger.info(f"[SCANNER] Portais MS expandidos carregados: +{added} (total {len(cls.PORTALS)})")
+            except Exception as e:
+                logger.warning(f"[SCANNER] falha ao carregar portals_capital_ms.yml: {e}")
+            finally:
+                cls._ms_loaded = True
     
     CATEGORY_KEYWORDS = {
         "tech": [
@@ -75,17 +136,17 @@ class RealPortalScanner:
             "futebol", "esporte", "campeonato", "time", "jogador", "partida", "torneio",
             "gol", "bola", "estádio", "torcida", "atleta", "corrida", "natação",
             "basquete", "vôlei", "tênis", "ufc", "mma", "luta", "boxe", "ginástica",
-            "sul-mato-grossense", "operário", "comercial", "novo", "athletico",
             "seleção", "brasileirão", "libertadores", "copa", "olimpíada", "paralimpíada",
-            "treino", "modalidade", "esportivo", "competição", "medalha", "título"
+            "treino", "modalidade", "esportivo", "competição", "medalha", "título",
+            "athletico", "operário", "comercial", "sul-mato-grossense"
         ],
         "security": [
             "segurança", "polícia", "crime", "investigação", "suspeito", "flagrante",
             "prisão", "preso", "delegacia", "assalto", "roubo", "furto", "estupro",
-            "homicídio", "morte", "operação", "abordagem", "ocorrência", "registro",
-            "boletim", "cárcere", "cadeia", "foragido", "mandado", "prender", "policiais",
-            "quadrilha", "banda", "tráfico", "droga", "entorpecente", "entorpecente",
-            "PF", "Polícia Federal", "PM", "Polícia Militar", "Civil", "crime", "criminal"
+            "homicídio", "operação", "abordagem", "ocorrência", "registro",
+            "boletim", "cárcere", "foragido", "mandado", "policiais",
+            "quadrilha", "banda", "tráfico", "droga", "entorpecente",
+            "PF", "Polícia Federal", "PM", "Polícia Militar", "Civil"
         ],
         "politics": [
             "governo", "política", "lei", "decreto", "parlamento", "eleição", "prefeito",
@@ -145,42 +206,44 @@ class RealPortalScanner:
         "economy": "camila.rocha",
         "general": "enzo.bianchi",
         # aliases vindos do classifier/miner
-        "technology": "enzo.bianchi",
         "culture": "leon.vaz",
         "science": "maya.santos",
     }
     
     def __init__(self):
+        self.__class__._load_ms_portals()
         self.session = requests.Session()
         self.session.headers.update({
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         })
     
     def scan_all(self) -> Dict:
-        """Escaneia TODOS os portais configurados."""
+        """Escaneia TODOS os portais configurados — concorrente (6 threads)."""
+        import concurrent.futures
         results = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "portals": {},
             "articles": [],
             "summary": {"total": 0, "success": 0, "failed": 0},
         }
-        
-        for portal in self.PORTALS:
+        def _scan_one(p):
             try:
-                portal_result = self._scan_portal(portal)
-                results["portals"][portal["name"]] = portal_result
+                return p["name"], self._scan_portal(p)
+            except Exception as e:
+                logger.error(f"Erro ao escanear {p['name']}: {e}")
+                return p["name"], {"name": p["name"], "url": p["url"], "status": "failed", "error": str(e), "articles": []}
+        # ThreadPool reduz 42*15s sequencial (~600s) para ~100s com 6 workers
+        with concurrent.futures.ThreadPoolExecutor(max_workers=6) as ex:
+            futures = {ex.submit(_scan_one, p): p for p in self.PORTALS}
+            for fut in concurrent.futures.as_completed(futures):
+                name, res = fut.result()
+                results["portals"][name] = res
                 results["summary"]["total"] += 1
-                
-                if portal_result["status"] == "success":
+                if res.get("status") == "success":
                     results["summary"]["success"] += 1
-                    results["articles"].extend(portal_result["articles"])
+                    results["articles"].extend(res.get("articles", []))
                 else:
                     results["summary"]["failed"] += 1
-                    
-            except Exception as e:
-                logger.error(f"Erro ao escanear {portal['name']}: {e}")
-                results["summary"]["failed"] += 1
-        
         return results
     
     def _scan_portal(self, portal: Dict) -> Dict:
@@ -303,7 +366,7 @@ class RealPortalScanner:
                 "source_url": portal["url"],
                 "category": category,
                 "reporter_slug": reporter,
-                "scraped_at": datetime.utcnow().isoformat(),
+                "scraped_at": datetime.now(timezone.utc).isoformat(),
             }
             
         except Exception as e:
@@ -413,9 +476,3 @@ class RealPortalScanner:
             return False
         
         return True
-
-
-def scan_all_portals() -> Dict:
-    """Função principal para escanear todos os portais."""
-    scanner = RealPortalScanner()
-    return scanner.scan_all()

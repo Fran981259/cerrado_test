@@ -4,7 +4,7 @@ import pytest
 from app.publisher import ArticlePublisher
 from app.database import get_session
 from app.schema import NewsArticle, Reporter
-from datetime import datetime
+from datetime import datetime, timezone
 
 def _get_pub():
     db = get_session()
@@ -17,7 +17,7 @@ def test_similarity_blocks_high_overlap():
     original = "O governo de Mato Grosso do Sul anunciou investimento de 10 milhões em saúde para hospitais de Campo Grande."
     content = "O governo de Mato Grosso do Sul anunciou investimento de 10 milhões em saúde para hospitais de Campo Grande."  # idêntico
     article = {
-        "title": "Governo anuncia investimento em saúde MS" + str(datetime.utcnow().timestamp()),
+        "title": "Governo anuncia investimento em saúde MS" + str(datetime.now(timezone.utc).timestamp()),
         "content": content,
         "original_text": original,
         "reporter_slug": "maya.santos",
@@ -34,7 +34,7 @@ def test_similarity_allows_paraphrase():
     original = "O governo de Mato Grosso do Sul anunciou investimento de 10 milhões em saúde para hospitais de Campo Grande com foco em leitos de UTI."
     paraphrase = "Em Campo Grande, a gestão estadual destinou R$ 10 milhões para ampliar a rede hospitalar, com ênfase na criação de vagas em terapia intensiva, segundo apuração própria com base em dados oficiais e contextualização para MS."
     article = {
-        "title": "Teste paráfrase válida " + str(datetime.utcnow().timestamp()),
+        "title": "Teste paráfrase válida " + str(datetime.now(timezone.utc).timestamp()),
         "content": paraphrase,
         "original_text": original,
         "reporter_slug": "maya.santos",
@@ -54,7 +54,7 @@ def test_similarity_ignores_curiosity():
     pub, db = _get_pub()
     original = "Texto original"
     article = {
-        "title": "Curiosidade teste " + str(datetime.utcnow().timestamp()),
+        "title": "Curiosidade teste " + str(datetime.now(timezone.utc).timestamp()),
         "content": original,
         "original_text": original,
         "reporter_slug": "enzo.bianchi",

@@ -3,6 +3,16 @@ import os
 import importlib
 from unittest.mock import patch
 
+
+TEST_DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///:memory:")
+
+
+def _restore_test_database(monkeypatch, db_mod):
+    monkeypatch.setenv("ENVIRONMENT", "test")
+    monkeypatch.setenv("DATABASE_URL", TEST_DATABASE_URL)
+    importlib.reload(db_mod)
+    db_mod.init_db()
+
 def test_local_scheduler_disabled_when_celery_active(monkeypatch):
     # Simula ENVIRONMENT com CELERY_SCHEDULER=1
     monkeypatch.setenv("CELERY_SCHEDULER", "1")
@@ -58,9 +68,11 @@ def test_database_fallback_dev(monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "postgresql://invalid:invalid@localhost:5432/nonexistent")
     # Recarrega database.py
     import app.database as db_mod
-    import importlib
-    importlib.reload(db_mod)
-    assert db_mod._using_sqlite is True or db_mod.ENVIRONMENT == "development"
+    try:
+        importlib.reload(db_mod)
+        assert db_mod._using_sqlite is True or db_mod.ENVIRONMENT == "development"
+    finally:
+        _restore_test_database(monkeypatch, db_mod)
 
 def test_database_fails_in_production(monkeypatch):
     monkeypatch.setenv("ENVIRONMENT", "production")
@@ -76,7 +88,4 @@ def test_database_fails_in_production(monkeypatch):
     except Exception as e:
         assert "production" in str(e).lower() or "PostgreSQL" in str(e) or db_mod.IS_PRODUCTION is True
     finally:
-        # Restaura para dev para não quebrar outros testes
-        monkeypatch.setenv("ENVIRONMENT", "development")
-        monkeypatch.setenv("DATABASE_URL", "postgresql://portal_user:portal_pass@localhost:5432/portal_cerrado")
-        importlib.reload(db_mod)
+        _restore_test_database(monkeypatch, db_mod)

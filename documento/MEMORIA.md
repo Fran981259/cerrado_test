@@ -3,9 +3,15 @@
 ## Canonico
 - Nome do projeto: Portal Cerrado.
 - Backend: FastAPI + Celery + Redis + PostgreSQL.
-- Frontend: Next.js.
-- O projeto tem modo de desenvolvimento com fallback local, mas o objetivo e usar dados reais no fluxo produtivo.
-- Quando for para producao na VPS, a camada de LLM deve ser migrada para Gemini, se a decisao de deploy assim exigir.
+- Frontend: Next.js + Tailwind.
+- Infra: Docker Swarm via Tailscale (100.95.111.24).
+
+## Runtime Real
+- Provider LLM: Groq (configurado como LLM_PROVIDER=gemini com GROQ_API_KEY).
+- Classificador: heuristico com keywords PT-BR e EN, normalizado via contracts.category_name().
+- 11 categorias canonicas: technology, culture, health, sports, politics, economy, security, agriculture, education, clima, general.
+- 9 reporeres digitais definidos em config/reporters.yml.
+- Deploy via update.sh (docker stack deploy), nao CI/CD automatico.
 
 ## Regras Fixas
 - Nao misturar docs de planejamento com docs de operacao.
@@ -13,8 +19,9 @@
 - Nao criar nomes ou marcas paralelas sem aprovacao.
 
 ## Identidade Editorial
-- Os repórteres digitais sao os mesmos definidos em `config/reporters.yml`.
+- Os reporeres digitais sao os mesmos definidos em config/reporters.yml.
 - A assinatura padrao deve continuar consistente com o projeto.
+- Regras de escrita: 700-900 palavras, piramide invertida, 2-3 fontes cruzadas.
 
 ## Infraestrutura de Referencia
 - O ambiente deve ser interpretado a partir do estado real do repositorio e da stack ativa.

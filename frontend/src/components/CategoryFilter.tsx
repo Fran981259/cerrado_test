@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { CATEGORY_LIST } from "@/lib/categories";
+import { Icon } from "@/components/Icon";
 
 export default function CategoryFilter() {
   const params = useSearchParams();
@@ -24,7 +25,7 @@ export default function CategoryFilter() {
             className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold border transition-colors ${isActive ? "text-white border-transparent" : "bg-white text-zinc-700 border-zinc-200 hover:border-zinc-300"}`}
             style={isActive ? { background: c.color } : undefined}
           >
-            {c.icon} {c.label}
+            <Icon name={c.iconClass} /> {c.label}
           </Link>
         );
       })}

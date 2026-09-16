@@ -6,8 +6,9 @@ Repórteres digitais evoluem com o tempo, como pessoas reais.
 
 import logging
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
+from app.contracts import as_utc
 from typing import Dict, List, Optional
 
 logging.basicConfig(level=logging.INFO)
@@ -56,7 +57,7 @@ class PersonalityEvolution:
             "slug": slug,
             "name": name,
             "specialty": specialty,
-            "birth_date": birth_date or datetime.utcnow(),
+            "birth_date": birth_date or datetime.now(timezone.utc),
             "current_stage": EvolutionStage.NEWBORN,
             "articles_published": 0,
             "experience_points": 0,
@@ -80,7 +81,7 @@ class PersonalityEvolution:
             return EvolutionStage.NEWBORN
         
         data = self.reporter_data[slug]
-        age_days = (datetime.utcnow() - data["birth_date"]).days
+        age_days = (datetime.now(timezone.utc) - as_utc(data["birth_date"])).days
         
         cumulative_days = 0
         for stage, duration in self.STAGE_DURATIONS.items():
@@ -228,7 +229,7 @@ class PersonalityEvolution:
                 milestone = {
                     "id": milestone_id,
                     "description": description,
-                    "reached_at": datetime.utcnow().isoformat(),
+                    "reached_at": datetime.now(timezone.utc).isoformat(),
                     "articles_at_milestone": count,
                 }
                 data["milestones"].append(milestone)
@@ -278,7 +279,7 @@ Total de matérias publicadas: {data.get('articles_published', 0)}
             "slug": data["slug"],
             "specialty": data["specialty"],
             "current_stage": stage.value,
-            "age_days": (datetime.utcnow() - data["birth_date"]).days,
+            "age_days": (datetime.now(timezone.utc) - as_utc(data["birth_date"])).days,
             "articles_published": data["articles_published"],
             "experience_points": data["experience_points"],
             "personality_traits": data["personality_traits"],
@@ -297,9 +298,3 @@ Total de matérias publicadas: {data.get('articles_published', 0)}
                     "progress": f"{(current_articles/m)*100:.1f}%",
                 }
         return {"target": None, "remaining": 0, "progress": "100%"}
-
-
-# ============================================================
-# Instância global
-# ============================================================
-evolution_system = PersonalityEvolution()

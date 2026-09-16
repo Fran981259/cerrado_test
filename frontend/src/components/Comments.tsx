@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Icon } from "@/components/Icon";
 
 type Comment = { name: string; text: string; at: string };
 
 function load(key: string): Comment[] {
   try {
+    if (typeof window === "undefined" || typeof localStorage === "undefined") return [];
     const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : [];
   } catch {
@@ -17,7 +19,11 @@ function load(key: string): Comment[] {
 // Quando o backend de comunidade existir, migra-se para API mantendo o layout.
 export default function Comments({ slug, title }: { slug: string; title: string }) {
   const key = `pc-comments-${slug}`;
-  const [items, setItems] = useState<Comment[]>(() => load(key));
+  const [items, setItems] = useState<Comment[]>([]);
+  useEffect(() => {
+    const id = window.setTimeout(() => setItems(load(key)), 0);
+    return () => window.clearTimeout(id);
+  }, [key]);
   const [name, setName] = useState("");
   const [text, setText] = useState("");
   const [error, setError] = useState("");
@@ -45,7 +51,7 @@ export default function Comments({ slug, title }: { slug: string; title: string 
 
   return (
     <section className="mt-10 rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm" aria-label={`Comentários sobre ${title}`}>
-      <h3 className="font-extrabold text-zinc-900">💬 Comentários {items.length > 0 && <span className="text-sm font-bold text-zinc-400">({items.length})</span>}</h3>
+      <h3 className="inline-flex items-center gap-2 font-extrabold text-zinc-900"><Icon name="fi-rr-comment-alt" /> Comentários {items.length > 0 && <span className="text-sm font-bold text-zinc-400">({items.length})</span>}</h3>
 
       <div className="mt-4 grid gap-3">
         <input

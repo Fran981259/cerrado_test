@@ -1,78 +1,99 @@
-import { fetchNews, fetchTrends, type Article, type TrendSignal } from "@/lib/api";
+import { notFound, permanentRedirect } from "next/navigation";
+import type { Metadata } from "next";
+import { fetchNewsResponse, fetchTrends, type Article, type TrendSignal } from "@/lib/api";
 import { NewsCard } from "@/components/NewsCard";
 import Ticker from "@/components/Ticker";
-import Weather from "@/components/Weather";
 import { TrendPanel } from "@/components/TrendPanel";
+import { Pagination } from "@/components/Pagination";
+import { parsePage } from "@/lib/pagination";
+import { categorySlug } from "@/lib/categories";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
-export default async function Home({ searchParams }: { searchParams: Promise<{ cat?: string }> }) {
-  const { cat } = await searchParams;
+export async function generateMetadata({ searchParams }: { searchParams: Promise<{ cat?: string; page?: string }> }): Promise<Metadata> {
+  const { cat, page } = await searchParams;
+  const base = process.env.NEXT_PUBLIC_SITE_URL || "http://100.95.111.24:3000";
+  const currentPage = parsePage(page);
+  if (currentPage === null) notFound();
+  const canonical = cat ? `${base}/?cat=${cat}${currentPage > 1 ? `&page=${currentPage}` : ""}` : `${base}/${currentPage > 1 ? `?page=${currentPage}` : ""}`;
+  const pageLabel = currentPage > 1 ? ` - Página ${currentPage}` : "";
+  return {
+    title: cat ? `Portal Cerrado | ${cat}${pageLabel}` : `Portal Cerrado${pageLabel}`,
+    description: cat ? `Notícias de ${cat} no Portal Cerrado${pageLabel}` : `Notícias do Portal Cerrado${pageLabel}`,
+    alternates: { canonical },
+    robots: currentPage > 1 ? { index: false, follow: true } : { index: true, follow: true },
+  };
+}
+
+export default async function Home({ searchParams }: { searchParams: Promise<{ cat?: string; page?: string }> }) {
+  const { cat, page } = await searchParams;
+  const perPage = 24;
+  const currentPage = parsePage(page);
+  if (currentPage === null) notFound();
+  if (cat) {
+    const slug = categorySlug(cat);
+    if (!slug) notFound();
+    permanentRedirect(`/categoria/${slug}${currentPage > 1 ? `?page=${currentPage}` : ""}`);
+  }
+  const offset = (currentPage - 1) * perPage;
   let list: Article[] = [];
   let trends: TrendSignal[] = [];
+  let total = 0;
   let loadError = "";
   try {
-    const [articles, trendSignals] = await Promise.all([
-      fetchNews({ category: cat, limit: 24 }),
+    const [articlesResult, trendSignals] = await Promise.all([
+      fetchNewsResponse({ category: cat, limit: perPage, offset, sortBy: "trend" }),
       fetchTrends(6),
     ]);
-    list = cat ? articles.filter((a) => a.category === cat) : articles;
+    list = articlesResult.news;
+    total = articlesResult.total;
     trends = trendSignals;
   } catch {
     loadError = "A API de noticias nao respondeu. O frontend depende do backend real para carregar o conteudo.";
   }
 
-  const trendRank = new Map<string, number>();
-  trends.forEach((trend, index) => {
-    trendRank.set(trend.category || trend.topic, trends.length - index);
-  });
-
-  // Destaques randomizados a cada revalidação (60s): hero + 4 sorteados do pool recente.
-  // Shuffle intencional no render (ISR) — desabilita regra de pureza só aqui.
-  /* eslint-disable react-hooks/purity */
-  const ranked = [...list].sort((a, b) => {
-    const aRank = trendRank.get(a.category) || 0;
-    const bRank = trendRank.get(b.category) || 0;
-    if (aRank !== bRank) return bRank - aRank;
-    return 0;
-  });
-  const pool = [...ranked.slice(0, 12)];
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
-  /* eslint-enable react-hooks/purity */
+  // Destaques determinísticos: hero = mais recente, secondary = próximos 4 (estável, sem Math.random)
+  const pool = [...list.slice(0, 12)];
   const picked = pool.slice(0, 5).map((a) => a.slug || a.title);
   const hero = pool[0];
   const secondary = pool.slice(1, 5);
   const rest = [...list.filter((a) => !picked.includes(a.slug || a.title))];
+  const totalPages = Math.max(1, Math.ceil((total || 0) / perPage));
+  if (!loadError && currentPage > totalPages) notFound();
 
   return (
-    <div>
-      <Ticker />
+    <div className="relative overflow-hidden bg-canvas">
+      {/* Fundo vivo animado */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(74,103,65,0.16),transparent_40rem),linear-gradient(180deg,#fdfbf7_0%,#f7f1e8_100%)] animate-breathe" />
+      
+      <div className="relative z-10">
+        <Ticker />
 
-      <div className="container-custom py-6">
-        <Weather />
-      </div>
+      <section className="container-custom py-6 sm:py-7">
+        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-accent-soil">Jornalismo com credibilidade</p>
+        <h1 className="mt-2 max-w-3xl font-display text-4xl font-black leading-[0.95] tracking-tight text-text-primary sm:text-5xl">O pulso de Mato Grosso do Sul.</h1>
+        <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-text-muted">Política, economia, segurança, agronegócio e clima — do dia a dia de Campo Grande e do interior, direto e sem rodeio.</p>
+      </section>
 
-      <div className="container-custom pb-4">
+      <div className="container-custom pb-6">
         <TrendPanel trends={trends} />
       </div>
 
-      <div className="container-custom pb-10">
+      <div className="container-custom pb-12">
         {hero && (
           <div className="grid lg:grid-cols-[2fr_1fr] gap-8">
             <NewsCard article={hero} variant="hero" />
-            <div className="border-l border-zinc-200 pl-8 hidden lg:block">
-              <h2 className="text-xl font-display font-bold text-text-primary mb-4">Destaques</h2>
-              <div className="grid gap-2">
+            <div className="hidden rounded-[2rem] border border-black/5 bg-white/70 p-6 shadow-sm backdrop-blur lg:block">
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-accent-soil">Seleção editorial</p>
+              <h2 className="mb-4 mt-2 font-display text-3xl font-black text-text-primary">Destaques</h2>
+              <div className="grid gap-3">
                 {secondary.map((a) => (
                   <NewsCard key={a.slug || a.title} article={a} variant="compact" />
                 ))}
               </div>
             </div>
             {/* Mobile secondary */}
-            <div className="lg:hidden grid gap-4">
+            <div className="grid gap-4 lg:hidden">
               {secondary.map((a) => (
                 <NewsCard key={a.slug || a.title} article={a} variant="compact" />
               ))}
@@ -82,12 +103,12 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
 
         {rest.length > 0 && (
           <>
-            <h2 className="mt-16 mb-8 text-2xl font-display font-bold text-text-primary flex items-center gap-4">
+            <h2 className="mt-16 mb-8 flex items-center gap-4 font-display text-3xl font-black text-text-primary">
               Últimas notícias
               {cat && <span className="text-base font-medium text-text-muted">— {cat}</span>}
-              <span className="flex-1 h-px bg-zinc-200" />
+              <span className="h-px flex-1 bg-black/10" />
             </h2>
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-4">
               {rest.map((a) => (
                 <NewsCard key={a.slug || a.title} article={a} />
               ))}
@@ -96,24 +117,15 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
         )}
 
         {!loadError && list.length === 0 && (
-          <div className="py-20 text-center text-text-muted">Nenhuma notícia encontrada.</div>
+          <div className="rounded-[2rem] border border-black/5 bg-white p-12 text-center text-text-muted shadow-sm">Nenhuma notícia encontrada.</div>
         )}
 
+        {!loadError && <Pagination page={currentPage} totalPages={totalPages} base="/" />}
+
         {loadError && (
-          <div className="py-20 text-center text-red-600 font-semibold">{loadError}</div>
+          <div className="rounded-[2rem] border border-red-100 bg-white p-12 text-center font-semibold text-red-600 shadow-sm">{loadError}</div>
         )}
       </div>
-      <div className="container-custom pb-20">
-        <div className="rounded-lg bg-white border border-zinc-200 p-8 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div>
-            <h3 className="font-display font-bold text-xl text-text-primary">Receba as principais notícias de MS</h3>
-            <p className="text-sm text-text-muted mt-1">Atualizações diárias direto no seu e-mail. Sem spam.</p>
-          </div>
-          <form className="flex gap-2 w-full md:w-auto">
-            <input placeholder="Seu e-mail" className="flex-1 md:w-72 rounded border border-zinc-300 px-4 py-2.5 text-sm outline-none focus:border-accent-soil focus:ring-1 focus:ring-accent-soil" />
-            <button type="button" className="shrink-0 rounded bg-text-primary text-white px-6 py-2.5 text-sm font-bold hover:bg-accent-soil transition-colors">Assinar</button>
-          </form>
-        </div>
       </div>
     </div>
   );

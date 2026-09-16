@@ -36,7 +36,8 @@ def test_article_fetcher_handles_invalid_url():
     f = ArticleFetcher()
     # Mock session.get to raise
     f.session.get = MagicMock(side_effect=Exception("network fail"))
-    res = f.fetch("https://invalid.invalid/123")
+    with patch("app.robots.is_allowed", return_value=True):
+        res = f.fetch("https://invalid.invalid/123")
     assert res["status"] == "failed"
 
 def test_article_fetcher_extracts_body():
@@ -97,6 +98,99 @@ def test_trends_endpoint_uses_ml_snapshot(monkeypatch):
 
     assert result["total"] == 1
     assert result["trends"][0]["topic"] == "politics"
+
+
+def test_list_news_accepts_trend_sort(monkeypatch):
+    from app.main import list_news
+
+    captured = {}
+
+    class DummyPublisher:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def count_published_articles(self, category=None, reporter_slug=None):
+            captured["count_category"] = category
+            captured["count_reporter_slug"] = reporter_slug
+            return 1
+
+        def get_published_articles(self, limit=20, offset=0, category=None, reporter_slug=None, sort_by="recent"):
+            captured["limit"] = limit
+            captured["offset"] = offset
+            captured["category"] = category
+            captured["reporter_slug"] = reporter_slug
+            captured["sort_by"] = sort_by
+            return [{"title": "Teste", "category": "politics"}]
+
+        def close(self):
+            return None
+
+    monkeypatch.setattr("app.main.ArticlePublisher", DummyPublisher)
+    result = list_news(limit=5, offset=2, category="politics", reporter_slug="joao", sort_by="trend")
+
+    assert captured["sort_by"] == "trend"
+    assert captured["offset"] == 2
+    assert captured["reporter_slug"] == "joao"
+    assert result["sort_by"] == "trend"
+    assert result["news"][0]["title"] == "Teste"
+
+
+def test_list_news_counts_by_reporter(monkeypatch):
+    from app.main import list_news
+
+    captured = {}
+
+    class DummyPublisher:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def count_published_articles(self, category=None, reporter_slug=None):
+            captured["count_category"] = category
+            captured["count_reporter_slug"] = reporter_slug
+            return 3
+
+        def get_published_articles(self, limit=20, offset=0, category=None, reporter_slug=None, sort_by="recent"):
+            return [{"title": "Teste", "category": "politics"}]
+
+        def close(self):
+            return None
+
+    monkeypatch.setattr("app.main.ArticlePublisher", DummyPublisher)
+    result = list_news(limit=5, offset=0, category="politics", reporter_slug="joao", sort_by="recent")
+
+    assert captured["count_reporter_slug"] == "joao"
+    assert captured["count_category"] == "politics"
+    assert result["total"] == 3
+
+
+def test_list_news_passes_offset_for_recent(monkeypatch):
+    from app.main import list_news
+
+    captured = {}
+
+    class DummyPublisher:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def count_published_articles(self, category=None, reporter_slug=None):
+            return 42
+
+        def get_published_articles(self, limit=20, offset=0, category=None, reporter_slug=None, sort_by="recent"):
+            captured["limit"] = limit
+            captured["offset"] = offset
+            captured["sort_by"] = sort_by
+            return [{"title": "Recente", "category": "general"}]
+
+        def close(self):
+            return None
+
+    monkeypatch.setattr("app.main.ArticlePublisher", DummyPublisher)
+    result = list_news(limit=7, offset=14, sort_by="recent")
+
+    assert captured["limit"] == 7
+    assert captured["offset"] == 14
+    assert captured["sort_by"] == "recent"
+    assert result["total"] == 42
 
 def test_publisher_auth_dependency(monkeypatch):
     # Testa que require_api_key funciona
