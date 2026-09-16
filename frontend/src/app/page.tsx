@@ -106,7 +106,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
             <h2 className="mt-16 mb-8 flex items-center gap-4 font-display text-3xl font-black text-text-primary">
               Últimas notícias
               {cat && <span className="text-base font-medium text-text-muted">— {cat}</span>}
-              <span className="h-px flex-1 bg-white/10" />
+              <span className="h-px flex-1 bg-black/10" />
             </h2>
             <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-4">
               {rest.map((a) => (
@@ -117,13 +117,13 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
         )}
 
         {!loadError && list.length === 0 && (
-          <div className="rounded-[2rem] glass-panel border-white/5 p-12 text-center text-text-muted shadow-lg">Nenhuma notícia encontrada. A Inteligência Artificial está escrevendo novas matérias neste instante...</div>
+          <div className="rounded-[2rem] glass-panel border-slate-200/50 p-12 text-center text-text-muted shadow-lg">Nenhuma notícia encontrada. A Inteligência Artificial está escrevendo novas matérias neste instante...</div>
         )}
 
         {!loadError && <Pagination page={currentPage} totalPages={totalPages} base="/" />}
 
         {loadError && (
-          <div className="rounded-[2rem] glass-panel border-red-500/20 p-12 text-center font-semibold text-red-400 shadow-lg">{loadError}</div>
+          <div className="rounded-[2rem] glass-panel border-red-500/20 p-12 text-center font-semibold text-red-600 shadow-lg">{loadError}</div>
         )}
       </div>
       </div>

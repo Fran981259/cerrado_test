@@ -81,7 +81,7 @@ const CAPITAL_MENU: MenuItem[] = [
 
 const linkCls = (on: boolean) =>
   `relative rounded-full px-2.5 py-1.5 text-[11px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-    on ? "bg-white/10 text-accent-soil shadow-sm ring-1 ring-white/10" : "text-text-muted hover:bg-white/10 hover:text-text-primary"
+    on ? "bg-accent-leaf text-white shadow-sm ring-1 ring-black/5" : "text-text-muted hover:bg-black/5 hover:text-text-primary"
   }`;
 
 function DesktopLinks() {
@@ -120,7 +120,7 @@ function DesktopLinks() {
                   <Link
                     key={s.label}
                     href={`/categoria/${s.slug}`}
-                    className={`block rounded-xl px-3 py-2 text-[12px] font-black uppercase tracking-wider transition-colors ${on ? "bg-white/10 text-accent-soil" : "text-text-muted hover:bg-white/5 hover:text-text-primary"}`}
+                    className={`block rounded-xl px-3 py-2 text-[12px] font-black uppercase tracking-wider transition-colors ${on ? "bg-slate-100 text-accent-leaf" : "text-text-muted hover:bg-slate-50 hover:text-text-primary"}`}
                   >
                     {s.label}
                   </Link>
@@ -179,7 +179,7 @@ export function DesktopNav() {
 
 export function MobileNav() {
   return (
-    <div className="overflow-x-auto border-t border-white/10 bg-black/20 lg:hidden" aria-label="Editorias">
+    <div className="overflow-x-auto border-t border-slate-200/50 bg-white/60 lg:hidden" aria-label="Editorias">
       <div className="flex gap-4 px-4">
         <Suspense>
           <MobileLinks />
