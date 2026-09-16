@@ -39,7 +39,7 @@ export default function CuradoriaPage() {
 
   const fetchArticles = async () => {
     try {
-      const res = await fetch("/api/curadoria");
+      const res = await fetch("/admin-api/curadoria");
       if (!res.ok) throw new Error("Falha ao buscar artigos");
       const data = await res.json();
       setArticles(data.articles || []);
@@ -52,7 +52,7 @@ export default function CuradoriaPage() {
 
   const handleUpdate = async (slug: string, updateData: any) => {
     try {
-      const res = await fetch(`/api/curadoria/${slug}`, {
+      const res = await fetch(`/admin-api/curadoria/${slug}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
