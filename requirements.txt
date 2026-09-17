@@ -24,3 +24,5 @@ ruff>=0.1.0
 mypy>=1.0.0
 loguru>=0.7.2
 sentry-sdk[fastapi]>=1.40.0
+tweepy>=4.14.0
+html2image>=2.0.4

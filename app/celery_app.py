@@ -28,6 +28,7 @@ celery_app = Celery(
         "app.tasks.curiosity_tasks",
         "app.tasks.auditor_tasks",
         "app.tasks.maintenance",
+        "app.tasks.social_tasks",
     ]
 )
 
@@ -94,6 +95,14 @@ celery_app.conf.update(
         # ================================
         # SITEMAP (1x ao dia)
         # ================================
+
+        # ================================
+        # REDES SOCIAIS: TOP NEWS TWITTER (3x ao dia)
+        # ================================
+        "post-top-news-twitter": {
+            "task": "app.tasks.social_tasks.post_top_news_twitter",
+            "schedule": crontab(hour="8,14,20", minute=0),  # 08:00, 14:00, 20:00
+        },
 
         # ================================
         # HEALTH CHECK (a cada 5 min)

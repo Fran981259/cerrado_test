@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     cron \
     curl \
+    chromium \
     && rm -rf /var/lib/apt/lists/*
 
 # Copia requirements e instala dependências Python
