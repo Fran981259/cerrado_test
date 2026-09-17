@@ -78,49 +78,85 @@ class RealPortalScanner:
     _ms_lock = threading.Lock()
     @classmethod
     def _load_ms_portals(cls):
-        """Carrega portais expandidos de config/portals_capital_ms.yml (40 portais, 14 cidades) — thread-safe e normalizado."""
+        """Carrega portais expandidos de config/portals_capital_ms.yml e config/portals_us.yml — thread-safe e normalizado."""
         import os
         import yaml
         with cls._ms_lock:
             if getattr(cls, "_ms_loaded", False):
                 return
-            cfg = os.path.join(os.path.dirname(__file__), "..", "config", "portals_capital_ms.yml")
-            cfg = os.path.abspath(cfg)
-            if not os.path.exists(cfg):
-                cls._ms_loaded = True
-                return
-            try:
-                with open(cfg, "r", encoding="utf-8") as f:
-                    data = yaml.safe_load(f) or {}
-                added = 0
-                seen = {_normalize_url(p["url"]) for p in cls.PORTALS}
-                for city, lst in (data.get("portals_ms") or {}).items():
-                    for p in lst or []:
-                        url = (p.get("url") or "").strip()
-                        norm = _normalize_url(url)
-                        if not url or norm in seen:
-                            continue
-                        if not isinstance(p.get("name"), str) or not p.get("url"):
-                            continue
-                        cls.PORTALS.append({
-                            "name": p.get("name") or url,
-                            "url": url,
-                            "default_category": "general",
-                            "city": p.get("city") or city,
-                            "selectors": {
-                                "article": "article, .post, .noticia, .news-item",
-                                "title": "h1, h2, h3, .title, .titulo",
-                                "link": "a",
-                            }
-                        })
-                        seen.add(norm)
-                        added += 1
-                if added:
-                    logger.info(f"[SCANNER] Portais MS expandidos carregados: +{added} (total {len(cls.PORTALS)})")
-            except Exception as e:
-                logger.warning(f"[SCANNER] falha ao carregar portals_capital_ms.yml: {e}")
-            finally:
-                cls._ms_loaded = True
+            
+            # Carregar portais do MS
+            cfg_ms = os.path.join(os.path.dirname(__file__), "..", "config", "portals_capital_ms.yml")
+            cfg_ms = os.path.abspath(cfg_ms)
+            
+            # Carregar portais dos EUA
+            cfg_us = os.path.join(os.path.dirname(__file__), "..", "config", "portals_us.yml")
+            cfg_us = os.path.abspath(cfg_us)
+            
+            seen = {_normalize_url(p["url"]) for p in cls.PORTALS}
+            added = 0
+            
+            # 1. Portais MS
+            if os.path.exists(cfg_ms):
+                try:
+                    with open(cfg_ms, "r", encoding="utf-8") as f:
+                        data_ms = yaml.safe_load(f) or {}
+                    for city, lst in (data_ms.get("portals_ms") or {}).items():
+                        for p in lst or []:
+                            url = (p.get("url") or "").strip()
+                            norm = _normalize_url(url)
+                            if not url or norm in seen:
+                                continue
+                            if not isinstance(p.get("name"), str) or not p.get("url"):
+                                continue
+                            cls.PORTALS.append({
+                                "name": p.get("name") or url,
+                                "url": url,
+                                "default_category": "general",
+                                "city": p.get("city") or city,
+                                "selectors": {
+                                    "article": "article, .post, .noticia, .news-item",
+                                    "title": "h1, h2, h3, .title, .titulo",
+                                    "link": "a",
+                                }
+                            })
+                            seen.add(norm)
+                            added += 1
+                except Exception as e:
+                    logger.warning(f"[SCANNER] falha ao carregar portals_capital_ms.yml: {e}")
+            
+            # 2. Portais EUA
+            if os.path.exists(cfg_us):
+                try:
+                    with open(cfg_us, "r", encoding="utf-8") as f:
+                        data_us = yaml.safe_load(f) or {}
+                    for category, lst in (data_us.get("portals_us") or {}).items():
+                        for p in lst or []:
+                            url = (p.get("url") or "").strip()
+                            norm = _normalize_url(url)
+                            if not url or norm in seen:
+                                continue
+                            if not isinstance(p.get("name"), str) or not p.get("url"):
+                                continue
+                            cls.PORTALS.append({
+                                "name": p.get("name") or url,
+                                "url": url,
+                                "default_category": "general",
+                                "city": p.get("city") or category,
+                                "selectors": {
+                                    "article": "article, .post, .noticia, .news-item",
+                                    "title": "h1, h2, h3, .title, .titulo",
+                                    "link": "a",
+                                }
+                            })
+                            seen.add(norm)
+                            added += 1
+                except Exception as e:
+                    logger.warning(f"[SCANNER] falha ao carregar portals_us.yml: {e}")
+
+            if added:
+                logger.info(f"[SCANNER] Portais externos carregados: +{added} (total {len(cls.PORTALS)})")
+            cls._ms_loaded = True
     
     CATEGORY_KEYWORDS = {
         "tech": [
