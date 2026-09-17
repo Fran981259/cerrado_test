@@ -20,13 +20,15 @@ export default function Header() {
         </div>
 
         <div className="hidden shrink-0 items-center gap-2 text-xs font-bold uppercase tracking-wider text-text-muted md:flex">
-          <Link href="/sobre" className="rounded-full px-3 py-2 hover:bg-black/5 hover:text-text-primary transition-colors">Sobre</Link>
-          <Link href="/contato" className="rounded-full bg-accent-leaf px-4 py-2 text-white shadow-sm hover:bg-text-primary hover:text-white transition-all">Contato</Link>
+          <Link href="/sobre" className="px-3 py-2 hover:bg-black/5 hover:text-text-primary transition-colors">Sobre</Link>
+          <Link href="/contato" className="bg-accent-leaf px-4 py-2 text-white shadow-sm hover:bg-text-primary hover:text-white transition-all">Contato</Link>
+        </div>
+
+        {/* mobile hamburger wrapper */}
+        <div className="flex shrink-0 items-center lg:hidden ml-auto">
+          <MobileNav />
         </div>
       </div>
-
-      {/* mobile nav */}
-      <MobileNav />
     </header>
   );
 }
