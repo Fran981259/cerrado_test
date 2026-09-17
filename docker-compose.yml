@@ -83,7 +83,7 @@ services:
       dockerfile: Dockerfile
     container_name: portal_cerrado_worker
     restart: unless-stopped
-    command: celery -A app.celery_app worker -l info
+    command: celery -A app.celery_app worker -c 1 -l info
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}@redis:6379/0

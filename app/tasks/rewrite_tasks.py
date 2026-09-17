@@ -67,7 +67,8 @@ def _find_related_sources(article: dict, max_related: int = 3) -> list:
     bind=True,
     max_retries=3,
     time_limit=600,
-    soft_time_limit=540
+    soft_time_limit=540,
+    rate_limit="15/m"
 )
 def rewrite_pending_articles(self):
     """

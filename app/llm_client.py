@@ -66,10 +66,10 @@ class LLMClient:
         return self._complete_openai(prompt, system_prompt, max_tokens, temperature)
 
     RETRYABLE_STATUS = {429, 500, 502, 503}
-    MAX_ATTEMPTS = 4
+    MAX_ATTEMPTS = 6
 
     def _post_with_backoff(self, url: str, payload: Dict, headers: Optional[Dict] = None, params: Optional[Dict] = None) -> requests.Response:
-        """POST com retry e backoff exponencial para erros transientes (429/5xx)."""
+        """POST com retry e backoff exponencial rigoroso para erros transientes (429/5xx)."""
         import random
         import time
 
@@ -78,7 +78,7 @@ class LLMClient:
             try:
                 response = requests.post(url, json=payload, headers=headers, params=params, timeout=self.timeout)
                 if response.status_code in self.RETRYABLE_STATUS and attempt < self.MAX_ATTEMPTS:
-                    wait = 2 ** attempt + random.uniform(0, 1)
+                    wait = 10 * (2 ** (attempt - 1)) + random.uniform(0, 3)
                     logger.warning("LLM HTTP %s (tentativa %d/%d). Aguardando %.1fs...", response.status_code, attempt, self.MAX_ATTEMPTS, wait)
                     time.sleep(wait)
                     continue
@@ -86,7 +86,7 @@ class LLMClient:
             except (requests.ConnectionError, requests.Timeout) as e:
                 last_exc = e
                 if attempt < self.MAX_ATTEMPTS:
-                    wait = 2 ** attempt + random.uniform(0, 1)
+                    wait = 10 * (2 ** (attempt - 1)) + random.uniform(0, 3)
                     logger.warning("LLM erro de rede %s (tentativa %d/%d). Aguardando %.1fs...", type(e).__name__, attempt, self.MAX_ATTEMPTS, wait)
                     time.sleep(wait)
                     continue
