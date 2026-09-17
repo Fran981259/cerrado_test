@@ -8,8 +8,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER obrigatorio}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}
     volumes:
-  caddy_data:
-  caddy_config:
       - postgres_data:/var/lib/postgresql/data
     networks:
       portal_cerrado_net:
@@ -62,8 +60,6 @@ services:
       DATABASE_CONNECT_RETRIES: ${DATABASE_CONNECT_RETRIES:-10}
       DATABASE_CONNECT_RETRY_DELAY: ${DATABASE_CONNECT_RETRY_DELAY:-1}
     volumes:
-  caddy_data:
-  caddy_config:
       - app_data:/app/data
     depends_on:
       postgres:
@@ -103,8 +99,6 @@ services:
       DATABASE_CONNECT_RETRIES: ${DATABASE_CONNECT_RETRIES:-10}
       DATABASE_CONNECT_RETRY_DELAY: ${DATABASE_CONNECT_RETRY_DELAY:-1}
     volumes:
-  caddy_data:
-  caddy_config:
       - app_data:/app/data
     depends_on:
       postgres:
@@ -145,8 +139,6 @@ services:
       DATABASE_CONNECT_RETRIES: ${DATABASE_CONNECT_RETRIES:-10}
       DATABASE_CONNECT_RETRY_DELAY: ${DATABASE_CONNECT_RETRY_DELAY:-1}
     volumes:
-  caddy_data:
-  caddy_config:
       - app_data:/app/data
     depends_on:
       postgres:
@@ -239,10 +231,10 @@ services:
       - frontend
 
 volumes:
-  caddy_data:
-  caddy_config:
   postgres_data:
   app_data:
+  caddy_data:
+  caddy_config:
 
 networks:
   portal_cerrado_net:
