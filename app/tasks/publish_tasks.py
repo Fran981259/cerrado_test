@@ -19,6 +19,19 @@ def publish_ready_articles(self):
             NewsArticle.updated_at.asc(), NewsArticle.id.asc()).with_for_update(skip_locked=True).limit(100).all()
         publisher = ArticlePublisher(db)
         for article in articles:
+            # Trava de Segurança Final (Failsafe)
+            if not article.content or len(article.content.strip()) < 100:
+                logger.error(f"[PUBLISH] Abortado: Texto muito curto ou vazio ({article.slug})")
+                article.status = "failed"
+                rejected += 1
+                continue
+                
+            if article.content == article.original_text:
+                logger.error(f"[PUBLISH] Abortado: Texto cru não processado pela IA ({article.slug})")
+                article.status = "failed"
+                rejected += 1
+                continue
+                
             try:
                 publisher.publish_existing(article)
                 published += 1

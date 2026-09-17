@@ -14,6 +14,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Set
 from difflib import SequenceMatcher
 from urllib.parse import urlsplit, urlunsplit
+import unicodedata
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -253,7 +254,36 @@ class DuplicateDetector:
             return False
         
         similarity = SequenceMatcher(None, title1, title2).ratio()
-        return similarity >= threshold
+        if similarity >= threshold:
+            return True
+            
+        return DuplicateDetector.are_semantically_similar(title1, title2)
+    
+    @staticmethod
+    def get_keywords(text: str) -> set:
+        """Extrai o núcleo de palavras-chave do texto (ignora stopwords comuns)."""
+        if not text:
+            return set()
+        stopwords = {"para", "como", "sobre", "pelo", "pela", "onde", "mais", "isso", "esse", "esta", "entre", "ainda"}
+        # Normaliza e remove acentos
+        n_text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii").lower()
+        words = set(re.findall(r'\b[a-z]{4,}\b', n_text))
+        return words - stopwords
+
+    @staticmethod
+    def are_semantically_similar(text1: str, text2: str) -> bool:
+        """Verifica se dois textos partilham as mesmas palavras-chave fundamentais."""
+        kw1 = DuplicateDetector.get_keywords(text1)
+        kw2 = DuplicateDetector.get_keywords(text2)
+        
+        if not kw1 or not kw2:
+            return False
+            
+        intersection = kw1.intersection(kw2)
+        overlap_ratio = len(intersection) / min(len(kw1), len(kw2))
+        
+        # Se compartilham pelo menos 3 palavras chaves fortes e mais de 45% de sobreposição
+        return len(intersection) >= 3 and overlap_ratio >= 0.45
     
     @staticmethod
     def find_duplicates(articles: List[Dict], 

@@ -122,8 +122,12 @@ def _persist_articles(articles: list, fetch_details: bool = True) -> dict:
                     duplicates += 1
                     continue
 
-                # Dedup por similaridade de título (85% threshold)
+                # Trava de Idioma e Qualidade Semântica
+                from app.filter import ContentFilter
                 new_title = (a.get("title") or "")[:500]
+                new_summary = (a.get("summary") or "")[:2000]
+
+                # Dedup por similaridade de título (Exata e Semântica)
                 is_title_dup = False
                 if new_title and recent_titles:
                     dummy = {"title": new_title}
@@ -131,6 +135,12 @@ def _persist_articles(articles: list, fetch_details: bool = True) -> dict:
                         if DuplicateDetector.are_duplicates(dummy, {"title": existing_title}, threshold=0.85):
                             is_title_dup = True
                             break
+                        # Se não for similar exato, tenta similaridade semântica de palavras-chave
+                        if DuplicateDetector.are_semantically_similar(new_title, existing_title):
+                            logger.info(f"[SCAN] Duplicata SEMÂNTICA detectada: '{new_title}' e '{existing_title}'")
+                            is_title_dup = True
+                            break
+                            
                 if is_title_dup:
                     duplicates += 1
                     continue
