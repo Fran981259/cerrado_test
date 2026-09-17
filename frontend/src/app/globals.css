@@ -1,35 +1,31 @@
 @import "tailwindcss";
 
 @theme {
-  --color-canvas: #F8FAFC; /* Clean ice white */
-  --color-text-primary: #0F172A; /* Deep slate */
-  --color-text-muted: #475569;
-  --color-accent-soil: #D97706; /* Rich gold/amber */
-  --color-accent-leaf: #1D4ED8; /* Deep royal blue */
+  --color-canvas: #FFFFFF; /* Branco absoluto */
+  --color-text-primary: #111111; /* Preto rico (quase puro) */
+  --color-text-muted: #555555;
+  --color-accent-soil: #111111; /* Acentos em preto para alto contraste */
+  --color-accent-leaf: #333333;
   --font-display: var(--font-zilla-slab);
   --font-sans: var(--font-inter);
 }
 
-* { scrollbar-width: thin; scrollbar-color: #CBD5E1 transparent; }
+* { scrollbar-width: thin; scrollbar-color: #E5E5E5 transparent; }
 
 body {
   @apply bg-canvas text-text-primary antialiased;
-  background-image: radial-gradient(circle at top right, rgba(29, 78, 216, 0.05), transparent 40%),
-                    radial-gradient(circle at bottom left, rgba(217, 119, 6, 0.05), transparent 40%);
-  background-attachment: fixed;
+  background-color: var(--color-canvas);
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--color-accent-leaf) 30%, transparent);
+  background: rgba(0, 0, 0, 0.15);
 }
 
-/* Glassmorphism e Premium Utilities */
+/* Minimalist Utilities - Substituindo Glassmorphism */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 1);
-  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.05);
+  background: #FFFFFF;
+  border: 1px solid #E5E5E5;
+  box-shadow: none;
 }
 
 .news-card-hover {
