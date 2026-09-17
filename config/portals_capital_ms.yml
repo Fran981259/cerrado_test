@@ -155,5 +155,10 @@ portals_ms:
       url: "https://www.maracajunahora.com.br"
       city: "Maracaju"
 
+  fortaleza:
+    - name: "Diário do Nordeste"
+      url: "https://diariodonordeste.verdesmares.com.br/"
+      city: "Fortaleza"
+
 # Nota: 37 cidades no Guia, acima 14 cidades com ~40 portais httpS validados.
 # Para plugar: app/scanner.py pode carregar este YAML e estender PORTALS; miner ignora (HTML scrape).
