@@ -26,7 +26,7 @@ export function NewsCard({ article, variant = "default" }: { article: Article; v
         <Link href={href} target={isExternal ? "_blank" : undefined} className="block">
           <div className="relative h-[440px] overflow-hidden sm:h-[520px]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={img} alt={article.title} className="img-zoom h-full w-full object-cover" />
+            <img src={img} alt={article.title} referrerPolicy="no-referrer" className="img-zoom h-full w-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/88 via-black/35 to-black/5" />
             <span className="absolute left-5 top-5 rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-wider text-white bg-accent-leaf shadow-lg">
               <Icon name={cat.iconClass} /> {cat.label}
@@ -51,7 +51,7 @@ export function NewsCard({ article, variant = "default" }: { article: Article; v
       <article className="group flex gap-4 rounded-2xl p-2 transition glass-panel hover:border-white/50 hover:shadow-xl">
         <div className="h-24 w-32 shrink-0 overflow-hidden rounded-xl bg-slate-100">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={img} alt={article.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform" />
+          <img src={img} alt={article.title} referrerPolicy="no-referrer" className="h-full w-full object-cover group-hover:scale-105 transition-transform" />
         </div>
         <div className="min-w-0 flex-1">
           <span className="text-[10px] font-black text-accent-leaf uppercase tracking-[0.18em]">{cat.label}</span>
@@ -68,7 +68,7 @@ export function NewsCard({ article, variant = "default" }: { article: Article; v
       <Link href={href} target={isExternal ? "_blank" : undefined} className="block">
         <div className="relative h-52 overflow-hidden bg-slate-100">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={img} alt={article.title} className="img-zoom h-full w-full object-cover" />
+          <img src={img} alt={article.title} referrerPolicy="no-referrer" className="img-zoom h-full w-full object-cover" />
           <span className="absolute left-3 top-3 rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wider text-white bg-accent-leaf shadow-lg">
             <Icon name={cat.iconClass} /> {cat.label}
           </span>

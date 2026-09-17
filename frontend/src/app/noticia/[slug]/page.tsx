@@ -99,7 +99,7 @@ export default async function NoticiaPage({ params }: { params: Promise<{ slug: 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
       <section className="relative isolate min-h-[560px] overflow-hidden bg-zinc-950 text-white">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={img} alt="" className="absolute inset-0 h-full w-full object-cover opacity-55" />
+        <img src={img} alt="" referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full object-cover opacity-55" />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(20,16,12,0.92)_0%,rgba(20,16,12,0.66)_48%,rgba(20,16,12,0.22)_100%)]" />
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#fdfbf7] to-transparent" />
         <div className="container-custom relative z-10 flex min-h-[560px] flex-col justify-end pb-16 pt-8">
@@ -139,7 +139,7 @@ export default async function NoticiaPage({ params }: { params: Promise<{ slug: 
 
           <figure className="mx-5 mt-6 overflow-hidden rounded-[1.5rem] bg-zinc-100 sm:mx-7">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={img} alt={article.title} className="h-[260px] w-full object-cover sm:h-[380px]" />
+            <img src={img} alt={article.title} referrerPolicy="no-referrer" className="h-[260px] w-full object-cover sm:h-[380px]" />
             <figcaption className="bg-canvas px-4 py-3 text-xs font-medium text-text-muted">
               {primarySource ? `Imagem: ${primarySource.name || article.source || "Fonte original"}` : "Imagem ilustrativa selecionada pela redação do Portal Cerrado."}
             </figcaption>
