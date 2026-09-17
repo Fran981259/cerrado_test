@@ -168,7 +168,7 @@ class LLMClient:
             body_text = "\n".join(f"- {p}" for p in paragraphs)
             body_text = f"\n\nCONTEXTO APURADO (use como base factual; reescreva do zero, sem copiar):\n{body_text}"
 
-        user_prompt = f"""Reescreva esta notícia em Português Brasileiro com padrão de jornal profissional.
+        user_prompt = f"""Reescreva esta notícia em Português Brasileiro com padrão de jornal profissional. IMPORTANTE: TRADUZA E ADAPTE O TÍTULO E O RESUMO PARA PT-BR!
 
 TÍTULO ORIGINAL: {title}
 LEAD (resumo): {summary}
@@ -177,10 +177,10 @@ FONTE PRINCIPAL: {source} — {source_url}
 {related_text}
 
 REQUISITOS EDITORIAIS:
-1. Reescreva completamente, sem copiar frases da fonte.
+1. Reescreva completamente, sem copiar frases da fonte. O idioma OBRIGATÓRIO é Português do Brasil.
 2. Use o contexto factual para ampliar precisão e densidade.
 3. Cruze com as fontes relacionadas quando existirem.
-4. Escreva 700 a 900 palavras.
+4. Escreva 700 a 900 palavras no corpo da notícia.
 5. Abra com um fato concreto, sem lead genérico.
 6. Use parágrafos curtos, 2 a 3 frases, com ritmo variado.
 7. Alterne frases curtas e médias; corte repetições e lugares-comuns.
@@ -189,10 +189,40 @@ REQUISITOS EDITORIAIS:
 10. Conclua com desdobramento concreto.
 11. Termine com: {attribution}
 
-REESCRITA:"""
+A SUA RESPOSTA DEVE SEGUIR EXATAMENTE ESTE FORMATO:
+
+TÍTULO: [Escreva aqui o título em português]
+RESUMO: [Escreva aqui o lead/resumo em português]
+CORPO:
+[Escreva aqui o corpo da notícia reescrita em português]"""
 
         rewritten = self.complete(prompt=user_prompt, system_prompt=reporter_prompt, max_tokens=5000, temperature=0.65)
-        return {**article, "rewritten_content": rewritten, "rewritten_at": datetime.now(timezone.utc).isoformat(), "llm_provider": self.provider, "llm_model": self.model}
+        
+        # Extrair Título, Resumo e Corpo
+        import re
+        parsed_title = title
+        parsed_summary = summary
+        parsed_body = rewritten
+
+        match = re.search(r"TÍTULO:\s*(.*?)\nRESUMO:\s*(.*?)\nCORPO:\s*(.*)", rewritten, re.IGNORECASE | re.DOTALL)
+        if match:
+            parsed_title = match.group(1).strip()
+            parsed_summary = match.group(2).strip()
+            parsed_body = match.group(3).strip()
+        else:
+            # Fallback se o LLM ignorar o formato
+            # Tenta limpar as tags TÍTULO:, etc se ele gerou bagunçado
+            parsed_body = re.sub(r"^(TÍTULO:|RESUMO:|CORPO:).*\n?", "", rewritten, flags=re.IGNORECASE | re.MULTILINE).strip()
+
+        return {
+            **article, 
+            "rewritten_title": parsed_title,
+            "rewritten_summary": parsed_summary,
+            "rewritten_content": parsed_body, 
+            "rewritten_at": datetime.now(timezone.utc).isoformat(), 
+            "llm_provider": self.provider, 
+            "llm_model": self.model
+        }
 
     def translate_to_pt_br(self, text: str, source_lang: str = "en") -> str:
         system_prompt = f"Você é um tradutor especializado em jornalismo. Traduza de {source_lang} para Português Brasileiro (pt-BR) com fluidez natural e tom jornalístico."

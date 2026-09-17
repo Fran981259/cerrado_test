@@ -142,6 +142,8 @@ def rewrite_pending_articles(self):
                     article_data["related_sources"] = related
 
                 content = ""
+                new_title = ""
+                new_summary = ""
                 if llm.api_key:
                     import time as _time
 
@@ -156,6 +158,8 @@ def rewrite_pending_articles(self):
                     candidate = result_llm.get("rewritten_content", "")
                     if candidate and len(candidate.split()) >= 350:
                         content = candidate
+                        new_title = result_llm.get("rewritten_title")
+                        new_summary = result_llm.get("rewritten_summary")
 
                 if not content:
                     # An upstream outage or a short answer must not delete the source.
@@ -164,8 +168,14 @@ def rewrite_pending_articles(self):
                     failed += 1
                     continue
 
+                if new_title and len(new_title) > 5:
+                    art.title = new_title[:500]
+                if new_summary and len(new_summary) > 5:
+                    art.summary = new_summary[:2000]
+                else:
+                    art.summary = (art.summary or "")[:2000]
+
                 art.content = content
-                art.summary = (art.summary or "")[:2000]
                 art.status = "rewritten"
                 art.updated_at = datetime.now(timezone.utc)
                 rewritten += 1
