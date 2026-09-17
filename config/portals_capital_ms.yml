@@ -160,5 +160,28 @@ portals_ms:
       url: "https://diariodonordeste.verdesmares.com.br/"
       city: "Fortaleza"
 
+  nacionais:
+    - name: "Folha de S.Paulo"
+      url: "https://www.folha.uol.com.br/"
+      city: "Nacional"
+    - name: "Estadão"
+      url: "https://www.estadao.com.br/"
+      city: "Nacional"
+    - name: "Valor Econômico"
+      url: "https://valor.globo.com/"
+      city: "Nacional"
+    - name: "O Dia"
+      url: "https://odia.ig.com.br/"
+      city: "Nacional"
+    - name: "Estado de Minas"
+      url: "https://www.em.com.br/"
+      city: "Nacional"
+    - name: "GZH (GaúchaZH)"
+      url: "https://gauchazh.clicrbs.com.br/"
+      city: "Nacional"
+    - name: "BBC News Brasil"
+      url: "https://www.bbc.com/portuguese"
+      city: "Nacional"
+
 # Nota: 37 cidades no Guia, acima 14 cidades com ~40 portais httpS validados.
 # Para plugar: app/scanner.py pode carregar este YAML e estender PORTALS; miner ignora (HTML scrape).
