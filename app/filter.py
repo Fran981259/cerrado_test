@@ -107,6 +107,10 @@ class ContentFilter:
         if not article.get('summary') and not article.get('content'):
             logger.debug("Artigo rejeitado: sem conteúdo")
             return False
+            
+        if not article.get('image_url'):
+            logger.debug("Artigo rejeitado: sem imagem original")
+            return False
         
         title_lower = article['title'].lower()
         summary_lower = article.get('summary', '').lower()
