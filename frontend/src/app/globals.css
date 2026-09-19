@@ -1,26 +1,33 @@
 @import "tailwindcss";
 
 @theme {
-  --color-canvas: #FFFFFF; /* Branco absoluto */
-  --color-text-primary: #111111; /* Preto rico (quase puro) */
-  --color-text-muted: #555555;
-  --color-accent-soil: #111111; /* Acentos em preto para alto contraste */
-  --color-accent-leaf: #333333;
-  --font-display: var(--font-zilla-slab);
-  --font-sans: var(--font-inter);
-  
-  /* Removendo arredondamento globalmente */
-  --radius-sm: 0px;
-  --radius-md: 0px;
-  --radius-lg: 0px;
-  --radius-xl: 0px;
-  --radius-2xl: 0px;
-  --radius-3xl: 0px;
-  --radius-full: 0px;
-  --radius: 0px;
+  /* Editorial claro — papel, Cerrado profundo, dourado, carvão */
+  --color-canvas: #f6f2e8;
+  --color-surface: #ffffff;
+  --color-text-primary: #161a16;
+  --color-text-muted: #4f554e;
+  --color-accent-soil: #1e4620;
+  --color-accent-leaf: #1e4620;
+  --color-gold: #c88a2c;
+  --color-gold-deep: #8a530a;
+  --color-charcoal: #1a1d20;
+  --font-display: "Zilla Slab", Georgia, serif;
+  --font-sans: "Inter", Arial, sans-serif;
+
+  /* Arredondamento sóbrio, editorial */
+  --radius-sm: 0.125rem;
+  --radius-md: 0.25rem;
+  --radius-lg: 0.375rem;
+  --radius-xl: 0.5rem;
+  --radius-2xl: 0.75rem;
+  --radius-3xl: 1rem;
+  --radius-full: 9999px;
+  --radius: 0.25rem;
 }
 
-* { scrollbar-width: thin; scrollbar-color: #E5E5E5 transparent; }
+* { scrollbar-width: thin; scrollbar-color: #cfc7b4 transparent; }
+
+html { color-scheme: light; }
 
 body {
   @apply bg-canvas text-text-primary antialiased;
@@ -28,14 +35,21 @@ body {
 }
 
 ::selection {
-  background: rgba(0, 0, 0, 0.15);
+  background: rgba(200, 138, 44, 0.35);
 }
 
-/* Minimalist Utilities - Substituindo Glassmorphism */
-.glass-panel {
-  background: #FFFFFF;
-  border: 1px solid #E5E5E5;
-  box-shadow: none;
+:focus-visible {
+  outline: 3px solid var(--color-accent-soil);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 .news-card-hover {
@@ -43,7 +57,7 @@ body {
 }
 .news-card-hover:hover {
   transform: translateY(-4px);
-  box-shadow: 0 20px 40px -10px rgba(0,0,0,0.12);
+  box-shadow: 0 20px 40px -16px rgba(22, 26, 22, 0.2);
 }
 
 .img-zoom {
@@ -53,14 +67,6 @@ body {
   transform: scale(1.05);
 }
 
-@keyframes breathe {
-  0%, 100% { opacity: 0.8; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.05); }
-}
-.animate-breathe {
-  animation: breathe 8s ease-in-out infinite;
-}
-
 /* util */
 .container-custom {
   max-width: 1280px;
@@ -68,6 +74,35 @@ body {
   padding-inline: 1.25rem;
 }
 @media (min-width: 640px) { .container-custom { padding-inline: 1.5rem; } }
+
+.container-editorial {
+  max-width: 1344px;
+  margin-inline: auto;
+  padding-inline: clamp(1.1rem, 3vw, 1.75rem);
+}
+
+.eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-gold-deep);
+}
+.eyebrow-light {
+  color: var(--color-gold);
+}
+
+.masthead-rule {
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-accent-soil) 0 40%, var(--color-gold) 40% 70%, var(--color-charcoal) 70%);
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
 
 .line-clamp-2 {
   display: -webkit-box;

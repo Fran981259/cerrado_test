@@ -1,22 +1,14 @@
 import type { Metadata } from "next";
-import { Zilla_Slab, Inter } from "next/font/google";
+import "@fontsource/inter/latin-400.css";
+import "@fontsource/inter/latin-500.css";
+import "@fontsource/inter/latin-600.css";
+import "@fontsource/zilla-slab/latin-400.css";
+import "@fontsource/zilla-slab/latin-500.css";
+import "@fontsource/zilla-slab/latin-600.css";
+import "@fontsource/zilla-slab/latin-700.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import "./globals.css";
-
-const zilla = Zilla_Slab({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-zilla-slab",
-  display: "swap",
-});
-
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-inter",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: {
@@ -38,14 +30,17 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://100.95.111.24:3000"),
 };
 
+import { Tracker } from "@/components/Tracker";
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className={`${zilla.variable} ${inter.variable} h-full`}>
+    <html lang="pt-BR" className="h-full">
       <head>
         <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/3.0.0/uicons-regular-rounded/css/uicons-regular-rounded.css" />
         <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/3.0.0/uicons-solid-rounded/css/uicons-solid-rounded.css" />
       </head>
       <body className="min-h-full flex flex-col font-sans antialiased">
+        <Tracker />
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />

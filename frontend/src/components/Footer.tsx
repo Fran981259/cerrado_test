@@ -1,57 +1,97 @@
 import Link from "next/link";
+import { REPORTER_LIST, reporterInitials } from "@/lib/reporters";
+
+const CITIES = ["Campo Grande", "Dourados", "Três Lagoas", "Corumbá", "Ponta Porã", "Aquidauana", "Jardim", "Naviraí", "Nova Andradina", "São Gabriel do Oeste", "Paranaíba", "Sidrolândia", "Chapadão do Sul", "Coxim"];
+
+const EDITORIAS = [
+  { label: "Política e Poder", href: "/categoria/politics" },
+  { label: "Polícia e Justiça", href: "/categoria/security" },
+  { label: "Economia", href: "/categoria/economy" },
+  { label: "Agronegócio", href: "/categoria/agriculture" },
+  { label: "Cotidiano e Clima", href: "/categoria/clima" },
+  { label: "Esporte", href: "/categoria/sports" },
+  { label: "Cultura e Entretenimento", href: "/categoria/culture" },
+  { label: "Ciência e Tecnologia", href: "/categoria/tech" },
+];
+
+const INSTITUCIONAL = [
+  { label: "Sobre Nós", href: "/sobre" },
+  { label: "Privacidade", href: "/privacidade" },
+  { label: "Termos de uso", href: "/termos" },
+  { label: "Contato", href: "/contato" },
+];
 
 export default function Footer() {
   return (
-    <footer className="mt-16 bg-[#040405] text-zinc-300 border-t border-white/5">
-      <div className="container-custom grid gap-8 py-14 md:grid-cols-[1.5fr_1fr_1fr_1.2fr]">
+    <footer className="mt-10 border-t-2 border-accent-soil bg-surface">
+      <div className="container-editorial grid gap-10 py-12 md:grid-cols-2 lg:grid-cols-4">
         <div>
-          <div className="font-display text-3xl font-black text-white">Portal<span className="text-accent-soil"> Cerrado</span></div>
-          <p className="mt-3 text-sm leading-relaxed opacity-80">
-            Tudo que acontece em Campo Grande e nas principais cidades de Mato Grosso do Sul com isenção e credibilidade. Política, economia, segurança, agronegócio, clima e tecnologia com apuração 24h.
-          </p>
-          <div className="mt-4 flex gap-2">
-            <a href="https://facebook.com" target="_blank" rel="noopener" aria-label="Facebook" className="grid h-8 w-8 place-items-center rounded-full bg-white/10 hover:bg-white hover:text-text-primary"><i className="fi fi-rr-share text-xs" /></a>
-            <a href="https://instagram.com" target="_blank" rel="noopener" aria-label="Instagram" className="grid h-8 w-8 place-items-center rounded-full bg-white/10 hover:bg-white hover:text-text-primary"><i className="fi fi-rr-camera text-xs" /></a>
-            <a href="https://x.com" target="_blank" rel="noopener" aria-label="X" className="grid h-8 w-8 place-items-center rounded-full bg-white/10 hover:bg-white hover:text-text-primary"><i className="fi fi-rr-paper-plane text-xs" /></a>
+          <div className="flex items-center gap-3">
+            <span aria-hidden="true" className="grid h-10 w-10 place-items-center rounded bg-accent-soil font-display text-base font-bold text-white">
+              PC
+            </span>
+            <span className="font-display text-2xl font-bold tracking-tight text-text-primary">
+              Portal <span className="text-accent-soil">Cerrado</span>
+            </span>
           </div>
-        </div>
-        <div>
-          <h4 className="font-bold text-white text-sm">Editorias</h4>
-          <ul className="mt-3 space-y-2 text-sm opacity-80">
-            <li><Link href="/categoria/politics" className="hover:text-white">Política e Poder</Link></li>
-            <li><Link href="/categoria/security" className="hover:text-white">Polícia e Justiça</Link></li>
-            <li><Link href="/categoria/clima" className="hover:text-white">Cotidiano</Link></li>
-            <li><Link href="/categoria/sports" className="hover:text-white">Esporte</Link></li>
-            <li><Link href="/categoria/economy" className="hover:text-white">Economia e Agronegócio</Link></li>
-            <li><Link href="/categoria/culture" className="hover:text-white">Cultura e Entretenimento</Link></li>
-          </ul>
-        </div>
-        <div>
-          <h4 className="font-bold text-white text-sm">Institucional</h4>
-          <ul className="mt-3 space-y-2 text-sm opacity-80">
-            <li><Link href="/sobre" className="hover:text-white">Sobre Nós</Link></li>
-            <li><Link href="/privacidade" className="hover:text-white">Privacidade</Link></li>
-            <li><Link href="/termos" className="hover:text-white">Termos de uso</Link></li>
-            <li><Link href="/contato" className="hover:text-white">Contato</Link></li>
-            <li><Link href="/sobre" className="hover:text-white">Expediente</Link></li>
-            <li><Link href="/contato" className="hover:text-white">Reportar News</Link></li>
-          </ul>
-        </div>
-        <div>
-          <h4 className="font-bold text-white text-sm">Contato</h4>
-          <p className="mt-3 text-sm opacity-80">
-            <span className="font-semibold text-white">(67) 3042-4141</span><br />
-            contato@portalcerrado.com.br<br />
-            Campo Grande — MS
+          <p className="mt-4 text-sm leading-relaxed text-text-muted">
+            Jornalismo sério sobre agronegócio, mercados e negócios regionais. Produzido em Mato Grosso do Sul, com apuração a partir de fontes públicas e da imprensa local de cada cidade.
           </p>
-          <p className="mt-3 text-xs leading-relaxed opacity-60">Informe Publicitário • Capital Play • Oportunidades • Rural</p>
-          <p className="mt-4 text-xs opacity-60">© {new Date().getFullYear()} Portal Cerrado. Todos os direitos reservados.</p>
+          <p className="mt-4 text-xs leading-relaxed text-text-muted">
+            Acompanhamos as principais cidades do Estado:
+            <span className="mt-1 block font-medium">{CITIES.join(" · ")}.</span>
+          </p>
+        </div>
+
+        <div>
+          <h4 className="border-b border-black/10 pb-2 text-xs font-black uppercase tracking-[0.18em] text-accent-soil">Editorias</h4>
+          <ul className="mt-4 space-y-2.5 text-sm">
+            {EDITORIAS.map((item) => (
+              <li key={item.href}>
+                <Link href={item.href} className="text-text-muted transition-colors hover:text-accent-soil hover:underline hover:decoration-gold decoration-2 underline-offset-2">
+                  {item.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div>
+          <h4 className="border-b border-black/10 pb-2 text-xs font-black uppercase tracking-[0.18em] text-accent-soil">Institucional</h4>
+          <ul className="mt-4 space-y-2.5 text-sm">
+            {INSTITUCIONAL.map((item) => (
+              <li key={item.href}>
+                <Link href={item.href} className="text-text-muted transition-colors hover:text-accent-soil hover:underline hover:decoration-gold decoration-2 underline-offset-2">
+                  {item.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-5 text-xs leading-relaxed text-text-muted">Redação em Campo Grande — MS.</p>
+        </div>
+
+        <div>
+          <h4 className="border-b border-black/10 pb-2 text-xs font-black uppercase tracking-[0.18em] text-accent-soil">Colunistas</h4>
+          <ul className="mt-4 space-y-2.5 text-sm">
+            {REPORTER_LIST.filter((r) => r.slug !== "redacao.cerrado")
+              .slice(0, 7)
+              .map((reporter) => (
+                <li key={reporter.slug} className="flex items-center gap-2.5">
+                  <span aria-hidden="true" className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-gold/20 text-[10px] font-bold text-gold-deep">
+                    {reporterInitials(reporter.name)}
+                  </span>
+                  <Link href={`/reporter/${reporter.slug}`} className="truncate text-text-muted transition-colors hover:text-accent-soil hover:underline hover:decoration-gold decoration-2 underline-offset-2">
+                    {reporter.name}
+                  </Link>
+                </li>
+              ))}
+          </ul>
         </div>
       </div>
-      <div className="border-t border-white/10">
-        <div className="container-custom py-4 text-xs opacity-60 flex flex-wrap gap-4 justify-between">
-          <span>Jornalismo sério com compromisso local.</span>
-          <span>Produzido em Mato Grosso do Sul — paleta Cerrado</span>
+      <div className="border-t border-black/10">
+        <div className="container-editorial flex flex-wrap items-center justify-between gap-4 py-5 text-xs text-text-muted">
+          <span>© {new Date().getFullYear()} Portal Cerrado. Todos os direitos reservados.</span>
+          <span>Jornalismo local com rigor editorial.</span>
         </div>
       </div>
     </footer>

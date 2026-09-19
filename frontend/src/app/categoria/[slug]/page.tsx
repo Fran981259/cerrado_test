@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { fetchNewsResponse, fetchTrends } from "@/lib/api";
 import { NewsCard } from "@/components/NewsCard";
-import { getCategory, categorySlug } from "@/lib/categories";
+import { CATEGORY_LIST, getCategory, categorySlug } from "@/lib/categories";
 import { TrendPanel } from "@/components/TrendPanel";
 import { Pagination } from "@/components/Pagination";
 import { parsePage } from "@/lib/pagination";
@@ -12,11 +12,7 @@ import { Icon } from "@/components/Icon";
 export const revalidate = 60;
 
 export function generateStaticParams() {
-  return [
-    { slug: "politics" }, { slug: "economy" }, { slug: "security" },
-    { slug: "agriculture" }, { slug: "sports" }, { slug: "health" },
-    { slug: "general" }, { slug: "tech" },
-  ];
+  return CATEGORY_LIST.map(({ slug }) => ({ slug }));
 }
 
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ page?: string }> }): Promise<Metadata> {
@@ -60,21 +56,21 @@ export default async function CategoriaPage({ params, searchParams }: { params: 
   if (currentPage > totalPages) notFound();
 
   return (
-    <div className="bg-[linear-gradient(180deg,#09090b_0%,#18181b_100%)] py-10">
-      <div className="container-custom">
-        <div className="overflow-hidden rounded-[2rem] border border-white/5 bg-white/5 p-8 text-white shadow-[0_28px_90px_rgba(45,41,38,0.16)] sm:p-10">
-          <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-black uppercase tracking-[0.24em]"><Icon name={cat.iconClass} /> Editoria</span>
-          <h1 className="mt-5 font-display text-5xl font-black leading-none tracking-tight sm:text-7xl">{cat.label}</h1>
-          <p className="mt-4 max-w-2xl text-lg leading-relaxed text-white/72">Acompanhe as principais atualizações desta editoria com organização visual, contexto regional e leitura direta.</p>
-          <p className="mt-6 text-sm font-bold uppercase tracking-widest text-white/55">{newsResult.total} matérias publicadas</p>
-        </div>
+    <div className="bg-canvas py-10 sm:py-14">
+      <div className="container-editorial">
+        <header className="border-b-2 border-charcoal pb-7">
+          <span className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.22em] text-gold-deep"><Icon name={cat.iconClass} /> Editoria</span>
+          <h1 className="mt-3 font-display text-5xl font-bold leading-none tracking-tight text-text-primary sm:text-7xl">{cat.label}</h1>
+          <p className="mt-4 max-w-2xl text-base leading-relaxed text-text-muted">Acompanhe as principais atualizações desta editoria, com contexto regional e leitura direta.</p>
+          <p className="mt-5 text-xs font-bold uppercase tracking-widest text-accent-soil">{newsResult.total} matérias publicadas</p>
+        </header>
 
         <div className="my-8">
           <TrendPanel trends={trends} title="Temas em alta no portal" compact />
         </div>
 
         {articles.length === 0 ? (
-          <div className="rounded-[2rem] border border-white/5 bg-white/5 p-12 text-center text-text-muted shadow-sm">
+          <div className="border-y border-black/10 bg-surface p-12 text-center text-text-muted">
             Nenhuma matéria em {cat.label} ainda.
             <Link href="/" className="mt-4 block font-black text-accent-soil">← Voltar para capa</Link>
           </div>

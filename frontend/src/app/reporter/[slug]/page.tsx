@@ -53,20 +53,20 @@ export default async function ReporterPage({ params, searchParams }: { params: P
   if (currentPage > totalPages) notFound();
 
   return (
-    <div className="bg-[radial-gradient(circle_at_top_left,rgba(166,94,78,0.16),transparent_30rem),linear-gradient(180deg,#fdfbf7_0%,#f7f1e8_100%)] py-10">
-      <div className="container-custom max-w-6xl">
-        <Link href="/" className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-black text-text-muted shadow-sm hover:text-accent-soil">← Voltar</Link>
+    <div className="bg-canvas py-10 sm:py-14">
+      <div className="container-editorial max-w-6xl">
+        <Link href="/" className="inline-flex items-center gap-2 border-b border-accent-soil pb-1 text-sm font-bold text-accent-soil hover:text-gold-deep">← Voltar para a capa</Link>
 
-        <div className="mt-6 overflow-hidden rounded-[2rem] border border-black/5 bg-white shadow-[0_28px_90px_rgba(45,41,38,0.12)]">
-          <div className="bg-text-primary p-8 text-white sm:p-10">
+        <div className="mt-6 border-y-2 border-charcoal bg-surface">
+          <div className="p-8 sm:p-10">
             <div className="flex flex-col gap-6 sm:flex-row sm:items-end">
-              <div className="flex h-28 w-28 shrink-0 items-center justify-center rounded-[2rem] bg-white font-display text-4xl font-black text-text-primary shadow-xl">
+              <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-accent-soil font-display text-3xl font-bold text-white">
                 {reporterInitials(r.name)}
               </div>
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.28em] text-white/55">{r.role}</p>
-                <h1 className="mt-2 font-display text-5xl font-black leading-none tracking-tight sm:text-7xl">{r.name}</h1>
-                <p className="mt-3 text-lg font-semibold text-white/78">{r.beat} • Portal Cerrado</p>
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-gold-deep">{r.role}</p>
+                <h1 className="mt-2 font-display text-5xl font-bold leading-none tracking-tight text-text-primary sm:text-7xl">{r.name}</h1>
+                <p className="mt-3 text-lg text-text-muted">{r.beat} • Portal Cerrado</p>
               </div>
             </div>
           </div>

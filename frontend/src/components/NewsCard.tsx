@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { getCategory, PATTERN_IMAGES } from "@/lib/categories";
+import { getCategory } from "@/lib/categories";
 import { getReporter } from "@/lib/reporters";
 import type { Article } from "@/lib/api";
 import { Icon } from "@/components/Icon";
+import { ArticleImage } from "@/components/home/ArticleImage";
 
 function formatDate(d?: string) {
   if (!d) return "";
@@ -16,17 +17,15 @@ function formatDate(d?: string) {
 export function NewsCard({ article, variant = "default" }: { article: Article; variant?: "hero" | "default" | "compact" }) {
   const cat = getCategory(article.category);
   const reporter = getReporter(article.reporter_slug);
-  const img = (article as unknown as { image_url?: string }).image_url || PATTERN_IMAGES[article.category] || PATTERN_IMAGES.general;
   const href = article.slug ? `/noticia/${article.slug}` : article.url || "#";
   const isExternal = !article.slug && !!article.url;
 
   if (variant === "hero") {
     return (
-      <article className="group relative overflow-hidden rounded-[2rem] border border-white/50 shadow-[0_28px_90px_rgba(15,23,42,0.15)] news-card-hover">
+      <article className="group relative overflow-hidden border border-black/10 bg-charcoal news-card-hover">
         <Link href={href} target={isExternal ? "_blank" : undefined} className="block">
-          <div className="relative h-[440px] overflow-hidden sm:h-[520px]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={img} alt={article.title} referrerPolicy="no-referrer" className="img-zoom h-full w-full object-cover" />
+          <div className="relative overflow-hidden">
+            <ArticleImage article={article} priority sizes="(min-width: 1024px) 55vw, 100vw" className="h-[440px] sm:h-[520px]" showBadge={false} />
             <div className="absolute inset-0 bg-gradient-to-t from-black/88 via-black/35 to-black/5" />
             <span className="absolute left-5 top-5 rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-wider text-white bg-accent-leaf shadow-lg">
               <Icon name={cat.iconClass} /> {cat.label}
@@ -48,11 +47,8 @@ export function NewsCard({ article, variant = "default" }: { article: Article; v
 
   if (variant === "compact") {
     return (
-      <article className="group flex gap-4 rounded-2xl p-2 transition glass-panel hover:border-white/50 hover:shadow-xl">
-        <div className="h-24 w-32 shrink-0 overflow-hidden rounded-xl bg-white/5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={img} alt={article.title} referrerPolicy="no-referrer" className="h-full w-full object-cover group-hover:scale-105 transition-transform" />
-        </div>
+      <article className="group flex gap-4 border-b border-black/10 py-3 transition-colors hover:bg-black/[0.025]">
+        <ArticleImage article={article} sizes="128px" className="h-24 w-32" showBadge={false} />
         <div className="min-w-0 flex-1">
           <span className="text-[10px] font-black text-accent-leaf uppercase tracking-[0.18em]">{cat.label}</span>
           <Link href={href} target={isExternal ? "_blank" : undefined} className="block">
@@ -64,15 +60,9 @@ export function NewsCard({ article, variant = "default" }: { article: Article; v
   }
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-[1.65rem] glass-panel news-card-hover">
+    <article className="group flex flex-col overflow-hidden border-b border-black/15 bg-surface news-card-hover">
       <Link href={href} target={isExternal ? "_blank" : undefined} className="block">
-        <div className="relative h-52 overflow-hidden bg-white/5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={img} alt={article.title} referrerPolicy="no-referrer" className="img-zoom h-full w-full object-cover" />
-          <span className="absolute left-3 top-3 rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wider text-white bg-accent-leaf shadow-lg">
-            <Icon name={cat.iconClass} /> {cat.label}
-          </span>
-        </div>
+        <ArticleImage article={article} sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw" className="h-52" />
       </Link>
       <div className="flex flex-1 flex-col p-5">
         <Link href={href} target={isExternal ? "_blank" : undefined}>

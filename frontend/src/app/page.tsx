@@ -1,132 +1,131 @@
-import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
-import { fetchNewsResponse, fetchTrends, type Article, type TrendSignal } from "@/lib/api";
-import { NewsCard } from "@/components/NewsCard";
-import Ticker from "@/components/Ticker";
-import { TrendPanel } from "@/components/TrendPanel";
-import { Pagination } from "@/components/Pagination";
-import { parsePage } from "@/lib/pagination";
-import { categorySlug } from "@/lib/categories";
+import { Suspense } from "react";
+import { fetchNewsResponse, type Article } from "@/lib/api";
+import { HeroGrid } from "@/components/home/HeroGrid";
+import { AgroModule } from "@/components/home/AgroModule";
+import { PoderModule } from "@/components/home/PoderModule";
+import { Columnists } from "@/components/home/Columnists";
+
+const BASE = process.env.NEXT_PUBLIC_SITE_URL || "http://100.95.111.24:3000";
 
 export const revalidate = 60;
 
-export async function generateMetadata({ searchParams }: { searchParams: Promise<{ cat?: string; page?: string }> }): Promise<Metadata> {
-  const { cat, page } = await searchParams;
-  const base = process.env.NEXT_PUBLIC_SITE_URL || "http://100.95.111.24:3000";
-  const currentPage = parsePage(page);
-  if (currentPage === null) notFound();
-  const canonical = cat ? `${base}/?cat=${cat}${currentPage > 1 ? `&page=${currentPage}` : ""}` : `${base}/${currentPage > 1 ? `?page=${currentPage}` : ""}`;
-  const pageLabel = currentPage > 1 ? ` - Página ${currentPage}` : "";
+export async function generateMetadata(): Promise<Metadata> {
   return {
-    title: cat ? `Portal Cerrado | ${cat}${pageLabel}` : `Portal Cerrado${pageLabel}`,
-    description: cat ? `Notícias de ${cat} no Portal Cerrado${pageLabel}` : `Notícias do Portal Cerrado${pageLabel}`,
-    alternates: { canonical },
-    robots: currentPage > 1 ? { index: false, follow: true } : { index: true, follow: true },
+    title: "Portal Cerrado — Notícias de Mato Grosso do Sul",
+    description: "Agro, mercados e negócios regionais. Política, economia, segurança e agronegócio em Mato Grosso do Sul, com apuração 24 horas.",
+    alternates: { canonical: BASE },
+    openGraph: {
+      title: "Portal Cerrado — Notícias de MS",
+      description: "Agro, mercados e negócios regionais de Mato Grosso do Sul.",
+      url: BASE,
+      type: "website",
+      locale: "pt_BR",
+      siteName: "Portal Cerrado",
+    },
   };
 }
 
-export default async function Home({ searchParams }: { searchParams: Promise<{ cat?: string; page?: string }> }) {
-  const { cat, page } = await searchParams;
-  const perPage = 24;
-  const currentPage = parsePage(page);
-  if (currentPage === null) notFound();
-  if (cat) {
-    const slug = categorySlug(cat);
-    if (!slug) notFound();
-    permanentRedirect(`/categoria/${slug}${currentPage > 1 ? `?page=${currentPage}` : ""}`);
-  }
-  const offset = (currentPage - 1) * perPage;
-  let list: Article[] = [];
-  let trends: TrendSignal[] = [];
-  let total = 0;
-  let loadError = "";
-  try {
-    const [articlesResult, trendSignals] = await Promise.all([
-      fetchNewsResponse({ category: cat, limit: perPage, offset, sortBy: "trend" }),
-      fetchTrends(6),
-    ]);
-    list = articlesResult.news;
-    total = articlesResult.total;
-    trends = trendSignals;
-  } catch {
-    loadError = "A API de noticias nao respondeu. O frontend depende do backend real para carregar o conteudo.";
-  }
+function pickHero(recent: Article[]): { main?: Article; feature?: Article; rail: Article[] } {
+  const picked: string[] = [];
+  const used = (article: Article): boolean => {
+    const key = article.slug || article.title;
+    if (picked.includes(key)) return true;
+    picked.push(key);
+    return false;
+  };
+  const main = recent.find((a) => !used(a));
+  const feature = recent.find((a) => !used(a));
+  const rail = recent.filter((a) => !used(a)).slice(0, 2);
+  return { main, feature, rail };
+}
 
-  // Destaques determinísticos: hero = mais recente, secondary = próximos 4 (estável, sem Math.random)
-  const pool = [...list.slice(0, 12)];
-  const picked = pool.slice(0, 5).map((a) => a.slug || a.title);
-  const hero = pool[0];
-  const secondary = pool.slice(1, 5);
-  const rest = [...list.filter((a) => !picked.includes(a.slug || a.title))];
-  const totalPages = Math.max(1, Math.ceil((total || 0) / perPage));
-  if (!loadError && currentPage > totalPages) notFound();
+const ORGANIZATION_JSON_LD = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": `${BASE}/#website`,
+      url: BASE,
+      name: "Portal Cerrado",
+      inLanguage: "pt-BR",
+      description: "Notícias de Agro, Mercados e Negócios regionais de Mato Grosso do Sul.",
+      potentialAction: {
+        "@type": "SearchAction",
+        target: { "@type": "EntryPoint", urlTemplate: `${BASE}/busca?q={search_term_string}` },
+        "query-input": "required name=search_term_string",
+      },
+    },
+    {
+      "@type": "Organization",
+      "@id": `${BASE}/#organization`,
+      name: "Portal Cerrado",
+      url: BASE,
+      foundingLocation: "Campo Grande, Mato Grosso do Sul, Brasil",
+      areaServed: "Mato Grosso do Sul, Brasil",
+    },
+  ],
+};
+
+export default async function Home() {
+  const settled = await Promise.allSettled([
+    fetchNewsResponse({ limit: 40, sortBy: "recent" }),
+    fetchNewsResponse({ category: "agriculture", limit: 5, sortBy: "recent" }),
+    fetchNewsResponse({ category: "politics", limit: 3, sortBy: "recent" }),
+    fetchNewsResponse({ category: "economy", limit: 3, sortBy: "recent" }),
+    fetchNewsResponse({ category: "security", limit: 2, sortBy: "recent" }),
+  ]);
+
+  const [recentResult, agroResult, politicsResult, economyResult, securityResult] = settled;
+  const recent = recentResult.status === "fulfilled" ? recentResult.value.news : [];
+  const agro = agroResult.status === "fulfilled" ? agroResult.value.news : [];
+  const politics = politicsResult.status === "fulfilled" ? politicsResult.value.news : [];
+  const economy = economyResult.status === "fulfilled" ? economyResult.value.news : [];
+  const security = securityResult.status === "fulfilled" ? securityResult.value.news : [];
+
+  const { main, feature, rail } = pickHero(recent);
+  const hardError = settled.every((r) => r.status === "rejected");
 
   return (
-    <div className="relative overflow-hidden bg-canvas">
-      {/* Fundo vivo animado */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.12),transparent_40rem),linear-gradient(180deg,#09090b_0%,#18181b_100%)] animate-breathe" />
-      
-      <div className="relative z-10">
-        <Ticker />
+    <div className="bg-canvas">
+      {hardError && (
+        <div className="container-editorial pt-6" role="alert">
+          <p className="rounded border border-red-700/25 bg-red-50 px-5 py-4 text-sm font-semibold text-red-800">
+            A API de notícias não respondeu neste momento. As cotações de mercado seguem carregando de fontes independentes.
+          </p>
+        </div>
+      )}
 
-      <section className="container-custom py-6 sm:py-7">
-        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-accent-soil">Jornalismo com credibilidade</p>
-        <h1 className="mt-2 max-w-3xl font-display text-4xl font-black leading-[0.95] tracking-tight text-text-primary sm:text-5xl">O pulso de Mato Grosso do Sul.</h1>
-        <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-text-muted">Política, economia, segurança, agronegócio e clima — do dia a dia de Campo Grande e do interior, direto e sem rodeio.</p>
-      </section>
+      <HeroGrid main={main} feature={feature} rail={rail} />
 
-      <div className="container-custom pb-6">
-        <TrendPanel trends={trends} />
-      </div>
+      <AgroModule articles={agro} />
 
-      <div className="container-custom pb-12">
-        {hero && (
-          <div className="grid lg:grid-cols-[2fr_1fr] gap-8">
-            <NewsCard article={hero} variant="hero" />
-            <div className="hidden rounded-[2rem] border border-white/5 bg-black/40 p-6 shadow-sm backdrop-blur lg:block">
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-accent-soil">Seleção editorial</p>
-              <h2 className="mb-4 mt-2 font-display text-3xl font-black text-text-primary">Destaques</h2>
-              <div className="grid gap-3">
-                {secondary.map((a) => (
-                  <NewsCard key={a.slug || a.title} article={a} variant="compact" />
-                ))}
-              </div>
-            </div>
-            {/* Mobile secondary */}
-            <div className="grid gap-4 lg:hidden">
-              {secondary.map((a) => (
-                <NewsCard key={a.slug || a.title} article={a} variant="compact" />
+      <PoderModule politics={politics} economy={economy} security={security} rural={agro.slice(1, 3)} />
+
+      <Suspense
+        fallback={
+          <section aria-label="Carregando colunistas" className="container-editorial py-10">
+            <div className="h-2 w-28 rounded bg-black/10" />
+            <div className="mt-2 h-7 w-72 rounded bg-black/10" />
+            <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+                <div key={i} className="h-56 rounded-md border border-black/10 bg-surface p-5">
+                  <div className="h-11 w-11 rounded-full bg-black/10" />
+                  <div className="mt-4 h-3 w-3/4 rounded bg-black/10" />
+                  <div className="mt-2 h-3 w-1/2 rounded bg-black/10" />
+                </div>
               ))}
             </div>
-          </div>
-        )}
+          </section>
+        }
+      >
+        <Columnists />
+      </Suspense>
 
-        {rest.length > 0 && (
-          <>
-            <h2 className="mt-16 mb-8 flex items-center gap-4 font-display text-3xl font-black text-text-primary">
-              Últimas notícias
-              {cat && <span className="text-base font-medium text-text-muted">— {cat}</span>}
-              <span className="h-px flex-1 bg-black/10" />
-            </h2>
-            <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-4">
-              {rest.map((a) => (
-                <NewsCard key={a.slug || a.title} article={a} />
-              ))}
-            </div>
-          </>
-        )}
-
-        {!loadError && list.length === 0 && (
-          <div className="rounded-[2rem] glass-panel border-white/10 p-12 text-center text-text-muted shadow-lg">Nenhuma notícia encontrada. A Inteligência Artificial está escrevendo novas matérias neste instante...</div>
-        )}
-
-        {!loadError && <Pagination page={currentPage} totalPages={totalPages} base="/" />}
-
-        {loadError && (
-          <div className="rounded-[2rem] glass-panel border-red-500/20 p-12 text-center font-semibold text-red-600 shadow-lg">{loadError}</div>
-        )}
-      </div>
-      </div>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(ORGANIZATION_JSON_LD) }}
+      />
     </div>
   );
 }
