@@ -94,14 +94,14 @@ export default async function NoticiaPage({ params }: { params: Promise<{ slug: 
   };
 
   return (
-    <main className="bg-[radial-gradient(circle_at_top_left,rgba(166,94,78,0.16),transparent_34rem),linear-gradient(180deg,#fdfbf7_0%,#f7f1e8_100%)] pb-16">
+    <main className="bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.12),transparent_40rem),linear-gradient(180deg,#09090b_0%,#18181b_100%)] pb-16">
       <ScrollProgress />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
       <section className="relative isolate min-h-[560px] overflow-hidden bg-zinc-950 text-white">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={img} alt="" referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full object-cover opacity-55" />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(20,16,12,0.92)_0%,rgba(20,16,12,0.66)_48%,rgba(20,16,12,0.22)_100%)]" />
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#fdfbf7] to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#09090b] to-transparent" />
         <div className="container-custom relative z-10 flex min-h-[560px] flex-col justify-end pb-16 pt-8">
           <Link href="/" className="mb-auto inline-flex w-fit items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-bold text-white/90 backdrop-blur transition hover:bg-white/20">← Voltar para capa</Link>
           <div className="max-w-4xl">

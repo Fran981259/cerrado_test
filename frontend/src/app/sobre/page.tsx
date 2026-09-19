@@ -4,10 +4,10 @@ export const metadata: Metadata = { title: "Sobre" };
 
 export default function SobrePage() {
   return (
-    <div className="bg-[linear-gradient(180deg,#fdfbf7_0%,#f7f1e8_100%)] py-14">
+    <div className="bg-[linear-gradient(180deg,#09090b_0%,#18181b_100%)] py-14">
       <div className="container-custom max-w-4xl">
-        <section className="overflow-hidden rounded-[2rem] border border-black/5 bg-white shadow-[0_28px_90px_rgba(45,41,38,0.12)]">
-          <div className="bg-text-primary p-8 text-white sm:p-12">
+        <section className="overflow-hidden rounded-[2rem] border border-white/5 bg-[#09090b] shadow-[0_28px_90px_rgba(0,0,0,0.5)]">
+          <div className="bg-white/5 p-8 text-white sm:p-12">
             <p className="text-xs font-black uppercase tracking-[0.28em] text-white/55">Mato Grosso do Sul • Jornalismo 24 horas</p>
             <h1 className="mt-4 font-display text-5xl font-black leading-none tracking-tight sm:text-7xl">Sobre o Portal Cerrado</h1>
           </div>

@@ -3,10 +3,10 @@ export const metadata: Metadata = { title: "Contato" };
 
 export default function ContatoPage() {
   return (
-    <div className="bg-[radial-gradient(circle_at_top_left,rgba(74,103,65,0.16),transparent_30rem),linear-gradient(180deg,#fdfbf7_0%,#f7f1e8_100%)] py-14">
-      <div className="container-custom max-w-5xl">
-        <section className="overflow-hidden rounded-[2rem] border border-black/5 bg-white shadow-[0_28px_90px_rgba(45,41,38,0.12)]">
-          <div className="bg-text-primary p-8 text-white sm:p-12">
+    <div className="bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.12),transparent_30rem),linear-gradient(180deg,#09090b_0%,#18181b_100%)] py-14">
+      <div className="container-custom max-w-3xl">
+        <section className="overflow-hidden rounded-[2rem] border border-white/5 bg-[#09090b] shadow-[0_28px_90px_rgba(0,0,0,0.5)]">
+          <div className="bg-white/5 p-8 text-white sm:p-12">
             <p className="text-xs font-black uppercase tracking-[0.28em] text-white/55">Redação aberta</p>
             <h1 className="mt-4 font-display text-5xl font-black leading-none tracking-tight sm:text-7xl">Fale com o Portal Cerrado</h1>
             <p className="mt-5 max-w-2xl text-lg leading-relaxed text-white/75">Sugestões de pauta, correções, denúncias documentadas e parcerias comerciais entram por um canal direto com a redação.</p>

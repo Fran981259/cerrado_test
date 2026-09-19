@@ -60,9 +60,9 @@ export default async function CategoriaPage({ params, searchParams }: { params: 
   if (currentPage > totalPages) notFound();
 
   return (
-    <div className="bg-[linear-gradient(180deg,#fdfbf7_0%,#f7f1e8_100%)] py-10">
+    <div className="bg-[linear-gradient(180deg,#09090b_0%,#18181b_100%)] py-10">
       <div className="container-custom">
-        <div className="overflow-hidden rounded-[2rem] border border-black/5 bg-text-primary p-8 text-white shadow-[0_28px_90px_rgba(45,41,38,0.16)] sm:p-10">
+        <div className="overflow-hidden rounded-[2rem] border border-white/5 bg-white/5 p-8 text-white shadow-[0_28px_90px_rgba(45,41,38,0.16)] sm:p-10">
           <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-black uppercase tracking-[0.24em]"><Icon name={cat.iconClass} /> Editoria</span>
           <h1 className="mt-5 font-display text-5xl font-black leading-none tracking-tight sm:text-7xl">{cat.label}</h1>
           <p className="mt-4 max-w-2xl text-lg leading-relaxed text-white/72">Acompanhe as principais atualizações desta editoria com organização visual, contexto regional e leitura direta.</p>
@@ -74,7 +74,7 @@ export default async function CategoriaPage({ params, searchParams }: { params: 
         </div>
 
         {articles.length === 0 ? (
-          <div className="rounded-[2rem] border border-black/5 bg-white p-12 text-center text-text-muted shadow-sm">
+          <div className="rounded-[2rem] border border-white/5 bg-white/5 p-12 text-center text-text-muted shadow-sm">
             Nenhuma matéria em {cat.label} ainda.
             <Link href="/" className="mt-4 block font-black text-accent-soil">← Voltar para capa</Link>
           </div>

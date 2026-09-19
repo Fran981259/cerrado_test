@@ -49,7 +49,7 @@ export function NewsCard({ article, variant = "default" }: { article: Article; v
   if (variant === "compact") {
     return (
       <article className="group flex gap-4 rounded-2xl p-2 transition glass-panel hover:border-white/50 hover:shadow-xl">
-        <div className="h-24 w-32 shrink-0 overflow-hidden rounded-xl bg-slate-100">
+        <div className="h-24 w-32 shrink-0 overflow-hidden rounded-xl bg-white/5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={img} alt={article.title} referrerPolicy="no-referrer" className="h-full w-full object-cover group-hover:scale-105 transition-transform" />
         </div>
@@ -66,7 +66,7 @@ export function NewsCard({ article, variant = "default" }: { article: Article; v
   return (
     <article className="group flex flex-col overflow-hidden rounded-[1.65rem] glass-panel news-card-hover">
       <Link href={href} target={isExternal ? "_blank" : undefined} className="block">
-        <div className="relative h-52 overflow-hidden bg-slate-100">
+        <div className="relative h-52 overflow-hidden bg-white/5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={img} alt={article.title} referrerPolicy="no-referrer" className="img-zoom h-full w-full object-cover" />
           <span className="absolute left-3 top-3 rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wider text-white bg-accent-leaf shadow-lg">
@@ -79,7 +79,7 @@ export function NewsCard({ article, variant = "default" }: { article: Article; v
           <h3 className="line-clamp-3 text-xl font-display font-black leading-tight text-text-primary group-hover:text-accent-leaf">{article.title}</h3>
         </Link>
         {article.summary && <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-text-muted">{article.summary.replace(/\*\*/g, "")}</p>}
-        <div className="mt-auto flex items-center justify-between border-t border-slate-200/50 pt-4 text-xs font-semibold text-text-muted">
+        <div className="mt-auto flex items-center justify-between border-t border-white/5 pt-4 text-xs font-semibold text-text-muted">
           <span className="font-bold">{reporter.name}</span>
           <span>{formatDate(article.published_at)}</span>
         </div>

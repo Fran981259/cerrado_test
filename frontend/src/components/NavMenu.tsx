@@ -7,7 +7,7 @@ import { Suspense, useState } from "react";
 // Taxonomia Capital News adaptada à paleta Cerrado — mantém slugs existentes, só rótulos mudam
 // Paleta continua Cerrado (rounded-full, bg-white, accent-soil), funcionalidade vem do Capital
 type Sub = { label: string; slug: string };
-type MenuItem = { label: string; href?: string; subs?: Sub[] };
+type MenuItem = { label: string; href?: string; subs?: Sub[]; highlight?: boolean };
 
 const CAPITAL_MENU: MenuItem[] = [
   { label: "Política", href: "/categoria/politics" },
@@ -43,11 +43,16 @@ const CAPITAL_MENU: MenuItem[] = [
     ],
   },
   { label: "Esportes", href: "/categoria/sports" },
+  { label: "Internacional", href: "/categoria/world", highlight: true },
 ];
 
-const linkCls = (on: boolean) =>
-  `relative px-2.5 py-1.5 text-[11px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-    on ? "bg-accent-leaf text-white shadow-sm ring-1 ring-black/5" : "text-text-muted hover:bg-black/5 hover:text-text-primary"
+const linkCls = (on: boolean, highlight: boolean = false) =>
+  `relative px-2.5 py-1.5 text-[11px] font-black uppercase tracking-wider transition-all whitespace-nowrap rounded-full ${
+    on
+      ? "bg-accent-leaf text-white shadow-sm ring-1 ring-white/5"
+      : highlight
+        ? "bg-white text-black shadow-sm hover:bg-accent-soil hover:text-white"
+        : "text-text-muted hover:bg-white/10 hover:text-white"
   }`;
 
 function DesktopLinks() {
@@ -63,7 +68,8 @@ function DesktopLinks() {
           const slug = item.href.split("/").pop() || "";
           const on = active === slug;
           return (
-            <Link key={item.label} href={item.href} aria-current={on ? "page" : undefined} className={linkCls(on)}>
+            <Link key={item.label} href={item.href} aria-current={on ? "page" : undefined} className={linkCls(on, item.highlight)}>
+              {item.highlight && <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-accent-soil animate-pulse" aria-hidden="true" />}
               {item.label}
             </Link>
           );
@@ -157,8 +163,9 @@ function MobileLinks({ onClose }: { onClose: () => void }) {
             key={"m-" + item.label}
             href={item.href!}
             onClick={onClose}
-            className={`block py-3 text-2xl font-black tracking-wide transition-colors ${on ? "text-accent-leaf" : "text-white/80 hover:text-white"}`}
+            className={`block py-3 text-2xl font-black tracking-wide transition-colors ${on ? "text-accent-leaf" : item.highlight ? "text-white" : "text-white/80 hover:text-white"}`}
           >
+            {item.highlight && <span className="mr-2 inline-block h-2 w-2 rounded-full bg-accent-soil animate-pulse" aria-hidden="true" />}
             {item.label}
           </Link>
         );

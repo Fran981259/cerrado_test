@@ -64,7 +64,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
   return (
     <div className="relative overflow-hidden bg-canvas">
       {/* Fundo vivo animado */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(74,103,65,0.16),transparent_40rem),linear-gradient(180deg,#fdfbf7_0%,#f7f1e8_100%)] animate-breathe" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.12),transparent_40rem),linear-gradient(180deg,#09090b_0%,#18181b_100%)] animate-breathe" />
       
       <div className="relative z-10">
         <Ticker />
@@ -83,7 +83,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
         {hero && (
           <div className="grid lg:grid-cols-[2fr_1fr] gap-8">
             <NewsCard article={hero} variant="hero" />
-            <div className="hidden rounded-[2rem] border border-black/5 bg-white/70 p-6 shadow-sm backdrop-blur lg:block">
+            <div className="hidden rounded-[2rem] border border-white/5 bg-black/40 p-6 shadow-sm backdrop-blur lg:block">
               <p className="text-xs font-black uppercase tracking-[0.24em] text-accent-soil">Seleção editorial</p>
               <h2 className="mb-4 mt-2 font-display text-3xl font-black text-text-primary">Destaques</h2>
               <div className="grid gap-3">
@@ -117,7 +117,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
         )}
 
         {!loadError && list.length === 0 && (
-          <div className="rounded-[2rem] glass-panel border-slate-200/50 p-12 text-center text-text-muted shadow-lg">Nenhuma notícia encontrada. A Inteligência Artificial está escrevendo novas matérias neste instante...</div>
+          <div className="rounded-[2rem] glass-panel border-white/10 p-12 text-center text-text-muted shadow-lg">Nenhuma notícia encontrada. A Inteligência Artificial está escrevendo novas matérias neste instante...</div>
         )}
 
         {!loadError && <Pagination page={currentPage} totalPages={totalPages} base="/" />}
