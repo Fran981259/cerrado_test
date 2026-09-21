@@ -1,10 +1,11 @@
 import type { MetadataRoute } from "next";
 import { getAllRealArticles } from "@/lib/api";
+import { getPublicSiteUrl } from "@/lib/siteUrl";
 
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = process.env.NEXT_PUBLIC_SITE_URL || "http://100.95.111.24:3000";
+  const base = getPublicSiteUrl();
   const staticPages: MetadataRoute.Sitemap = [
     { url: `${base}/`, lastModified: new Date(), changeFrequency: "hourly", priority: 1 },
     { url: `${base}/sobre`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },

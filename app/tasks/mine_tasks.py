@@ -1,11 +1,9 @@
-"""
-Tarefas de Mineração de Notícias Globais
-"""
-from app.celery_app import celery_app
-from app.miner import MinerPipeline
+"""Compatibility task for retired global-news queues."""
+
 import logging
 from datetime import datetime, timezone
 
+from app.celery_app import celery_app
 logger = logging.getLogger(__name__)
 
 
@@ -18,24 +16,13 @@ logger = logging.getLogger(__name__)
     soft_time_limit=1380,
 )
 def mine_global_news(self):
-    """
-    Coleta notícias de portais globais.
-    Roda a cada 30 minutos.
-    """
-    try:
-        logger.info("[CELERY] Iniciando mine_global_news")
-        pipeline = MinerPipeline()
-        articles = pipeline.run(target_volume=50)
-        from app.tasks.scan_tasks import _persist_articles
-        persisted = _persist_articles(articles)
-        pipeline.miner.session.close()
-        logger.info(f"[CELERY] Mineração concluída: {len(articles)} artigos")
-        return {
-            "status": "success",
-            "articles_mined": len(articles),
-            "persisted": persisted,
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        }
-    except Exception as e:
-        logger.error(f"[CELERY] Erro em mine_global_news: {e}")
-        raise self.retry(exc=e)
+    """Acknowledge retired jobs without collecting or publishing anything."""
+    # Kept as a harmless compatibility entrypoint for queues that still contain
+    # the old task name. Global mining is not part of Portal Cerrado's mandate.
+    logger.warning("[CELERY] mine_global_news ignorada: mineração global está desativada pela política editorial")
+    return {
+        "status": "disabled",
+        "articles_mined": 0,
+        "persisted": 0,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }

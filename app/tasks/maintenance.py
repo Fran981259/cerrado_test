@@ -2,19 +2,17 @@
 Tarefas de Manutenção do Sistema — Portal Cerrado
 VERSÃO REAL: cleanup, sitemap, health e métricas com DB/Redis.
 """
-from app.celery_app import celery_app
-from datetime import datetime, timedelta, timezone
+
 import logging
 import os
+from datetime import datetime, timedelta, timezone
+
+from app.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 
 
-@celery_app.task(
-    name="app.tasks.maintenance.cleanup_old_content",
-    bind=True,
-    max_retries=3
-)
+@celery_app.task(name="app.tasks.maintenance.cleanup_old_content", bind=True, max_retries=3)
 def cleanup_old_content(self):
     """
     Remove conteúdo antigo: drafts >7d, failed >3d, logs antigos.
@@ -25,33 +23,41 @@ def cleanup_old_content(self):
     try:
         logger.info("[MAINTENANCE] Iniciando cleanup_old_content")
         from app.database import get_session
-        from app.schema import NewsArticle, PublicationLog, ScrapingTask, EditorialTrendSignal
+        from app.schema import EditorialTrendSignal, NewsArticle, PublicationLog, ScrapingTask
 
         db = get_session()
         cleaned = 0
         try:
             now = datetime.now(timezone.utc)
-            db.query(EditorialTrendSignal).filter(EditorialTrendSignal.generated_at < now - timedelta(days=2)).delete(synchronize_session=False)
+            db.query(EditorialTrendSignal).filter(EditorialTrendSignal.generated_at < now - timedelta(days=2)).delete(
+                synchronize_session=False
+            )
             # drafts com mais de 7 dias sem evoluir
             cutoff_draft = now - timedelta(days=7)
-            q1 = db.query(NewsArticle).filter(
-                NewsArticle.status == "draft",
-                NewsArticle.created_at < cutoff_draft
-            ).delete(synchronize_session=False)
+            q1 = (
+                db.query(NewsArticle)
+                .filter(NewsArticle.status == "draft", NewsArticle.created_at < cutoff_draft)
+                .delete(synchronize_session=False)
+            )
             cleaned += q1
 
             # failed com mais de 3 dias
             cutoff_failed = now - timedelta(days=3)
-            q2 = db.query(NewsArticle).filter(
-                NewsArticle.status == "failed",
-                NewsArticle.updated_at < cutoff_failed
-            ).delete(synchronize_session=False)
+            q2 = (
+                db.query(NewsArticle)
+                .filter(NewsArticle.status == "failed", NewsArticle.updated_at < cutoff_failed)
+                .delete(synchronize_session=False)
+            )
             cleaned += q2
 
             # logs de publicação com mais de 90 dias (LGPD)
             cutoff_logs = now - timedelta(days=90)
             try:
-                q3 = db.query(PublicationLog).filter(PublicationLog.created_at < cutoff_logs).delete(synchronize_session=False)
+                q3 = (
+                    db.query(PublicationLog)
+                    .filter(PublicationLog.created_at < cutoff_logs)
+                    .delete(synchronize_session=False)
+                )
                 cleaned += q3
             except Exception:
                 q3 = 0
@@ -59,18 +65,38 @@ def cleanup_old_content(self):
             # scraping tasks antigas >30d
             try:
                 cutoff_scrap = now - timedelta(days=30)
-                q4 = db.query(ScrapingTask).filter(ScrapingTask.created_at < cutoff_scrap).delete(synchronize_session=False)
+                q4 = (
+                    db.query(ScrapingTask)
+                    .filter(ScrapingTask.created_at < cutoff_scrap)
+                    .delete(synchronize_session=False)
+                )
                 cleaned += q4
             except Exception:
                 q4 = 0
 
+            # analytics page_views antigas >30d
+            try:
+                from app.schema import PageView
+
+                cutoff_analytics = now - timedelta(days=30)
+                q_analytics = (
+                    db.query(PageView).filter(PageView.created_at < cutoff_analytics).delete(synchronize_session=False)
+                )
+                cleaned += q_analytics
+            except Exception as e:
+                logger.error(f"[MAINTENANCE] Falha ao limpar PageView: {e}")
+
             # publicadas antigas: arquiva (não apaga — preserva link e histórico)
             cutoff_arch = now - timedelta(days=ARCHIVE_DAYS)
-            archived = db.query(NewsArticle).filter(
-                NewsArticle.status == "published",
-                NewsArticle.visibility == "public",
-                NewsArticle.published_at < cutoff_arch
-            ).update({"visibility": "archived"}, synchronize_session=False)
+            archived = (
+                db.query(NewsArticle)
+                .filter(
+                    NewsArticle.status == "published",
+                    NewsArticle.visibility == "public",
+                    NewsArticle.published_at < cutoff_arch,
+                )
+                .update({"visibility": "archived"}, synchronize_session=False)
+            )
 
             db.commit()
         except Exception:
@@ -84,18 +110,14 @@ def cleanup_old_content(self):
             "status": "success",
             "cleaned": cleaned,
             "archived": archived,
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
     except Exception as e:
         logger.error(f"[MAINTENANCE] Erro em cleanup_old_content: {e}")
         raise self.retry(exc=e)
 
 
-@celery_app.task(
-    name="app.tasks.maintenance.system_health_check",
-    bind=True,
-    max_retries=3
-)
+@celery_app.task(name="app.tasks.maintenance.system_health_check", bind=True, max_retries=3)
 def system_health_check(self):
     """
     Verifica saúde real: DB, Redis, contagem de publicações recentes.
@@ -109,6 +131,7 @@ def system_health_check(self):
         try:
             from app.database import get_session
             from app.schema import NewsArticle
+
             db = get_session()
             try:
                 db.execute  # noqa
@@ -124,6 +147,7 @@ def system_health_check(self):
         # Redis
         try:
             import redis as redis_lib
+
             redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
             r = redis_lib.from_url(redis_url, socket_connect_timeout=2)
             r.ping()
@@ -144,37 +168,38 @@ def system_health_check(self):
         try:
             from app.database import get_session
             from app.schema import NewsArticle
+
             db = get_session()
             try:
                 cutoff = datetime.now(timezone.utc) - timedelta(hours=2)
-                recent = db.query(NewsArticle).filter(
-                    NewsArticle.status == "published",
-                    NewsArticle.published_at >= cutoff
-                ).count()
+                recent = (
+                    db.query(NewsArticle)
+                    .filter(
+                        NewsArticle.status == "published",
+                        NewsArticle.visibility == "public",
+                        NewsArticle.region == "ms",
+                        NewsArticle.published_at >= cutoff,
+                    )
+                    .count()
+                )
                 checks["recent_published_2h"] = recent
                 if recent == 0:
-                    # só alerta se já deveria haver publicações (após GO-LIVE)
                     checks["publication"] = "warn: nenhuma publicação nas últimas 2h"
+                    if status == "healthy":
+                        status = "degraded"
+                    logger.error("[HEALTH] Nenhuma publicação nas últimas 2h; verifique Beat, worker e pipeline.")
             finally:
                 db.close()
         except Exception as e:
             checks["publication"] = f"check fail: {e}"
 
-        return {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "status": status,
-            "checks": checks
-        }
+        return {"timestamp": datetime.now(timezone.utc).isoformat(), "status": status, "checks": checks}
     except Exception as e:
         logger.error(f"[MAINTENANCE] Erro em system_health_check: {e}")
         return {"status": "unhealthy", "error": str(e), "timestamp": datetime.now(timezone.utc).isoformat()}
 
 
-@celery_app.task(
-    name="app.tasks.maintenance.report_metrics",
-    bind=True,
-    max_retries=3
-)
+@celery_app.task(name="app.tasks.maintenance.report_metrics", bind=True, max_retries=3)
 def report_metrics(self):
     """
     Reporta métricas reais de produção.
@@ -182,9 +207,10 @@ def report_metrics(self):
     """
     try:
         logger.info("[MAINTENANCE] Reportando métricas")
+        from sqlalchemy import func
+
         from app.database import get_session
         from app.schema import NewsArticle
-        from sqlalchemy import func
 
         db = get_session()
         try:
@@ -192,15 +218,17 @@ def report_metrics(self):
             today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
             hour_start = now.replace(minute=0, second=0, microsecond=0)
 
-            articles_today = db.query(NewsArticle).filter(
-                NewsArticle.status == "published",
-                NewsArticle.published_at >= today_start
-            ).count()
+            articles_today = (
+                db.query(NewsArticle)
+                .filter(NewsArticle.status == "published", NewsArticle.published_at >= today_start)
+                .count()
+            )
 
-            articles_this_hour = db.query(NewsArticle).filter(
-                NewsArticle.status == "published",
-                NewsArticle.published_at >= hour_start
-            ).count()
+            articles_this_hour = (
+                db.query(NewsArticle)
+                .filter(NewsArticle.status == "published", NewsArticle.published_at >= hour_start)
+                .count()
+            )
 
             total_published = db.query(NewsArticle).filter(NewsArticle.status == "published").count()
             total_draft = db.query(NewsArticle).filter(NewsArticle.status == "draft").count()
@@ -208,9 +236,12 @@ def report_metrics(self):
             total_all = db.query(NewsArticle).count()
 
             # por categoria
-            by_cat = db.query(NewsArticle.category, func.count()).filter(
-                NewsArticle.status == "published"
-            ).group_by(NewsArticle.category).all()
+            by_cat = (
+                db.query(NewsArticle.category, func.count())
+                .filter(NewsArticle.status == "published")
+                .group_by(NewsArticle.category)
+                .all()
+            )
             by_category = {cat or "unknown": cnt for cat, cnt in by_cat}
 
             # taxa sucesso = published / total
@@ -218,10 +249,11 @@ def report_metrics(self):
 
             # erros recentes = failed nas últimas 24h
             cutoff_24h = now - timedelta(hours=24)
-            errors_24h = db.query(NewsArticle).filter(
-                NewsArticle.status == "failed",
-                NewsArticle.updated_at >= cutoff_24h
-            ).count()
+            errors_24h = (
+                db.query(NewsArticle)
+                .filter(NewsArticle.status == "failed", NewsArticle.updated_at >= cutoff_24h)
+                .count()
+            )
 
         finally:
             db.close()
@@ -236,7 +268,7 @@ def report_metrics(self):
             "total_all": total_all,
             "by_category": by_category,
             "success_rate": round(success_rate, 2),
-            "errors_24h": errors_24h
+            "errors_24h": errors_24h,
         }
         logger.info(f"[MAINTENANCE] Métricas: {metrics}")
         return metrics

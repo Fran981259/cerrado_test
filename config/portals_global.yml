@@ -7,7 +7,9 @@
 # ============================================================
 
 global_miner:
-  enabled: true
+  # O Portal Cerrado é regional. Pauta nacional ou internacional só entra
+  # mediante apuração editorial explícita; nunca por coleta automática.
+  enabled: false
   check_interval_minutes: 30
 
   # =========================================

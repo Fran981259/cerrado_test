@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { fetchNewsResponse, type Article } from "@/lib/api";
 import { NewsCard } from "@/components/NewsCard";
+import { getPublicSiteUrl } from "@/lib/siteUrl";
 
 export const revalidate = 60;
 
-const BASE = process.env.NEXT_PUBLIC_SITE_URL || "http://100.95.111.24:3000";
+const BASE = getPublicSiteUrl();
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<{ q?: string }> }): Promise<Metadata> {
   const { q } = await searchParams;
@@ -33,7 +34,7 @@ export default async function BuscaPage({ searchParams }: { searchParams: Promis
     try {
       const seen = new Map<string, Article>();
       for (const offset of [0, 100]) {
-        const response = await fetchNewsResponse({ limit: 100, offset, sortBy: "recent" });
+        const response = await fetchNewsResponse({ region: "ms", limit: 100, offset, sortBy: "recent" });
         response.news.forEach((article) => seen.set(article.slug || article.title, article));
         if (response.news.length < 100) break;
       }

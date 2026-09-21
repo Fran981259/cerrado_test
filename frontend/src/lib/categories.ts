@@ -44,7 +44,11 @@ export const CATEGORY_LIST = Object.entries(CATEGORIES).map(([slug, v]) => ({ sl
 
 export function categorySlug(value: unknown): string | null {
   if (typeof value !== "string") return null;
-  const aliases: Record<string, string> = { technology: "tech", entertainment: "culture", ciencia: "science" };
+  const aliases: Record<string, string> = {
+    technology: "tech",
+    entertainment: "culture",
+    ciencia: "science",
+  };
   const slug = Object.hasOwn(aliases, value) ? aliases[value] : value;
   return Object.hasOwn(CATEGORIES, slug) ? slug : null;
 }

@@ -10,9 +10,10 @@ type Props = {
 };
 
 export function TrendPanel({ trends, title = "Em alta agora", compact = false }: Props) {
-  if (!trends.length) return null;
+  const editorialTrends = trends.filter((trend) => trend.category !== "general" && trend.topic !== "general");
+  if (!editorialTrends.length) return null;
 
-  const visible = trends.slice(0, compact ? 4 : 5);
+  const visible = editorialTrends.slice(0, compact ? 4 : 5);
 
   return (
     <section className="rounded-[1.75rem] border border-black/5 bg-white/90 p-5 shadow-[0_18px_50px_rgba(45,41,38,0.08)] backdrop-blur">

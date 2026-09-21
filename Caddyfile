@@ -1,0 +1,17 @@
+{
+    email razuk@portalcerrado.com.br
+}
+
+portalcerrado.com.br, www.portalcerrado.com.br {
+    reverse_proxy /api/* portal_cerrado:8000
+    
+    reverse_proxy /* frontend:3000
+    
+    # Headers de segurança básicos
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+}

@@ -1,17 +1,15 @@
 """
 Tarefas de Classificação de Artigos
 """
-from app.celery_app import celery_app
+
 import logging
+
+from app.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 
 
-@celery_app.task(
-    name="app.tasks.classify_tasks.classify_pending_articles",
-    bind=True,
-    max_retries=3
-)
+@celery_app.task(name="app.tasks.classify_tasks.classify_pending_articles", bind=True, max_retries=3)
 def classify_pending_articles(self):
     """
     Classifica artigos em status 'draft' por importância e engajamento,
@@ -19,10 +17,11 @@ def classify_pending_articles(self):
     Roda a cada 30 minutos.
     """
     try:
+        from datetime import datetime, timezone
+
+        from app.classifier import NewsClassifier
         from app.database import get_session
         from app.schema import NewsArticle
-        from app.classifier import NewsClassifier
-        from datetime import datetime, timezone
 
         logger.info("[CLASSIFY] Iniciando classificação de drafts")
         db = get_session()
@@ -37,6 +36,9 @@ def classify_pending_articles(self):
                 .all()
             )
             for art in articles:
+                inferred_category = classifier.classify_category(f"{art.title or ''} {art.summary or ''}")
+                if inferred_category != "general":
+                    art.category = inferred_category
                 data = {
                     "title": art.title,
                     "summary": art.summary or "",

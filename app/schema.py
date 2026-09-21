@@ -1,14 +1,17 @@
 # Schema do Banco de Dados — Portal Cerrado
 # Define as tabelas e modelos para o sistema de notícias.
 
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, JSON, Boolean
+from sqlalchemy import JSON, Boolean, Column, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
-from app.contracts import UTCDateTime as DateTime, utcnow
+
+from app.contracts import UTCDateTime as DateTime
+from app.contracts import utcnow
 from app.database import Base
 
 
 class NewsArticle(Base):
     """Modelo para uma matéria de notícias publicada."""
+
     __tablename__ = "news_articles"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -30,13 +33,14 @@ class NewsArticle(Base):
     compliance_hash = Column(String(64), nullable=True)
 
     # Status e publicação
-    status = Column(String(20), default="draft")
-    published_at = Column(DateTime, nullable=True)
+    status = Column(String(20), default="draft", index=True)
+    published_at = Column(DateTime, nullable=True, index=True)
     scheduled_at = Column(DateTime, nullable=True)
     visibility = Column(String(20), default="public")
 
-    # Categorias
-    category = Column(String(50), nullable=True)
+    # Categorias e Localização
+    category = Column(String(50), nullable=True, index=True)
+    region = Column(String(20), default="ms", index=True)
     tags = Column(JSON, nullable=True)
 
     # Classificação
@@ -56,6 +60,7 @@ class NewsArticle(Base):
 
 class Reporter(Base):
     """Modelo para um repórter digital."""
+
     __tablename__ = "reporters"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -86,6 +91,7 @@ class Reporter(Base):
 
 class SourcePortal(Base):
     """Modelo para um portal de notícias de origem."""
+
     __tablename__ = "source_portals"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -111,6 +117,7 @@ class SourcePortal(Base):
 
 class ScrapingTask(Base):
     """Modelo para uma tarefa de scraping realizada."""
+
     __tablename__ = "scraping_tasks"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -129,6 +136,7 @@ class ScrapingTask(Base):
 
 class PublicationLog(Base):
     """Registro de auditoria de publicações."""
+
     __tablename__ = "publication_logs"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -142,6 +150,7 @@ class PublicationLog(Base):
 
 class EditorialTrendSignal(Base):
     """Snapshot de sinais editoriais para temas em alta."""
+
     __tablename__ = "editorial_trend_signals"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -158,6 +167,19 @@ class EditorialTrendSignal(Base):
 
 class ArticleIdentity(Base):
     """Additive uniqueness ledger for retries, without changing legacy article rows."""
+
     __tablename__ = "article_identities"
     key = Column(String(100), primary_key=True)
     article_id = Column(Integer, ForeignKey("news_articles.id", ondelete="CASCADE"), nullable=True)
+
+
+class PageView(Base):
+    """Registro de visualização de página (Analytics Interno)."""
+
+    __tablename__ = "page_views"
+
+    id = Column(Integer, primary_key=True, index=True)
+    path = Column(String(500), nullable=False, index=True)
+    referrer = Column(String(500), nullable=True)
+
+    created_at = Column(DateTime, default=utcnow, nullable=False, index=True)

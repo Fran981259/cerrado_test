@@ -1,0 +1,3 @@
+interface:
+  display_name: "Desenvolvimento Backend"
+  short_description: "Implementação segura de APIs, regras e persistência"

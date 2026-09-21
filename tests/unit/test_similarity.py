@@ -1,20 +1,26 @@
 """Tests para similaridade check Lei 9.610/98 e falha fechada do rewriter."""
-import os
-import pytest
-from app.publisher import ArticlePublisher
-from app.database import get_session
-from app.schema import NewsArticle, Reporter
+
 from datetime import datetime, timezone
+
+import pytest
+
+from app.database import get_session
+from app.publisher import ArticlePublisher
+from app.schema import NewsArticle
+
 
 def _get_pub():
     db = get_session()
     pub = ArticlePublisher(db)
     return pub, db
 
+
 def test_similarity_blocks_high_overlap():
     pub, db = _get_pub()
     # Conteúdo muito similar ao original (>35%)
-    original = "O governo de Mato Grosso do Sul anunciou investimento de 10 milhões em saúde para hospitais de Campo Grande."
+    original = (
+        "O governo de Mato Grosso do Sul anunciou investimento de 10 milhões em saúde para hospitais de Campo Grande."
+    )
     content = "O governo de Mato Grosso do Sul anunciou investimento de 10 milhões em saúde para hospitais de Campo Grande."  # idêntico
     article = {
         "title": "Governo anuncia investimento em saúde MS" + str(datetime.now(timezone.utc).timestamp()),
@@ -29,18 +35,19 @@ def test_similarity_blocks_high_overlap():
         pub.publish_article(article)
     db.close()
 
+
 def test_similarity_allows_paraphrase():
     pub, db = _get_pub()
     original = "O governo de Mato Grosso do Sul anunciou investimento de 10 milhões em saúde para hospitais de Campo Grande com foco em leitos de UTI."
     paraphrase = "Em Campo Grande, a gestão estadual destinou R$ 10 milhões para ampliar a rede hospitalar, com ênfase na criação de vagas em terapia intensiva, segundo apuração própria com base em dados oficiais e contextualização para MS."
     article = {
-        "title": "Teste paráfrase válida " + str(datetime.now(timezone.utc).timestamp()),
+        "title": "Paráfrase válida em Campo Grande " + str(datetime.now(timezone.utc).timestamp()),
         "content": paraphrase,
         "original_text": original,
         "reporter_slug": "maya.santos",
         "category": "health",
         "tags": ["health"],
-        "sources": [{"url": "https://example.com/b", "name": "Test"}],
+        "sources": [{"url": "https://www.midiamax.com.br/teste", "name": "Midiamax"}],
     }
     # Deve permitir (similaridade <35%)
     result = pub.publish_article(article)
@@ -50,18 +57,19 @@ def test_similarity_allows_paraphrase():
     db.commit()
     db.close()
 
+
 def test_similarity_ignores_curiosity():
     pub, db = _get_pub()
     original = "Texto original"
     article = {
-        "title": "Curiosidade teste " + str(datetime.now(timezone.utc).timestamp()),
+        "title": "Curiosidade em Campo Grande " + str(datetime.now(timezone.utc).timestamp()),
         "content": original,
         "original_text": original,
         "reporter_slug": "enzo.bianchi",
         "category": "technology",
         "tags": ["tech"],
         "is_curiosity": True,
-        "sources": [{"url": "https://example.com/c", "name": "Test"}],
+        "sources": [{"url": "https://www.midiamax.com.br/teste", "name": "Midiamax"}],
     }
     # Curiosidades não são bloqueadas por similaridade (original pode ser igual)
     result = pub.publish_article(article)
@@ -70,8 +78,10 @@ def test_similarity_ignores_curiosity():
     db.commit()
     db.close()
 
+
 def test_rewriter_returns_empty_without_llm():
     from app.rewriter import ArticleRewriter, load_reporters_config
+
     reporters = load_reporters_config()
     r = reporters["enzo.bianchi"]
     w = ArticleRewriter(r)
@@ -80,22 +90,36 @@ def test_rewriter_returns_empty_without_llm():
     res = w.rewrite(article)
     assert res["content"] == ""
 
+
 def test_rewriter_returns_empty_even_with_long_body():
     from app.rewriter import ArticleRewriter, load_reporters_config
+
     reporters = load_reporters_config()
     r = reporters["enzo.bianchi"]
     w = ArticleRewriter(r)
-    long_body = ("Paragrafo real apurado sobre tecnologia com dados e entrevistas. " * 90)
-    article = {"title": "Teste com corpo longo para fallback", "summary": "Resumo curto", "url": "https://example.com/y", "body": long_body}
+    long_body = "Paragrafo real apurado sobre tecnologia com dados e entrevistas. " * 90
+    article = {
+        "title": "Teste com corpo longo para fallback",
+        "summary": "Resumo curto",
+        "url": "https://example.com/y",
+        "body": long_body,
+    }
     res = w.rewrite(article)
     assert res["content"] == ""
 
+
 def test_rewriter_returns_empty_below_700():
     from app.rewriter import ArticleRewriter, load_reporters_config
+
     reporters = load_reporters_config()
     r = reporters["enzo.bianchi"]
     w = ArticleRewriter(r)
-    mid_body = ("Paragrafo real apurado sobre tecnologia com dados. " * 40)
-    article = {"title": "Teste abaixo do piso", "summary": "Resumo curto", "url": "https://example.com/z", "body": mid_body}
+    mid_body = "Paragrafo real apurado sobre tecnologia com dados. " * 40
+    article = {
+        "title": "Teste abaixo do piso",
+        "summary": "Resumo curto",
+        "url": "https://example.com/z",
+        "body": mid_body,
+    }
     res = w.rewrite(article)
     assert res["content"] == ""

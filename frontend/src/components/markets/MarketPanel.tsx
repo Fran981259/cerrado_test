@@ -15,12 +15,15 @@ function ChangePct({ direction, pct }: { direction: string | null; pct: number |
 
 export async function MarketPanel() {
   const feed = await getMarketFeed();
-  const sources = Array.from(new Set(feed.items.map((item) => item.source)));
-  const updated = feed.items
+  const availableItems = feed.items.filter((item) => item.status === "ok");
+  const sources = Array.from(new Set(availableItems.map((item) => item.source)));
+  const updated = availableItems
     .map((item) => item.updatedAt)
     .filter(Boolean)
     .sort()
     .at(-1);
+
+  if (!availableItems.length) return null;
 
   return (
     <aside className="flex flex-col rounded-lg border border-black/10 bg-surface p-5 shadow-sm" aria-labelledby="mercado-cotacoes-heading">
@@ -32,7 +35,7 @@ export async function MarketPanel() {
       </div>
 
       <ul className="mt-4 divide-y divide-black/8">
-        {feed.items.map((item) => (
+        {availableItems.map((item) => (
           <li key={item.id} className="py-3">
             {item.status === "ok" ? (
               <div className="flex items-center justify-between gap-3">
@@ -45,25 +48,14 @@ export async function MarketPanel() {
                   <ChangePct direction={item.direction} pct={item.changePct} />
                 </div>
               </div>
-            ) : (
-              <div className="flex items-center justify-between gap-3 rounded-md border border-dashed border-black/15 bg-black/[0.02] px-3 py-2" role="status">
-                <div className="min-w-0">
-                  <span className="block text-sm font-bold text-text-primary">{item.label}</span>
-                  <span className="block text-[11px] text-text-muted">{item.sublabel}</span>
-                </div>
-                <span className="shrink-0 text-right text-[11px] font-semibold text-text-muted">
-                  indisponível
-                  <span className="block text-[10px] font-normal">{item.note ?? "fonte fora do ar"}</span>
-                </span>
-              </div>
-            )}
+            ) : null}
           </li>
         ))}
       </ul>
 
       <div className="mt-auto border-t border-black/8 pt-3 text-[10px] leading-relaxed text-text-muted">
         {feed.degraded && (
-          <p className="mb-1 font-semibold text-amber-700">Algumas fontes estão temporariamente fora do ar; os valores abaixo seguem as últimas cotações disponíveis.</p>
+          <p className="mb-1 font-semibold text-amber-700">Exibimos somente cotações verificadas disponíveis no momento.</p>
         )}
         <p>
           Fonte: {sources.join(" · ")}

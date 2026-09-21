@@ -1,9 +1,10 @@
 """Robots decisions distinguish missing policies from unavailable origins."""
+
 import logging
 import os
 from datetime import timedelta
 from urllib.error import HTTPError
-from urllib.parse import urlsplit, urljoin
+from urllib.parse import urljoin, urlsplit
 from urllib.request import Request, urlopen
 from urllib.robotparser import RobotFileParser
 
@@ -45,10 +46,17 @@ def _can_fetch_from_text(content, user_agent, target_url):
 
 
 def _fetch_and_parse(robots_url, user_agent, target_url):
-    return _can_fetch_from_text(_fetch_raw(robots_url), user_agent, target_url)
+    try:
+        content = _fetch_raw(robots_url)
+    except Exception as exc:
+        logger.warning("Falha ao obter robots.txt (%s)", type(exc).__name__)
+        return False
+    return _can_fetch_from_text(content, user_agent, target_url)
 
 
 _MEM_CACHE: dict = {}
+
+
 def is_allowed(url, user_agent=None):
     if not RESPECT_ROBOTS:
         return True
@@ -65,6 +73,7 @@ def is_allowed(url, user_agent=None):
     try:
         from app.database import get_session
         from app.schema import SourcePortal
+
         db = get_session()
         portal = db.query(SourcePortal).filter(SourcePortal.url == base).first()
         if portal and portal.robots_txt_last_fetched and portal.robots_txt_content:

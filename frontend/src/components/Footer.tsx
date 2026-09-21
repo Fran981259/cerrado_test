@@ -23,8 +23,8 @@ const INSTITUCIONAL = [
 
 export default function Footer() {
   return (
-    <footer className="mt-10 border-t-2 border-accent-soil bg-surface">
-      <div className="container-editorial grid gap-10 py-12 md:grid-cols-2 lg:grid-cols-4">
+    <footer className="mt-6 border-t-2 border-accent-soil bg-surface">
+      <div className="container-editorial grid gap-10 py-10 md:grid-cols-2 lg:grid-cols-4">
         <div>
           <div className="flex items-center gap-3">
             <span aria-hidden="true" className="grid h-10 w-10 place-items-center rounded bg-accent-soil font-display text-base font-bold text-white">

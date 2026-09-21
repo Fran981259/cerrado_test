@@ -3,9 +3,11 @@
 Usa SQLite temporário (nunca o DATABASE_URL real). Padrão de fixture:
 importar app.schema ANTES do create_all, senão nenhuma tabela é criada.
 """
-import pytest
-from datetime import datetime, timedelta, timezone
+
+from datetime import datetime, timezone
 from unittest.mock import patch
+
+import pytest
 
 from app.auditor import HorusAuditor
 
@@ -14,8 +16,10 @@ from app.auditor import HorusAuditor
 def tdb(monkeypatch, tmp_path):
     import sqlalchemy
     from sqlalchemy.orm import sessionmaker
-    from app.database import Base
+
     import app.schema  # noqa: F401 — registra tabelas antes do create_all
+    from app.database import Base
+
     engine = sqlalchemy.create_engine(f"sqlite:///{tmp_path}/horus_test.db")
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
@@ -25,10 +29,15 @@ def tdb(monkeypatch, tmp_path):
 
 def _reporter(Session, slug="enzo.bianchi", stage="established"):
     from app.schema import Reporter
+
     db = Session()
-    rep = Reporter(slug=slug, display_name=slug.replace(".", " ").title(),
-                   role="technology", personality_stage=stage,
-                   email=f"{slug}@test.com")
+    rep = Reporter(
+        slug=slug,
+        display_name=slug.replace(".", " ").title(),
+        role="technology",
+        personality_stage=stage,
+        email=f"{slug}@test.com",
+    )
     db.add(rep)
     db.commit()
     db.refresh(rep)
@@ -37,18 +46,31 @@ def _reporter(Session, slug="enzo.bianchi", stage="established"):
     return rid
 
 
-def _article(Session, reporter_id, title="Titulo de teste para auditoria",
-             content="Conteudo original e distinto para teste de auditoria.",
-             original="Texto fonte completamente diferente sem relacao.",
-             published_at=None, status="published"):
+def _article(
+    Session,
+    reporter_id,
+    title="Titulo de teste para auditoria",
+    content="Conteudo original e distinto para teste de auditoria.",
+    original="Texto fonte completamente diferente sem relacao.",
+    published_at=None,
+    status="published",
+):
     from app.schema import NewsArticle
+
     db = Session()
-    art = NewsArticle(title=title, slug=f"slug-{title[:10]}-{reporter_id}-{abs(hash(title)) % 99999}",
-                      summary="Resumo", content=content, reporter_id=reporter_id,
-                      sources=[{"url": "https://ex.com/a", "name": "Ex"}],
-                      original_text=original, status=status,
-                      published_at=published_at or datetime.now(timezone.utc),
-                      category="technology", tags=["technology"])
+    art = NewsArticle(
+        title=title,
+        slug=f"slug-{title[:10]}-{reporter_id}-{abs(hash(title)) % 99999}",
+        summary="Resumo",
+        content=content,
+        reporter_id=reporter_id,
+        sources=[{"url": "https://ex.com/a", "name": "Ex"}],
+        original_text=original,
+        status=status,
+        published_at=published_at or datetime.now(timezone.utc),
+        category="technology",
+        tags=["technology"],
+    )
     db.add(art)
     db.commit()
     aid = art.id
@@ -58,8 +80,10 @@ def _article(Session, reporter_id, title="Titulo de teste para auditoria",
 
 # ---------------- _audit_agents ----------------
 
+
 def test_audit_agents_real_counts(tdb):
-    from app.schema import SourcePortal, ScrapingTask
+    from app.schema import ScrapingTask, SourcePortal
+
     db = tdb()
     portal = SourcePortal(url="https://ex.com", name="ex")
     db.add(portal)
@@ -77,6 +101,7 @@ def test_audit_agents_real_counts(tdb):
 
 def test_audit_agents_db_failure(tdb, monkeypatch):
     import app.database
+
     monkeypatch.setattr(app.database, "get_session", _boom)
     res = HorusAuditor()._audit_agents()
     assert all(v["status"] == "not_implemented" for v in res.values())
@@ -87,6 +112,7 @@ def _boom():
 
 
 # ---------------- _audit_reporters ----------------
+
 
 def test_audit_reporters_real_counts(tdb):
     rid = _reporter(tdb, slug="enzo.bianchi")
@@ -104,6 +130,7 @@ def test_audit_reporters_not_found(tdb):
 
 # ---------------- _audit_content_quality ----------------
 
+
 def test_audit_content_quality_no_articles_today(tdb):
     res = HorusAuditor()._audit_content_quality()
     assert res["status"] == "not_implemented"
@@ -115,6 +142,7 @@ def test_audit_content_quality_average(tdb):
     _article(tdb, rid, title="Qualidade alta um")
     _article(tdb, rid, title="Qualidade alta dois")
     from app.filter import ContentFilter
+
     with patch.object(ContentFilter, "calculate_quality_score", return_value=8.0):
         res = HorusAuditor()._audit_content_quality()
     assert res["articles_audited_today"] == 2
@@ -122,6 +150,7 @@ def test_audit_content_quality_average(tdb):
 
 
 # ---------------- _audit_compliance ----------------
+
 
 def test_audit_compliance_flags_violation(tdb):
     rid = _reporter(tdb)
@@ -134,9 +163,13 @@ def test_audit_compliance_flags_violation(tdb):
 
 def test_audit_compliance_clean(tdb):
     rid = _reporter(tdb)
-    _article(tdb, rid, title="Materia limpa e original",
-             content=" ".join(["Jornalismo apurado com dados verificados"] * 20),
-             original=" ".join(["Fonte bruta totalmente distinta"] * 20))
+    _article(
+        tdb,
+        rid,
+        title="Materia limpa e original",
+        content=" ".join(["Jornalismo apurado com dados verificados"] * 20),
+        original=" ".join(["Fonte bruta totalmente distinta"] * 20),
+    )
     res = HorusAuditor()._audit_compliance()
     assert res["legal_compliance"] is True
 
@@ -148,10 +181,17 @@ def test_audit_compliance_no_published(tdb):
 
 # ---------------- consolidate + overall ----------------
 
+
 def _base_report():
     blank = {}
-    return {"agents": blank, "reporters": blank, "content_quality": blank,
-            "compliance": blank, "performance": blank, "alerts": []}
+    return {
+        "agents": blank,
+        "reporters": blank,
+        "content_quality": blank,
+        "compliance": blank,
+        "performance": blank,
+        "alerts": [],
+    }
 
 
 def test_consolidate_and_critical():
@@ -180,6 +220,7 @@ def test_overall_warning_and_healthy():
 
 
 # ---------------- watch_reporter_evolution ----------------
+
 
 def test_watch_evolution_real_data(tdb):
     rid = _reporter(tdb, slug="maya.santos", stage="established")

@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // O executor CLI do TypeScript perde stdout neste ambiente Node 22, fazendo
+  // o Next falhar ao interpretar `tsc --showConfig`. O compilador via API é o
+  // caminho padrão e estável para TypeScript 5.x.
+  experimental: {
+    useTypeScriptCli: false,
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },

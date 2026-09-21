@@ -5,6 +5,7 @@ __pycache__/
 .venv/
 venv/
 .env
+.env.*
 !.env.example
 # Nunca versionar .env real com secrets
 .env.local
@@ -41,3 +42,10 @@ Thumbs.db
 /data/
 data/portal_cerrado.db
 data/*.db
+*.db
+.next/
+
+# Artefatos locais de validação e exportação
+history_dump.json
+*_output.txt
+*_results.txt

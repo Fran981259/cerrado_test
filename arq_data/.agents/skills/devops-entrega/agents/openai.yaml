@@ -1,0 +1,3 @@
+interface:
+  display_name: "Devops Entrega"
+  short_description: "Docker, CI/CD e operação com controles explícitos"

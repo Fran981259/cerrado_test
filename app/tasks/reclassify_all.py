@@ -2,11 +2,13 @@
 Reclassifica TODAS as notícias usando o classificador heurístico atualizado.
 Normaliza categorias via contracts.category_name() para garantir nomes canônicos.
 """
+
+import logging
+
+from app.classifier import NewsClassifier
+from app.contracts import CATEGORIES, category_name
 from app.database import get_session
 from app.schema import NewsArticle
-from app.classifier import NewsClassifier
-from app.contracts import category_name, CATEGORIES
-import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -44,7 +46,9 @@ def reclassify_all():
 
     db.commit()
     db.close()
-    print(f"\nReclassificação concluída: {updated} artigos atualizados ({fixed_invalid} categorias inválidas corrigidas)")
+    print(
+        f"\nReclassificação concluída: {updated} artigos atualizados ({fixed_invalid} categorias inválidas corrigidas)"
+    )
 
 
 if __name__ == "__main__":

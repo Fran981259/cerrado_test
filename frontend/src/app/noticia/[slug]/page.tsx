@@ -9,6 +9,7 @@ import { getCategory, PATTERN_IMAGES } from '@/lib/categories';
 import { getReporter, reporterInitials } from '@/lib/reporters';
 import { Icon } from '@/components/Icon';
 import { ScrollProgress } from '@/components/ScrollProgress';
+import { getPublicSiteUrl } from '@/lib/siteUrl';
 
 export const revalidate = 300;
 
@@ -36,7 +37,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const base = process.env.NEXT_PUBLIC_SITE_URL || 'http://100.95.111.24:3000';
+  const base = getPublicSiteUrl();
   try {
     const article = await fetchArticleBySlug(slug);
     if (!article) return { title: 'Notícia não encontrada' };
@@ -102,7 +103,7 @@ export default async function NoticiaPage({ params }: { params: Promise<{ slug: 
   );
   const minutes = readingTimeMinutes(article.content || article.summary || '');
   const reporterSlug = article.reporter_slug || '';
-  const base = process.env.NEXT_PUBLIC_SITE_URL || 'http://100.95.111.24:3000';
+  const base = getPublicSiteUrl();
   const canonicalUrl = `${base}/noticia/${article.slug || slug}`;
   const updatedAt = (article as { updated_at?: string }).updated_at;
   const lead = cleanText(article.summary || article.content).slice(0, 360);

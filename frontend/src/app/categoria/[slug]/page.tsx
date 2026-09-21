@@ -8,6 +8,7 @@ import { TrendPanel } from "@/components/TrendPanel";
 import { Pagination } from "@/components/Pagination";
 import { parsePage } from "@/lib/pagination";
 import { Icon } from "@/components/Icon";
+import { getPublicSiteUrl } from "@/lib/siteUrl";
 
 export const revalidate = 60;
 
@@ -18,13 +19,13 @@ export function generateStaticParams() {
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ page?: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const { page } = await searchParams;
-  const base = process.env.NEXT_PUBLIC_SITE_URL || "http://100.95.111.24:3000";
+  const base = getPublicSiteUrl();
   const cat = getCategory(slug);
   const currentPage = parsePage(page);
   if (currentPage === null || !categorySlug(slug)) notFound();
   const canonical = `${base}/categoria/${slug}${currentPage > 1 ? `?page=${currentPage}` : ""}`;
   return {
-    title: `${cat.label} | Portal Cerrado`,
+    title: cat.label,
     description: `Notícias de ${cat.label} em Mato Grosso do Sul`,
     alternates: { canonical },
     robots: currentPage > 1 ? { index: false, follow: true } : { index: true, follow: true },
@@ -48,7 +49,7 @@ export default async function CategoriaPage({ params, searchParams }: { params: 
   if (canonicalSlug !== slug) permanentRedirect(`/categoria/${canonicalSlug}${currentPage > 1 ? `?page=${currentPage}` : ""}`);
   const offset = (currentPage - 1) * perPage;
   const [newsResult, trends] = await Promise.all([
-    fetchNewsResponse({ category: slug, limit: perPage, offset, sortBy: "trend" }),
+    fetchNewsResponse({ category: slug, region: "ms", limit: perPage, offset, sortBy: "trend" }),
     fetchTrends(5),
   ]);
   const articles = newsResult.news;

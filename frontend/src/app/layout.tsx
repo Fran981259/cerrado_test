@@ -8,6 +8,7 @@ import "@fontsource/zilla-slab/latin-600.css";
 import "@fontsource/zilla-slab/latin-700.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { getPublicSiteUrl } from "@/lib/siteUrl";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -27,7 +28,7 @@ export const metadata: Metadata = {
   },
   twitter: { card: "summary_large_image" },
   robots: { index: true, follow: true },
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://100.95.111.24:3000"),
+  metadataBase: new URL(getPublicSiteUrl()),
 };
 
 import { Tracker } from "@/components/Tracker";

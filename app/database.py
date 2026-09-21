@@ -5,20 +5,19 @@ PostgreSQL via SQLAlchemy
 
 import os
 import time
+
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
 except Exception:
     pass
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy.pool import QueuePool, NullPool
+from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.pool import NullPool, QueuePool
 
 # URL do banco
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "sqlite:///data/portal_cerrado.db"
-)
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///data/portal_cerrado.db")
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
 IS_PRODUCTION = ENVIRONMENT == "production"
@@ -60,6 +59,7 @@ def _connect_postgres(url: str):
         raise last_error
     return engine
 
+
 try:
     # Tenta PostgreSQL (produção). Em caso de falha transitória, repete antes de cair.
     engine = _connect_postgres(DATABASE_URL)
@@ -67,12 +67,10 @@ try:
 except Exception as e:
     if IS_PRODUCTION:
         import logging
-        logging.getLogger(__name__).error(
-            "Banco indisponivel em producao; sem fallback (%s)", type(e).__name__
-        )
+
+        logging.getLogger(__name__).error("Banco indisponivel em producao; sem fallback (%s)", type(e).__name__)
         raise
     # Fallback local (desenvolvimento sem Postgres): usa SQLite.
-    import sqlite3
     _sqlite_file = os.path.join(os.path.dirname(__file__), "..", "data", "portal_cerrado.db")
     _sqlite_file = os.path.abspath(_sqlite_file)
     os.makedirs(os.path.dirname(_sqlite_file), exist_ok=True)
@@ -84,9 +82,8 @@ except Exception as e:
     )
     _using_sqlite = True
     import logging
-    logging.getLogger(__name__).warning(
-        "Banco indisponivel; usando SQLite local (ENVIRONMENT=%s)", ENVIRONMENT
-    )
+
+    logging.getLogger(__name__).warning("Banco indisponivel; usando SQLite local (ENVIRONMENT=%s)", ENVIRONMENT)
 
 # Session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -96,9 +93,18 @@ Base = declarative_base()
 
 
 def init_db():
-    """Inicializa o banco de dados (cria tabelas)."""
-    from app.schema import NewsArticle, Reporter, SourcePortal, ScrapingTask, PublicationLog
-    Base.metadata.create_all(bind=engine)
+    """Inicializa o banco de dados (roda as migrações)."""
+    import os
+
+    from alembic.config import Config
+
+    from alembic import command
+
+    # Path to alembic.ini
+    alembic_cfg = Config(os.path.join(os.path.dirname(__file__), "..", "alembic.ini"))
+    alembic_cfg.set_main_option("sqlalchemy.url", str(engine.url))
+
+    command.upgrade(alembic_cfg, "head")
 
 
 def get_session():

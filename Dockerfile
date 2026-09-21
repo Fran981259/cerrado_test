@@ -29,6 +29,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copia código fonte
 COPY app/ ./app/
 COPY config/ ./config/
+COPY alembic/ ./alembic/
+COPY alembic.ini .
 
 # Cria diretório de logs
 RUN mkdir -p /app/logs

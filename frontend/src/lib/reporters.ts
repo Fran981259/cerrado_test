@@ -93,13 +93,27 @@ export const REPORTERS: Record<string, ReporterBio> = {
   "carlos.nunes": { name: "Carlos Nunes", specialty: "Economia", role: "Jornalista", beat: "Economia", university: "Universidade Federal de Pernambuco (UFPE)", state: "Pernambuco", bio: "Repórter da equipe econômica do Portal Cerrado." },
   "fernanda.lima": { name: "Fernanda Lima", specialty: "Ciência", role: "Jornalista", beat: "Ciência", university: "Universidade Federal de São Paulo (UNIFESP)", state: "São Paulo", bio: "Repórter da equipe de ciência do Portal Cerrado." },
   "pedro.mendes": { name: "Pedro Mendes", specialty: "Entretenimento", role: "Jornalista", beat: "Entretenimento", university: "Universidade Federal de Mato Grosso do Sul (UFMS)", state: "Mato Grosso do Sul", bio: "Repórter da equipe de entretenimento do Portal Cerrado." },
+  "redacao.cerrado": { name: "Redação Portal Cerrado", specialty: "Geral", role: "Equipe Editorial", beat: "Geral", university: "", state: "Mato Grosso do Sul", bio: "Equipe de redação oficial do Portal Cerrado." },
+  "helena.silva": {
+    name: "Helena Silva",
+    specialty: "Internacional",
+    role: "Correspondente Internacional",
+    beat: "Geopolítica e eventos globais",
+    university: "Universidade Federal do Rio de Janeiro (UFRJ)",
+    state: "Rio de Janeiro",
+    bio: "Correspondente internacional do Portal Cerrado. Traduz os impactos da geopolítica e dos grandes eventos mundiais para o cotidiano brasileiro.",
+  },
 };
 
 export const REPORTER_LIST = Object.entries(REPORTERS).map(([slug, v]) => ({ slug, ...v }));
 
 export function getReporter(slug?: string) {
   if (!slug) return { name: "Redação", specialty: "Geral", role: "Redação", beat: "Geral", university: "", state: "", bio: "" };
-  return REPORTERS[slug] ?? { name: slug, specialty: "Geral", role: "Jornalista", beat: "Geral", university: "", state: "", bio: "" };
+  if (REPORTERS[slug]) return REPORTERS[slug];
+
+  // Format slug if it's not in the list (e.g. "joao.silva" -> "Joao Silva")
+  const formattedName = slug.split(".").map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
+  return { name: formattedName, specialty: "Geral", role: "Jornalista", beat: "Geral", university: "", state: "", bio: "" };
 }
 
 export function reporterInitials(name: string) {

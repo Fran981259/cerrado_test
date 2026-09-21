@@ -1,14 +1,15 @@
+import logging
 import os
 import tempfile
 import uuid
-import logging
+
 from html2image import Html2Image
 
 logger = logging.getLogger(__name__)
 
 # Initialize html2image. We must disable sandbox in docker root environments.
 try:
-    hti = Html2Image(custom_flags=['--no-sandbox', '--disable-gpu', '--hide-scrollbars'])
+    hti = Html2Image(custom_flags=["--no-sandbox", "--disable-gpu", "--hide-scrollbars"])
 except Exception as e:
     logger.error(f"Failed to initialize Html2Image: {e}")
     hti = None
@@ -80,11 +81,12 @@ body {
 </html>
 """
 
+
 def generate_twitter_image(title: str, category: str) -> str:
     """Generates an image for Twitter using html2image and returns the temp file path."""
     if not hti:
         raise RuntimeError("html2image is not initialized")
-    
+
     # Escape simple HTML entities in title
     safe_title = title.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     safe_category = category.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
@@ -92,11 +94,11 @@ def generate_twitter_image(title: str, category: str) -> str:
     html_content = HTML_TEMPLATE.format(title=safe_title, category=safe_category)
     output_filename = f"post_{uuid.uuid4().hex}.png"
     output_path = os.path.join(tempfile.gettempdir(), output_filename)
-    
+
     hti.output_path = tempfile.gettempdir()
     hti.screenshot(html_str=html_content, save_as=output_filename, size=(1200, 675))
-    
+
     if not os.path.exists(output_path):
         raise FileNotFoundError("Image was not generated correctly.")
-        
+
     return output_path

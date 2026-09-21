@@ -10,15 +10,14 @@ RECURSOS:
 - Atualização a cada 30 minutos
 """
 
-import feedparser
-import logging
 import hashlib
+import logging
 import random
 import re
-from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Optional, Any
-from urllib.parse import urlparse
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
 
+import feedparser
 import httpx
 import yaml
 
@@ -32,8 +31,8 @@ logger = logging.getLogger(__name__)
 # CONSTANTES DE VOLUME
 # ============================================================
 MIN_ARTICLES_PER_DAY = 50  # Mínimo diário
-ARTICLES_PER_CYCLE = 3     # ~3 a cada 30 min = 48/dia mínimo
-                             # + ajustes = garantido 50+
+ARTICLES_PER_CYCLE = 3  # ~3 a cada 30 min = 48/dia mínimo
+# + ajustes = garantido 50+
 
 # Randomização: cada categoria tem chance de ser amostrada
 RANDOM_CATEGORY_PROBABILITY = 0.85  # 85% chance de pegar a categoria
@@ -42,63 +41,64 @@ RANDOM_CATEGORY_PROBABILITY = 0.85  # 85% chance de pegar a categoria
 class GlobalNewsMiner:
     """
     Agente minerador de notícias globais COM RANDOMIZAÇÃO.
-    
+
     - Cada execução escolhe aleatoriamente quais categorias minerar
     - Cada feed tem chance de ser amostrado ou pulado
     - Garante variedade na pauta diária
     """
-    
+
     def __init__(self, config_path: str = "config/portals_global.yml"):
         self.config = self._load_config(config_path)
         self.classifier = NewsClassifier()
-        self.session = httpx.Client(
-            timeout=30.0,
-            headers={"User-Agent": "PortalCerrado-Miner/1.0"}
-        )
+        self.session = httpx.Client(timeout=30.0, headers={"User-Agent": "PortalCerrado-Miner/1.0"})
         self._load_glossary()
-    
+
     def _load_config(self, path: str) -> Dict:
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, "r", encoding="utf-8") as f:
             return yaml.safe_load(f)
-    
+
     def _load_glossary(self):
-        cfg_lang = self.config.get('global_miner', {}).get('language', {})
-        self.glossary = cfg_lang.get('glossary', {})
-        self.preserve_terms = cfg_lang.get('preserve_terms', [])
-    
+        cfg_lang = self.config.get("global_miner", {}).get("language", {})
+        self.glossary = cfg_lang.get("glossary", {})
+        self.preserve_terms = cfg_lang.get("preserve_terms", [])
+
     def mine_randomized(self) -> List[Dict[str, Any]]:
         """
         Coleta randomizada de notícias.
-        
+
         - Escolhe aleatoriamente quais portais minerar
         - Escolhe aleatoriamente quantos artigos pegar de cada portal
         - Varia a cada execução para evitar repetição
         """
+        if not self.config.get("global_miner", {}).get("enabled", False):
+            logger.info("Minerador global desativado pela política editorial.")
+            return []
+
         all_news = []
-        portals = self.config.get('global_miner', {}).get('portals', {})
-        
+        portals = self.config.get("global_miner", {}).get("portals", {})
+
         # 1. Embaralha ordem das categorias
         categories = list(portals.keys())
         random.shuffle(categories)
-        
+
         for category in categories:
             # 85% chance de minerar esta categoria nesta execução
             if random.random() > RANDOM_CATEGORY_PROBABILITY:
                 logger.debug(f"Pulando categoria: {category}")
                 continue
-            
+
             portal_list = portals[category]
-            
+
             # Embaralha portais dentro da categoria
             shuffled_portals = portal_list.copy()
             random.shuffle(shuffled_portals)
-            
+
             # Pega 60-80% dos portais da categoria
             n_portals = max(1, int(len(shuffled_portals) * random.uniform(0.6, 0.8)))
             selected_portals = shuffled_portals[:n_portals]
-            
+
             logger.info(f"[{category}] Minerando {n_portals}/{len(portal_list)} portais")
-            
+
             for portal in selected_portals:
                 try:
                     # Quantidade variável de artigos por portal (5-20)
@@ -107,7 +107,7 @@ class GlobalNewsMiner:
                     all_news.extend(articles)
                 except Exception as e:
                     logger.error(f"Erro ao minerar {portal['name']}: {e}")
-        
+
         # Embaralha resultado final
         random.shuffle(all_news)
 
@@ -121,17 +121,21 @@ class GlobalNewsMiner:
         seen = set()
         unique_news = []
         for article in all_news:
-            if article['url'] not in seen:
-                seen.add(article['url'])
+            if article["url"] not in seen:
+                seen.add(article["url"])
                 unique_news.append(article)
-        
+
         logger.info(f"Total único coletado: {len(unique_news)} artigos")
         return unique_news
-    
+
     def mine_all(self) -> List[Dict[str, Any]]:
         """Coleta completa de todos os portais (sem randomização)."""
+        if not self.config.get("global_miner", {}).get("enabled", False):
+            logger.info("Minerador global desativado pela política editorial.")
+            return []
+
         all_news = []
-        portals = self.config.get('global_miner', {}).get('portals', {})
+        portals = self.config.get("global_miner", {}).get("portals", {})
 
         for category, portal_list in portals.items():
             for portal in portal_list:
@@ -159,15 +163,16 @@ class GlobalNewsMiner:
         do Google e o pipeline tenta apurar (fetch_miss é tolerado).
         """
         out: List[Dict[str, Any]] = []
-        searches = self.config.get('global_miner', {}).get('google_news', [])
+        searches = self.config.get("global_miner", {}).get("google_news", [])
         for search in searches:
-            rss_url = search.get('rss', '')
-            category = search.get('category', 'general')
+            rss_url = search.get("rss", "")
+            category = search.get("category", "general")
             if not rss_url:
                 continue
-            if search.get('respect_robots', True):
+            if search.get("respect_robots", True):
                 try:
                     from app.robots import is_allowed
+
                     if not is_allowed(rss_url):
                         logger.warning(f"[ROBOTS] Google News bloqueado: {search.get('name')}")
                         continue
@@ -193,7 +198,7 @@ class GlobalNewsMiner:
         try:
             r = self.session.head(url, follow_redirects=True, timeout=10)
             final = str(r.url)
-            if 'news.google.com' not in final:
+            if "news.google.com" not in final:
                 return final
         except Exception:
             pass
@@ -201,285 +206,282 @@ class GlobalNewsMiner:
 
     def _parse_gnews_entry(self, entry, search: Dict, category: str) -> Optional[Dict]:
         try:
-            title = entry.get('title', '').strip()
+            title = entry.get("title", "").strip()
             if not title:
                 return None
-            link = entry.get('link', '')
-            src = entry.get('source') or {}
-            publisher = (src.get('title') or '').strip() or 'Google News'
+            link = entry.get("link", "")
+            src = entry.get("source") or {}
+            publisher = (src.get("title") or "").strip() or "Google News"
             resolved = self._resolve_google_url(link) if link else link
-            summary = self._clean_html(entry.get('summary', entry.get('description', '')))
-            published = entry.get('published', entry.get('updated', ''))
+            summary = self._clean_html(entry.get("summary", entry.get("description", "")))
+            published = entry.get("published", entry.get("updated", ""))
             article = {
-                'title': title,
-                'url': resolved,
-                'summary': summary[:1500],
-                'source': publisher,
-                'source_url': (src.get('href') or '').strip() or 'https://news.google.com',
-                'source_lang': 'pt-BR',
-                'category': category,
-                'image_url': self._extract_image(entry),
-                'published_at': self._parse_date(published),
-                'mined_at': datetime.now(timezone.utc).isoformat(),
-                'hash': hashlib.md5(link.encode()).hexdigest(),
-                'requires_translation': False,
-                'origin': 'google_news',
+                "title": title,
+                "url": resolved,
+                "summary": summary[:1500],
+                "source": publisher,
+                "source_url": (src.get("href") or "").strip() or "https://news.google.com",
+                "source_lang": "pt-BR",
+                "category": category,
+                "image_url": self._extract_image(entry),
+                "published_at": self._parse_date(published),
+                "mined_at": datetime.now(timezone.utc).isoformat(),
+                "hash": hashlib.md5(link.encode()).hexdigest(),
+                "requires_translation": False,
+                "origin": "google_news",
             }
             return article
         except Exception as e:
             logger.error(f"[GNEWS] erro ao parsear: {e}")
             return None
-    
-    def _mine_portal(self, portal: Dict, category: str, 
-                     limit: int = 10) -> List[Dict[str, Any]]:
+
+    def _mine_portal(self, portal: Dict, category: str, limit: int = 10) -> List[Dict[str, Any]]:
         """Coleta artigos de um portal via RSS com limite variável."""
-        articles = []
-        rss_url = portal.get('rss')
+        articles: List[Dict[str, Any]] = []
+        rss_url = portal.get("rss")
         if not rss_url:
             return articles
 
         # Enforce robots.txt for RSS URL (opt-out permitido por busca, ex: Google News RSS)
-        if portal.get('respect_robots', True):
+        if portal.get("respect_robots", True):
             try:
                 from app.robots import is_allowed
+
                 if not is_allowed(rss_url):
                     logger.warning(f"[ROBOTS] RSS bloqueado por robots.txt: {rss_url}")
                     return articles
             except Exception as e:
                 logger.debug(f"[ROBOTS] check falhou para {rss_url}: {e}")
-        
+
         try:
             response = self.session.get(rss_url)
             response.raise_for_status()
-            
+
             feed = feedparser.parse(response.content)
             entries = feed.entries[:limit]
-            
+
             for entry in entries:
                 article = self._parse_entry(entry, portal, category)
                 if article and self._is_relevant(article):
                     articles.append(article)
-                    
+
         except Exception as e:
             logger.error(f"Erro ao coletar RSS de {portal['name']}: {e}")
-        
+
         return articles
-    
+
     def _parse_entry(self, entry, portal: Dict, category: str) -> Optional[Dict]:
         try:
-            title = entry.get('title', '')
-            link = entry.get('link', '')
-            summary = entry.get('summary', entry.get('description', ''))
-            published = entry.get('published', entry.get('updated', ''))
-            
+            title = entry.get("title", "")
+            link = entry.get("link", "")
+            summary = entry.get("summary", entry.get("description", ""))
+            published = entry.get("published", entry.get("updated", ""))
+
             summary = self._clean_html(summary)
             image_url = self._extract_image(entry)
-            source_lang = self._detect_language(title + ' ' + summary)
-            
+            source_lang = self._detect_language(title + " " + summary)
+
             article = {
-                'title': title,
-                'url': link,
-                'summary': summary[:1500],
-                'source': portal['name'],
-                'source_url': portal['url'],
-                'source_lang': source_lang,
-                'category': category,
-                'image_url': image_url,
-                'published_at': self._parse_date(published),
-                'mined_at': datetime.now(timezone.utc).isoformat(),
-                'hash': hashlib.md5(link.encode()).hexdigest(),
-                'requires_translation': source_lang != 'pt-BR',
+                "title": title,
+                "url": link,
+                "summary": summary[:1500],
+                "source": portal["name"],
+                "source_url": portal["url"],
+                "source_lang": source_lang,
+                "category": category,
+                "region": "global",
+                "image_url": image_url,
+                "published_at": self._parse_date(published),
+                "mined_at": datetime.now(timezone.utc).isoformat(),
+                "hash": hashlib.md5(link.encode()).hexdigest(),
+                "requires_translation": source_lang != "pt-BR",
             }
-            
+
             return article
-            
+
         except Exception as e:
             logger.error(f"Erro ao parsear: {e}")
             return None
-    
+
     def _clean_html(self, text: str) -> str:
-        text = re.sub(r'<[^>]+>', '', text)
-        text = re.sub(r'\s+', ' ', text)
+        text = re.sub(r"<[^>]+>", "", text)
+        text = re.sub(r"\s+", " ", text)
         return text.strip()
-    
+
     def _extract_image(self, entry) -> Optional[str]:
-        if hasattr(entry, 'media_content') and entry.media_content:
-            return entry.media_content[0].get('url')
-        if hasattr(entry, 'enclosures') and entry.enclosures:
+        if hasattr(entry, "media_content") and entry.media_content:
+            return entry.media_content[0].get("url")
+        if hasattr(entry, "enclosures") and entry.enclosures:
             for enc in entry.enclosures:
-                if enc.get('type', '').startswith('image/'):
-                    return enc.get('url')
-        if hasattr(entry, 'links'):
+                if enc.get("type", "").startswith("image/"):
+                    return enc.get("url")
+        if hasattr(entry, "links"):
             for link in entry.links:
-                if link.get('type', '').startswith('image/'):
-                    return link.get('href')
+                if link.get("type", "").startswith("image/"):
+                    return link.get("href")
         return None
-    
+
     def _detect_language(self, text: str) -> str:
-        common_en = ['the', 'and', 'is', 'in', 'to', 'of', 'a', 'that', 'it', 'for']
-        common_pt = ['o', 'a', 'e', 'é', 'de', 'do', 'da', 'que', 'para', 'com']
-        
+        common_en = ["the", "and", "is", "in", "to", "of", "a", "that", "it", "for"]
+        common_pt = ["o", "a", "e", "é", "de", "do", "da", "que", "para", "com"]
+
         text_lower = text.lower()
-        en_count = sum(1 for w in common_en if f' {w} ' in f' {text_lower} ')
-        pt_count = sum(1 for w in common_pt if f' {w} ' in f' {text_lower} ')
-        
-        return 'en' if en_count > pt_count else 'pt-BR'
-    
+        en_count = sum(1 for w in common_en if f" {w} " in f" {text_lower} ")
+        pt_count = sum(1 for w in common_pt if f" {w} " in f" {text_lower} ")
+
+        return "en" if en_count > pt_count else "pt-BR"
+
     def _parse_date(self, date_str: str) -> str:
         if not date_str:
             return datetime.now(timezone.utc).isoformat()
-        
+
         formats = [
-            '%Y-%m-%dT%H:%M:%S%z',
-            '%Y-%m-%dT%H:%M:%SZ',
-            '%Y-%m-%d %H:%M:%S',
-            '%a, %d %b %Y %H:%M:%S %z',
+            "%Y-%m-%dT%H:%M:%S%z",
+            "%Y-%m-%dT%H:%M:%SZ",
+            "%Y-%m-%d %H:%M:%S",
+            "%a, %d %b %Y %H:%M:%S %z",
         ]
-        
+
         for fmt in formats:
             try:
                 return datetime.strptime(date_str, fmt).isoformat()
             except ValueError:
                 continue
-        
+
         return datetime.now(timezone.utc).isoformat()
-    
+
     def _is_relevant(self, article: Dict) -> bool:
-        filters = self.config.get('global_miner', {}).get('relevance_filters', {})
-        title_lower = article['title'].lower()
-        summary_lower = article['summary'].lower()
-        combined = title_lower + ' ' + summary_lower
+        filters = self.config.get("global_miner", {}).get("relevance_filters", {})
+        title_lower = article["title"].lower()
+        summary_lower = article["summary"].lower()
+        combined = title_lower + " " + summary_lower
 
         # Google News: já vem em pt-BR, com busca direcionada e veículo —
         # relevante por construção (o filtro de qualidade/dedup vem depois)
-        if article.get('origin') == 'google_news' and article.get('source'):
+        if article.get("origin") == "google_news" and article.get("source"):
             return True
-        
-        brazil_kw = filters.get('brazil_keywords', [])
+
+        brazil_kw = filters.get("brazil_keywords", [])
         for kw in brazil_kw:
             if kw.lower() in combined:
                 return True
-        
-        category = article['category']
-        if category in ['technology', 'economy', 'geopolitics', 'health', 'science_health']:
-            cat_kw = filters.get('global_keywords', {}).get(category, [])
+
+        category = article["category"]
+        if category in ["technology", "economy", "geopolitics", "health", "science_health"]:
+            cat_kw = filters.get("global_keywords", {}).get(category, [])
             for kw in cat_kw:
                 if re.search(r"\b" + re.escape(kw.lower()) + r"\b", combined):
                     return True
-        
-        if category == 'sports_global':
+
+        if category == "sports_global":
             return True
-        
+
         return False
 
 
 class VolumeManager:
     """
     Gerenciador de Volume de Publicação.
-    
+
     Garante mínimo de 50 matérias/dia com:
     - Distribuição por categoria
     - Mix entre fontes nacionais e globais
     - Priorização por tier
     """
-    
+
     # Distribuição alvo por categoria (% das 50+ matérias)
     DISTRIBUTION_TARGET = {
-        'technology': 0.18,     # 9 matérias/dia
-        'economy': 0.15,        # 7-8 matérias/dia
-        'geopolitics': 0.15,    # 7-8 matérias/dia
-        'sports': 0.12,         # 6 matérias/dia
-        'security': 0.10,       # 5 matérias/dia
-        'politics': 0.10,       # 5 matérias/dia
-        'health': 0.08,         # 4 matérias/dia
-        'culture': 0.05,        # 2-3 matérias/dia
-        'education': 0.04,      # 2 matérias/dia
-        'agriculture': 0.03,    # 1-2 matérias/dia
+        "technology": 0.18,  # 9 matérias/dia
+        "economy": 0.15,  # 7-8 matérias/dia
+        "geopolitics": 0.15,  # 7-8 matérias/dia
+        "sports": 0.12,  # 6 matérias/dia
+        "security": 0.10,  # 5 matérias/dia
+        "politics": 0.10,  # 5 matérias/dia
+        "health": 0.08,  # 4 matérias/dia
+        "culture": 0.05,  # 2-3 matérias/dia
+        "education": 0.04,  # 2 matérias/dia
+        "agriculture": 0.03,  # 1-2 matérias/dia
     }
-    
+
     @staticmethod
     def get_target_count(category: str, total_target: int = MIN_ARTICLES_PER_DAY) -> int:
         """Retorna quantas matérias devem ser publicadas por categoria."""
         pct = VolumeManager.DISTRIBUTION_TARGET.get(category, 0.05)
         return max(1, int(total_target * pct))
-    
+
     @staticmethod
-    def balance_selection(articles: List[Dict], 
-                          total_target: int = MIN_ARTICLES_PER_DAY) -> List[Dict]:
+    def balance_selection(articles: List[Dict], total_target: int = MIN_ARTICLES_PER_DAY) -> List[Dict]:
         """
         Balanceia seleção de artigos respeitando distribuição por categoria.
         """
         if not articles:
             return []
-        
+
         # Agrupa por categoria
-        by_category = {}
+        by_category: Dict[str, List[Any]] = {}
         for article in articles:
-            cat = article.get('classification', {}).get('category') or article.get('category')
+            cat = article.get("classification", {}).get("category") or article.get("category")
+            if cat is None:
+                continue
             if cat not in by_category:
                 by_category[cat] = []
             by_category[cat].append(article)
-        
+
         # Ordena cada categoria por score
         for cat in by_category:
-            by_category[cat].sort(
-                key=lambda a: a.get('classification', {}).get('final_score', 0),
-                reverse=True
-            )
-        
+            by_category[cat].sort(key=lambda a: a.get("classification", {}).get("final_score", 0), reverse=True)
+
         # Seleciona respeitando targets
         selected = []
         for category, target_pct in VolumeManager.DISTRIBUTION_TARGET.items():
             target_count = max(1, int(total_target * target_pct))
             available = by_category.get(category, [])
             selected.extend(available[:target_count])
-        
+
         # Completa com artigos restantes se necessário
         if len(selected) < total_target:
             remaining = [a for a in articles if a not in selected]
-            remaining.sort(
-                key=lambda a: a.get('classification', {}).get('final_score', 0),
-                reverse=True
-            )
-            selected.extend(remaining[:total_target - len(selected)])
-        
+            remaining.sort(key=lambda a: a.get("classification", {}).get("final_score", 0), reverse=True)
+            selected.extend(remaining[: total_target - len(selected)])
+
         return selected
 
 
 class MinerPipeline:
     """Pipeline completo do Miner."""
-    
+
     def __init__(self):
         self.miner = GlobalNewsMiner()
         from app.translator import NewsTranslator as LLMTranslator
+
         self.translator = LLMTranslator()
         self.volume = VolumeManager()
         self._load_routing()
-    
+
     def _load_routing(self):
-        with open("config/portals_global.yml", 'r', encoding='utf-8') as f:
+        with open("config/portals_global.yml", "r", encoding="utf-8") as f:
             config = yaml.safe_load(f)
-        routing = config.get('global_miner', {}).get('reporter_routing', {})
-        self.reporter_map = {cat: info.get('reporter') for cat, info in routing.items()}
-    
+        routing = config.get("global_miner", {}).get("reporter_routing", {})
+        self.reporter_map = {cat: info.get("reporter") for cat, info in routing.items()}
+
     def run(self, target_volume: int = MIN_ARTICLES_PER_DAY) -> List[Dict]:
         """Executa pipeline completo."""
         logger.info("=" * 50)
         logger.info("INICIANDO PIPELINE DO MINER")
         logger.info("=" * 50)
-        
+
         # 1. Coleta randomizada
         articles = self.miner.mine_randomized()
         logger.info(f"Coletados: {len(articles)} artigos")
-        
+
         # 2. Classificação (importância + engajamento)
         for article in articles:
             self.miner.classifier.classify(article)
-        
+
         # 3. Filtra por prioridade mínima
         articles = self.miner.classifier.filter_by_priority(articles, min_tier="TIER_3")
         logger.info(f"Após filtro de prioridade: {len(articles)} artigos")
-        
+
         # 4. Tradução para pt-BR
         translated = []
         for article in articles:
@@ -487,29 +489,29 @@ class MinerPipeline:
                 translated.append(self.translator.translate(article))
             except RuntimeError:
                 translated.append({**article, "needs_review": True})
-        
+
         # 5. Roteamento para repórteres
         for article in translated:
             article = self._route_to_reporter(article)
-        
+
         # 6. Balanceamento de volume
         final = self.volume.balance_selection(translated, total_target=target_volume)
         logger.info(f"Volume final balanceado: {len(final)} artigos")
-        
+
         return final
-    
+
     def _route_to_reporter(self, article: Dict) -> Dict:
-        category = article.get('category', '')
+        category = article.get("category", "")
         # Mapeia categoria minerada para categoria de repórter
         cat_map = {
-            'technology': 'tech',
-            'geopolitics': 'politics',
-            'economy': 'economy',
-            'science_health': 'health',
-            'sports_global': 'sports',
-            'agriculture': 'agriculture',
+            "technology": "tech",
+            "geopolitics": "politics",
+            "economy": "economy",
+            "science_health": "health",
+            "sports_global": "sports",
+            "agriculture": "agriculture",
         }
-        mapped = cat_map.get(category, 'general')
-        article['reporter_slug'] = self.reporter_map.get(mapped, 'enzo.bianchi')
-        article['routed_at'] = datetime.now(timezone.utc).isoformat()
+        mapped = cat_map.get(category, "general")
+        article["reporter_slug"] = self.reporter_map.get(mapped, "enzo.bianchi")
+        article["routed_at"] = datetime.now(timezone.utc).isoformat()
         return article

@@ -1,29 +1,47 @@
 """Tests para core modules não cobertos: scanner, miner, article_fetcher, llm, database (P4.12)."""
+
 import os
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 import pytest
+
 
 def test_scanner_classify_uses_word_boundary():
     from app.scanner import RealPortalScanner
+
     s = RealPortalScanner()
     # "campo" em "comportamento" não deve classificar como agriculture
     assert s._classify("O comportamento do mercado financeiro") != "agriculture"
     assert s._classify("Inteligência artificial revoluciona saúde") == "tech"
     assert s._classify("Produtor rural celebra safra de soja em MS") == "agriculture"
 
+
 def test_scanner_is_valid_article_filters():
     from app.scanner import RealPortalScanner
+
     s = RealPortalScanner()
     assert s._is_valid_article({"title": "Trecho curto", "url": "https://ex.com/a/b"}) is False
-    assert s._is_valid_article({"title": "Título válido com tamanho suficiente para passar", "url": "https://ex.com/a"}) is False  # path <1 slash
+    assert (
+        s._is_valid_article({"title": "Título válido com tamanho suficiente para passar", "url": "https://ex.com/a"})
+        is False
+    )  # path <1 slash
+
 
 def test_miner_mine_randomized_returns_list():
     from app.miner import GlobalNewsMiner
+
     # Mock config to avoid file read
     with patch.object(GlobalNewsMiner, "_load_config", return_value={"global_miner": {"portals": {}, "language": {}}}):
         with patch.object(GlobalNewsMiner, "_load_glossary", return_value=None):
             miner = GlobalNewsMiner.__new__(GlobalNewsMiner)
-            miner.config = {"global_miner": {"portals": {"technology": [{"name": "Test", "rss": "https://example.com/rss", "url": "https://example.com"}]}, "language": {}}}
+            miner.config = {
+                "global_miner": {
+                    "portals": {
+                        "technology": [{"name": "Test", "rss": "https://example.com/rss", "url": "https://example.com"}]
+                    },
+                    "language": {},
+                }
+            }
             miner.classifier = MagicMock()
             miner.session = MagicMock()
             # Mock _mine_portal to return 1 article
@@ -31,8 +49,10 @@ def test_miner_mine_randomized_returns_list():
                 arts = miner.mine_randomized()
                 assert isinstance(arts, list)
 
+
 def test_article_fetcher_handles_invalid_url():
     from app.article_fetcher import ArticleFetcher
+
     f = ArticleFetcher()
     # Mock session.get to raise
     f.session.get = MagicMock(side_effect=Exception("network fail"))
@@ -40,9 +60,12 @@ def test_article_fetcher_handles_invalid_url():
         res = f.fetch("https://invalid.invalid/123")
     assert res["status"] == "failed"
 
+
 def test_article_fetcher_extracts_body():
-    from app.article_fetcher import ArticleFetcher
     from bs4 import BeautifulSoup
+
+    from app.article_fetcher import ArticleFetcher
+
     f = ArticleFetcher()
     html = "<html><head><title>Test</title><meta property='og:title' content='OG Title'><meta name='description' content='Desc'></head><body><article><p>Paragrafo um com conteudo real para teste de extracao.</p><p>Paragrafo dois com mais conteudo.</p></article></body></html>"
     soup = BeautifulSoup(html, "html.parser")
@@ -51,24 +74,32 @@ def test_article_fetcher_extracts_body():
     # Deve extrair algo
     assert "Paragrafo" in body or body == ""
 
+
 def test_llm_client_complete_without_key():
     from app.llm_client import LLMClient
+
     with patch.dict(os.environ, {"GEMINI_API_KEY": "", "OPENAI_API_KEY": ""}, clear=False):
         c = LLMClient(api_key="", provider="gemini")
         assert c.complete("hello") == ""
 
+
 def test_llm_client_rewrite_article_no_api_key():
     from app.llm_client import LLMClient
+
     c = LLMClient(api_key="test", provider="gemini")
     c.api_key = ""  # force no key
-    res = c.rewrite_article({"title": "T", "summary": "S", "source": "S", "url": "http://ex.com", "body": "b"}, "prompt", "attr")
+    res = c.rewrite_article(
+        {"title": "T", "summary": "S", "source": "S", "url": "http://ex.com", "body": "b"}, "prompt", "attr"
+    )
     # Deve retornar dict com rewritten_content vazio
     assert "rewritten_content" in res
     assert res["rewritten_content"] == ""
 
+
 def test_database_init_creates_tables():
-    from app.database import init_db, get_session
+    from app.database import get_session, init_db
     from app.schema import NewsArticle
+
     init_db()
     db = get_session()
     # Deve conseguir contar sem erro
@@ -76,9 +107,11 @@ def test_database_init_creates_tables():
     assert isinstance(cnt, int)
     db.close()
 
-def test_llm_client_supports_only_gemini_and_openai():
+
+def test_llm_client_supports_only_gemini_openai_and_groq():
     from app.llm_client import SUPPORTED_PROVIDERS
-    assert SUPPORTED_PROVIDERS == {"gemini", "openai"}
+
+    assert SUPPORTED_PROVIDERS == {"gemini", "openai", "groq"}
 
 
 def test_classifier_boosts_real_portal_categories():
@@ -90,10 +123,22 @@ def test_classifier_boosts_real_portal_categories():
     assert enriched["classification"]["importance_score"] > 3.0
 
 
+def test_classifier_corrects_sports_and_security_before_publication():
+    from app.classifier import NewsClassifier
+
+    classifier = NewsClassifier()
+
+    assert classifier.classify_category("Brasil define vaga olímpica no Sul-Americano") == "sports"
+    assert classifier.classify_category("Polícia apreende maconha escondida em carga de milho") == "security"
+
+
 def test_trends_endpoint_uses_ml_snapshot(monkeypatch):
     from app.main import list_trends
 
-    monkeypatch.setattr("app.main.get_latest_trend_signals", lambda limit=8: [{"topic": "politics", "category": "politics", "score": 42, "article_count": 3}])
+    monkeypatch.setattr(
+        "app.main.get_latest_trend_signals",
+        lambda limit=8: [{"topic": "politics", "category": "politics", "score": 42, "article_count": 3}],
+    )
     result = list_trends(limit=3)
 
     assert result["total"] == 1
@@ -133,6 +178,33 @@ def test_list_news_accepts_trend_sort(monkeypatch):
     assert captured["reporter_slug"] == "joao"
     assert result["sort_by"] == "trend"
     assert result["news"][0]["title"] == "Teste"
+
+
+def test_list_news_passes_region_filter(monkeypatch):
+    from app.main import list_news
+
+    captured = {}
+
+    class DummyPublisher:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def count_published_articles(self, category=None, reporter_slug=None, region=None):
+            captured["count_region"] = region
+            return 1
+
+        def get_published_articles(self, limit=20, offset=0, category=None, reporter_slug=None, sort_by="recent", region=None):
+            captured["region"] = region
+            return [{"title": "Local", "region": "ms"}]
+
+        def close(self):
+            return None
+
+    monkeypatch.setattr("app.main.ArticlePublisher", DummyPublisher)
+    result = list_news(region="ms")
+
+    assert captured == {"count_region": "ms", "region": "ms"}
+    assert result["region"] == "ms"
 
 
 def test_list_news_counts_by_reporter(monkeypatch):
@@ -192,13 +264,15 @@ def test_list_news_passes_offset_for_recent(monkeypatch):
     assert captured["sort_by"] == "recent"
     assert result["total"] == 42
 
+
 def test_publisher_auth_dependency(monkeypatch):
     # Testa que require_api_key funciona
     monkeypatch.setenv("PUBLISH_API_KEY", "secret123")
     monkeypatch.setenv("ENVIRONMENT", "production")
-    from app.main import require_api_key
-    import pytest
     from fastapi import HTTPException
+
+    from app.main import require_api_key
+
     # Sem header -> 401
     with pytest.raises(HTTPException) as exc:
         require_api_key(None)

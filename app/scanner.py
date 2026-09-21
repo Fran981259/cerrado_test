@@ -3,17 +3,19 @@ Scanner REAL de Notícias — Portal Cerrado
 Coleta headlines de portais brasileiros via HTTP.
 """
 
-import re
 import logging
+import re
 import threading
-import requests
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from urllib.parse import urljoin, urlparse
+
+import requests
 from bs4 import BeautifulSoup
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 def _normalize_url(u: str) -> str:
     try:
@@ -31,7 +33,7 @@ def _normalize_url(u: str) -> str:
 
 class RealPortalScanner:
     """Scanner que faz scraping REAL de portais."""
-    
+
     PORTALS = [
         {
             "name": "MS News",
@@ -41,7 +43,7 @@ class RealPortalScanner:
                 "article": "article, .post, .noticia, .news-item",
                 "title": "h1, h2, h3, .title, .titulo",
                 "link": "a",
-            }
+            },
         },
         {
             "name": "MS Todo Dia",
@@ -51,7 +53,7 @@ class RealPortalScanner:
                 "article": "article, .post, .noticia",
                 "title": "h1, h2, h3, .title",
                 "link": "a",
-            }
+            },
         },
         {
             "name": "G1 MS",
@@ -61,7 +63,7 @@ class RealPortalScanner:
                 "article": "article, .post, .noticia",
                 "title": "h1, h2, h3, .title",
                 "link": "a",
-            }
+            },
         },
         {
             "name": "O Estado Online",
@@ -71,31 +73,30 @@ class RealPortalScanner:
                 "article": "article, .post, .noticia",
                 "title": "h1, h2, h3, .title",
                 "link": "a",
-            }
+            },
         },
     ]
 
     _ms_lock = threading.Lock()
+
     @classmethod
     def _load_ms_portals(cls):
-        """Carrega portais expandidos de config/portals_capital_ms.yml e config/portals_us.yml — thread-safe e normalizado."""
+        """Carrega exclusivamente fontes jornalísticas de Mato Grosso do Sul."""
         import os
+
         import yaml
+
         with cls._ms_lock:
             if getattr(cls, "_ms_loaded", False):
                 return
-            
+
             # Carregar portais do MS
             cfg_ms = os.path.join(os.path.dirname(__file__), "..", "config", "portals_capital_ms.yml")
             cfg_ms = os.path.abspath(cfg_ms)
-            
-            # Carregar portais dos EUA
-            cfg_us = os.path.join(os.path.dirname(__file__), "..", "config", "portals_us.yml")
-            cfg_us = os.path.abspath(cfg_us)
-            
+
             seen = {_normalize_url(p["url"]) for p in cls.PORTALS}
             added = 0
-            
+
             # 1. Portais MS
             if os.path.exists(cfg_ms):
                 try:
@@ -109,127 +110,366 @@ class RealPortalScanner:
                                 continue
                             if not isinstance(p.get("name"), str) or not p.get("url"):
                                 continue
-                            cls.PORTALS.append({
-                                "name": p.get("name") or url,
-                                "url": url,
-                                "default_category": "general",
-                                "city": p.get("city") or city,
-                                "selectors": {
-                                    "article": "article, .post, .noticia, .news-item",
-                                    "title": "h1, h2, h3, .title, .titulo",
-                                    "link": "a",
+                            city_name = p.get("city") or city
+                            if city_name.strip().lower() in {"nacional", "fortaleza"}:
+                                continue
+                            cls.PORTALS.append(
+                                {
+                                    "name": p.get("name") or url,
+                                    "url": url,
+                                    "default_category": "general",
+                                    "city": city_name,
+                                    "region": "ms",
+                                    "selectors": {
+                                        "article": "article, .post, .noticia, .news-item",
+                                        "title": "h1, h2, h3, .title, .titulo",
+                                        "link": "a",
+                                    },
                                 }
-                            })
+                            )
                             seen.add(norm)
                             added += 1
                 except Exception as e:
                     logger.warning(f"[SCANNER] falha ao carregar portals_capital_ms.yml: {e}")
-            
-            # 2. Portais EUA
-            if os.path.exists(cfg_us):
-                try:
-                    with open(cfg_us, "r", encoding="utf-8") as f:
-                        data_us = yaml.safe_load(f) or {}
-                    for category, lst in (data_us.get("portals_us") or {}).items():
-                        for p in lst or []:
-                            url = (p.get("url") or "").strip()
-                            norm = _normalize_url(url)
-                            if not url or norm in seen:
-                                continue
-                            if not isinstance(p.get("name"), str) or not p.get("url"):
-                                continue
-                            cls.PORTALS.append({
-                                "name": p.get("name") or url,
-                                "url": url,
-                                "default_category": "general",
-                                "city": p.get("city") or category,
-                                "selectors": {
-                                    "article": "article, .post, .noticia, .news-item",
-                                    "title": "h1, h2, h3, .title, .titulo",
-                                    "link": "a",
-                                }
-                            })
-                            seen.add(norm)
-                            added += 1
-                except Exception as e:
-                    logger.warning(f"[SCANNER] falha ao carregar portals_us.yml: {e}")
 
             if added:
-                logger.info(f"[SCANNER] Portais externos carregados: +{added} (total {len(cls.PORTALS)})")
+                logger.info(f"[SCANNER] Fontes locais carregadas: +{added} (total {len(cls.PORTALS)})")
             cls._ms_loaded = True
-    
+
     CATEGORY_KEYWORDS = {
         "tech": [
-            "tecnologia", "inovação", "software", "startup", "digital", "ti",
-            "inteligência artificial", "robot", "cibernet", "google", "microsoft",
-            "apple", "meta", "facebook", "instagram", "whatsapp", "telegram", "netflix",
-            "celular", "smartphone", "iphone", "android", "programação", "código",
-            "hacker", "ciberataque", "bitcoin", "criptomoeda", "nuvem", "cloud",
-            "5g", "wi-fi", "internet", "site", "plataforma", "sistema",
-            "cyber", "app", "apps", "automação", "robotica", "robotização"
+            "tecnologia",
+            "inovação",
+            "software",
+            "startup",
+            "digital",
+            "ti",
+            "inteligência artificial",
+            "robot",
+            "cibernet",
+            "google",
+            "microsoft",
+            "apple",
+            "meta",
+            "facebook",
+            "instagram",
+            "whatsapp",
+            "telegram",
+            "netflix",
+            "celular",
+            "smartphone",
+            "iphone",
+            "android",
+            "programação",
+            "código",
+            "hacker",
+            "ciberataque",
+            "bitcoin",
+            "criptomoeda",
+            "nuvem",
+            "cloud",
+            "5g",
+            "wi-fi",
+            "internet",
+            "site",
+            "plataforma",
+            "sistema",
+            "cyber",
+            "app",
+            "apps",
+            "automação",
+            "robotica",
+            "robotização",
         ],
         "sports": [
-            "futebol", "esporte", "campeonato", "time", "jogador", "partida", "torneio",
-            "gol", "bola", "estádio", "torcida", "atleta", "corrida", "natação",
-            "basquete", "vôlei", "tênis", "ufc", "mma", "luta", "boxe", "ginástica",
-            "seleção", "brasileirão", "libertadores", "copa", "olimpíada", "paralimpíada",
-            "treino", "modalidade", "esportivo", "competição", "medalha", "título",
-            "athletico", "operário", "comercial", "sul-mato-grossense"
+            "futebol",
+            "esporte",
+            "campeonato",
+            "time",
+            "jogador",
+            "partida",
+            "torneio",
+            "gol",
+            "bola",
+            "estádio",
+            "torcida",
+            "atleta",
+            "corrida",
+            "natação",
+            "basquete",
+            "vôlei",
+            "tênis",
+            "ufc",
+            "mma",
+            "luta",
+            "boxe",
+            "ginástica",
+            "seleção",
+            "brasileirão",
+            "libertadores",
+            "copa",
+            "olimpíada",
+            "paralimpíada",
+            "treino",
+            "modalidade",
+            "esportivo",
+            "competição",
+            "medalha",
+            "título",
+            "athletico",
+            "operário",
+            "comercial",
+            "sul-mato-grossense",
         ],
         "security": [
-            "segurança", "polícia", "crime", "investigação", "suspeito", "flagrante",
-            "prisão", "preso", "delegacia", "assalto", "roubo", "furto", "estupro",
-            "homicídio", "operação", "abordagem", "ocorrência", "registro",
-            "boletim", "cárcere", "foragido", "mandado", "policiais",
-            "quadrilha", "banda", "tráfico", "droga", "entorpecente",
-            "PF", "Polícia Federal", "PM", "Polícia Militar", "Civil"
+            "segurança",
+            "polícia",
+            "crime",
+            "investigação",
+            "suspeito",
+            "flagrante",
+            "prisão",
+            "preso",
+            "delegacia",
+            "assalto",
+            "roubo",
+            "furto",
+            "estupro",
+            "homicídio",
+            "operação",
+            "abordagem",
+            "ocorrência",
+            "registro",
+            "boletim",
+            "cárcere",
+            "foragido",
+            "mandado",
+            "policiais",
+            "quadrilha",
+            "banda",
+            "tráfico",
+            "droga",
+            "entorpecente",
+            "PF",
+            "Polícia Federal",
+            "PM",
+            "Polícia Militar",
+            "Civil",
         ],
         "politics": [
-            "governo", "política", "lei", "decreto", "parlamento", "eleição", "prefeito",
-            "vereador", "deputado", "senador", "governador", "presidente", "campanha",
-            "votação", "urna", "mandato", "gestão", "administração", "secretário",
-            "assembleia", "câmara", "senado", "congresso", "estadual", "municipal",
-            "reforma", "projeto", "indicação", "legislativo", "executivo", "judiciário",
-            "tribunal", "STJ", "STF", "TRE", "TSE", "portaria", "resolução", "norma"
+            "governo",
+            "política",
+            "lei",
+            "decreto",
+            "parlamento",
+            "eleição",
+            "prefeito",
+            "vereador",
+            "deputado",
+            "senador",
+            "governador",
+            "presidente",
+            "campanha",
+            "votação",
+            "urna",
+            "mandato",
+            "gestão",
+            "administração",
+            "secretário",
+            "assembleia",
+            "câmara",
+            "senado",
+            "congresso",
+            "estadual",
+            "municipal",
+            "reforma",
+            "projeto",
+            "indicação",
+            "legislativo",
+            "executivo",
+            "judiciário",
+            "tribunal",
+            "STJ",
+            "STF",
+            "TRE",
+            "TSE",
+            "portaria",
+            "resolução",
+            "norma",
         ],
         "health": [
-            "saúde", "hospitalar", "doença", "tratamento", "prevenção", "vacina", "médico",
-            "enfermagem", "enfermeiro", "UBS", "SUS", "ambulatório", "clínica",
-            "atendimento", "paciente", "diagnóstico", "receita", "medicamento", "remédio",
-            "cirurgia", "exame", "laboratório", "hemocentro", "hemosul", "vacinação",
-            "dengue", "covid", "gripe", "sarampo", "tuberculose", "HIV", "AIDS",
-            "leito", "enfermaria", "UTI", "emergência", "pronto-socorro", "atender"
+            "saúde",
+            "hospitalar",
+            "doença",
+            "tratamento",
+            "prevenção",
+            "vacina",
+            "médico",
+            "enfermagem",
+            "enfermeiro",
+            "UBS",
+            "SUS",
+            "ambulatório",
+            "clínica",
+            "atendimento",
+            "paciente",
+            "diagnóstico",
+            "receita",
+            "medicamento",
+            "remédio",
+            "cirurgia",
+            "exame",
+            "laboratório",
+            "hemocentro",
+            "hemosul",
+            "vacinação",
+            "dengue",
+            "covid",
+            "gripe",
+            "sarampo",
+            "tuberculose",
+            "HIV",
+            "AIDS",
+            "leito",
+            "enfermaria",
+            "UTI",
+            "emergência",
+            "pronto-socorro",
+            "atender",
         ],
         "education": [
-            "educação", "universidade", "estudante", "curso", "concurso", "escola",
-            "UFMS", "IFMS", "faculdade", "aula", "professor", "aluno", "vestibular",
-            "ENEM", "prova", "ensino", "graduação", "pós", "mestrado", "doutorado",
-            "aprendizado", "conhecimento", "bolsa", "estágio", "formatura", "diploma",
-            "ensino fundamental", "ensino médio", "ensino superior", "matricul", "inscrição"
+            "educação",
+            "universidade",
+            "estudante",
+            "curso",
+            "concurso",
+            "escola",
+            "UFMS",
+            "IFMS",
+            "faculdade",
+            "aula",
+            "professor",
+            "aluno",
+            "vestibular",
+            "ENEM",
+            "prova",
+            "ensino",
+            "graduação",
+            "pós",
+            "mestrado",
+            "doutorado",
+            "aprendizado",
+            "conhecimento",
+            "bolsa",
+            "estágio",
+            "formatura",
+            "diploma",
+            "ensino fundamental",
+            "ensino médio",
+            "ensino superior",
+            "matricul",
+            "inscrição",
         ],
         "agriculture": [
-            "agronegócio", "safra", "produtor rural", "exportação", "agro", "plantio",
-            "soja", "milho", "algodão", "cana-de-açúcar", "pecuária", "gado", "boi",
-            "suíno", "frango", "pesca", "aquicultura", "fronteira", "pantanal",
-            "colheita", "plantação", "fertilizante", "insumo", "máquina agrícola",
-            "agricultor", "lavoura", "rebanho", "bovino", "suinocultura", "avicultura"
+            "agronegócio",
+            "safra",
+            "produtor rural",
+            "exportação",
+            "agro",
+            "plantio",
+            "soja",
+            "milho",
+            "algodão",
+            "cana-de-açúcar",
+            "pecuária",
+            "gado",
+            "boi",
+            "suíno",
+            "frango",
+            "pesca",
+            "aquicultura",
+            "fronteira",
+            "pantanal",
+            "colheita",
+            "plantação",
+            "fertilizante",
+            "insumo",
+            "máquina agrícola",
+            "agricultor",
+            "lavoura",
+            "rebanho",
+            "bovino",
+            "suinocultura",
+            "avicultura",
         ],
         "entertainment": [
-            "cultura", "evento", "show", "arte", "festival", "música", "teatro",
-            "cinema", "filme", "série", "ator", "atriz", "celebridade", "famoso",
-            "carnaval", "festa junina", "réveillon", "feriado", "turismo",
-            "viagem", "praia", "hotel", "restaurante", "gastronomia", "parque",
-            "exposição", "pintura", "espetáculo", "concerto", "banda", "cant", "artista"
+            "cultura",
+            "evento",
+            "show",
+            "arte",
+            "festival",
+            "música",
+            "teatro",
+            "cinema",
+            "filme",
+            "série",
+            "ator",
+            "atriz",
+            "celebridade",
+            "famoso",
+            "carnaval",
+            "festa junina",
+            "réveillon",
+            "feriado",
+            "turismo",
+            "viagem",
+            "praia",
+            "hotel",
+            "restaurante",
+            "gastronomia",
+            "parque",
+            "exposição",
+            "pintura",
+            "espetáculo",
+            "concerto",
+            "banda",
+            "cant",
+            "artista",
         ],
         "economy": [
-            "economia", "mercado", "emprego", "bolsa", "investimento", "crédito",
-            "trabalho", "salário", "piso salarial", "INSS", "imposto", "taxa", "juro",
-            "banco", "finança", "receita", "arrecadação", "balança comercial",
-            "comércio", "indústria", "fábrica", "varejo", "atacado", "negócio",
-            "empresa", "funcionário", "contratação", "demissão", "vaga", "BNDES"
+            "economia",
+            "mercado",
+            "emprego",
+            "bolsa",
+            "investimento",
+            "crédito",
+            "trabalho",
+            "salário",
+            "piso salarial",
+            "INSS",
+            "imposto",
+            "taxa",
+            "juro",
+            "banco",
+            "finança",
+            "receita",
+            "arrecadação",
+            "balança comercial",
+            "comércio",
+            "indústria",
+            "fábrica",
+            "varejo",
+            "atacado",
+            "negócio",
+            "empresa",
+            "funcionário",
+            "contratação",
+            "demissão",
+            "vaga",
+            "BNDES",
         ],
     }
-    
+
     REPORTER_BY_CATEGORY = {
         "tech": "enzo.bianchi",
         "sports": "marcus.teixeira",
@@ -245,29 +485,40 @@ class RealPortalScanner:
         "culture": "leon.vaz",
         "science": "maya.santos",
     }
-    
+
     def __init__(self):
         self.__class__._load_ms_portals()
         self.session = requests.Session()
-        self.session.headers.update({
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        })
-    
+        self.session.headers.update(
+            {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+        )
+
     def scan_all(self) -> Dict:
         """Escaneia TODOS os portais configurados — concorrente (6 threads)."""
         import concurrent.futures
-        results = {
+
+        results: Dict[str, Any] = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "portals": {},
             "articles": [],
             "summary": {"total": 0, "success": 0, "failed": 0},
         }
+
         def _scan_one(p):
             try:
                 return p["name"], self._scan_portal(p)
             except Exception as e:
                 logger.error(f"Erro ao escanear {p['name']}: {e}")
-                return p["name"], {"name": p["name"], "url": p["url"], "status": "failed", "error": str(e), "articles": []}
+                return p["name"], {
+                    "name": p["name"],
+                    "url": p["url"],
+                    "status": "failed",
+                    "error": str(e),
+                    "articles": [],
+                }
+
         # ThreadPool reduz 42*15s sequencial (~600s) para ~100s com 6 workers
         with concurrent.futures.ThreadPoolExecutor(max_workers=6) as ex:
             futures = {ex.submit(_scan_one, p): p for p in self.PORTALS}
@@ -281,17 +532,18 @@ class RealPortalScanner:
                 else:
                     results["summary"]["failed"] += 1
         return results
-    
+
     def _scan_portal(self, portal: Dict) -> Dict:
         """Escaneia um portal específico."""
         name = portal["name"]
         url = portal["url"]
-        
+
         logger.info(f"Escaneando: {name} ({url})")
 
         # Enforce robots.txt at runtime (cached, re-check daily)
         try:
             from app.robots import is_allowed
+
             if not is_allowed(url):
                 logger.warning(f"[ROBOTS] Bloqueado por robots.txt: {url}")
                 return {"name": name, "url": url, "status": "blocked", "error": "robots.txt disallow", "articles": []}
@@ -305,10 +557,10 @@ class RealPortalScanner:
             ctype = response.headers.get("Content-Type", "")
             if "charset" not in ctype.lower() or "iso-8859-1" in ctype.lower():
                 response.encoding = response.apparent_encoding or "utf-8"
-            
+
             soup = BeautifulSoup(response.content, "html.parser")
             articles = self._extract_articles(soup, portal, url)
-            
+
             return {
                 "name": name,
                 "url": url,
@@ -316,7 +568,7 @@ class RealPortalScanner:
                 "articles_count": len(articles),
                 "articles": articles,
             }
-            
+
         except requests.exceptions.RequestException as e:
             logger.warning(f"Falha em {name}: {e}")
             return {
@@ -326,30 +578,29 @@ class RealPortalScanner:
                 "error": str(e),
                 "articles": [],
             }
-    
-    def _extract_articles(self, soup: BeautifulSoup, portal: Dict, 
-                          base_url: str) -> List[Dict]:
+
+    def _extract_articles(self, soup: BeautifulSoup, portal: Dict, base_url: str) -> List[Dict]:
         """Extrai artigos do HTML."""
-        articles = []
+        articles: List[Dict] = []
         seen_urls = set()
-        
-        candidates = []
+
+        candidates: List[Any] = []
         candidates.extend(soup.find_all("article"))
         candidates.extend(soup.find_all(["h2", "h3"]))
         candidates.extend(soup.find_all("div", class_=re.compile(r"noticia|post|news|article|item", re.I)))
-        
+
         for element in candidates:
             article = self._parse_element(element, portal, base_url)
             if article and article["url"] not in seen_urls:
                 if self._is_valid_article(article):
                     articles.append(article)
                     seen_urls.add(article["url"])
-                    
+
                     if len(articles) >= 25:
                         break
-        
+
         return articles
-    
+
     def _parse_element(self, element, portal: Dict, base_url: str) -> Optional[Dict]:
         """Parseia um elemento HTML em artigo."""
         try:
@@ -366,13 +617,13 @@ class RealPortalScanner:
                 if not title_elem:
                     title_elem = element.find("a")
                 title = title_elem.get_text(strip=True) if title_elem else ""
-            
+
             if not link or not link.get("href"):
                 return None
-            
+
             if not title or len(title) < 10:
                 return None
-            
+
             href = link["href"].strip()
             if href.startswith(("http://", "https://")):
                 pass
@@ -385,15 +636,28 @@ class RealPortalScanner:
                 href = urljoin(base_url.rstrip("/") + "/", href)
             else:
                 return None
-            
-            if any(skip in href.lower() for skip in ["/login", "/cadastro", "/contato", "/sobre", "/privacy", "/termos", "/search", "/feed", "/rss"]):
+
+            if any(
+                skip in href.lower()
+                for skip in [
+                    "/login",
+                    "/cadastro",
+                    "/contato",
+                    "/sobre",
+                    "/privacy",
+                    "/termos",
+                    "/search",
+                    "/feed",
+                    "/rss",
+                ]
+            ):
                 return None
-            
+
             category = self._classify(title)
             reporter = self.REPORTER_BY_CATEGORY.get(category, "enzo.bianchi")
-            
+
             summary = self._extract_summary(element)
-            
+
             return {
                 "title": title[:300],
                 "summary": summary,
@@ -401,13 +665,14 @@ class RealPortalScanner:
                 "source": portal["name"],
                 "source_url": portal["url"],
                 "category": category,
+                "region": portal.get("region", "ms"),
                 "reporter_slug": reporter,
                 "scraped_at": datetime.now(timezone.utc).isoformat(),
             }
-            
-        except Exception as e:
+
+        except Exception:
             return None
-    
+
     def _extract_summary(self, element) -> str:
         """Extrai o summary/resumo do artigo."""
         text_parts = []
@@ -416,41 +681,42 @@ class RealPortalScanner:
             if 50 < len(text) < 300:
                 text_parts.append(text)
         return " ".join(text_parts[:2])[:500] if text_parts else ""
-    
+
     def _classify(self, title: str) -> str:
         """Classifica um artigo por categoria usando word boundaries."""
         import re
+
         title_lower = title.lower()
-        
+
         scores = {}
         for category, keywords in self.CATEGORY_KEYWORDS.items():
             score = 0
             for kw in keywords:
                 # Usa word boundary para evitar "ia" em "entre", "campo" em "comportamento", etc.
-                pattern = r'\b' + re.escape(kw.lower()) + r'\b'
+                pattern = r"\b" + re.escape(kw.lower()) + r"\b"
                 if re.search(pattern, title_lower):
                     score += 1
             if score > 0:
                 scores[category] = score
-        
+
         if scores:
-            best_category = max(scores, key=scores.get)
+            best_category = max(scores, key=lambda c: scores[c])
             return best_category
-        
+
         return "general"
-    
+
     def _is_valid_article(self, article: Dict) -> bool:
         """Valida se é um artigo válido — filtro anti-lixo para AdSense."""
         title = (article.get("title", "") or "").strip()
         url = (article.get("url", "") or "").strip()
-        
+
         if len(title) < 20:
             return False
         if len(title.split()) < 4:
             return False
         if not url.startswith("http"):
             return False
-        
+
         title_lower = title.lower().strip()
         url_lower = url.lower()
 
@@ -465,13 +731,36 @@ class RealPortalScanner:
             return False
 
         invalid_contains = [
-            "últimas notícias", "última hora", "breaking news", "notícias ao vivo",
-            "para o servidor", "contato", "sobre nós", "política de privacidade",
-            "termos de uso", "cadastro", "login", "registro", "newsletter",
-            "edição anterior", "arquivo", "search", "pesquisa", "search result",
-            "click here", "saiba mais", "leia mais", "veja também", "veja mais",
-            "voltar", "anterior", "próximo", "next", "previous",
-            "veja notícias em campo grande", "últimas notícias de economia",
+            "últimas notícias",
+            "última hora",
+            "breaking news",
+            "notícias ao vivo",
+            "para o servidor",
+            "contato",
+            "sobre nós",
+            "política de privacidade",
+            "termos de uso",
+            "cadastro",
+            "login",
+            "registro",
+            "newsletter",
+            "edição anterior",
+            "arquivo",
+            "search",
+            "pesquisa",
+            "search result",
+            "click here",
+            "saiba mais",
+            "leia mais",
+            "veja também",
+            "veja mais",
+            "voltar",
+            "anterior",
+            "próximo",
+            "next",
+            "previous",
+            "veja notícias em campo grande",
+            "últimas notícias de economia",
             "o jornal que respeita seus leitores",
             "mercedita e serenatas",  # placeholder cultural poluído
         ]
@@ -484,12 +773,31 @@ class RealPortalScanner:
 
         # 3) URLs de listagem / homepage / artefatos do portal
         skip_url_substrings = [
-            "javascript:", "mailto:", "#", "/search",
-            "/login", "/signup", "/register", "/feed", "/rss",
-            "/podcast", "/video", "/author", "/sobre", "/contato",
-            "/privacy", "/termos", "/cadastro",
-            "/homepage-nova", "/arte-e-lazer/mercedita", "/tag/", "/categoria/",
-            "/author/", "/page/", "?s=", "?p=",
+            "javascript:",
+            "mailto:",
+            "#",
+            "/search",
+            "/login",
+            "/signup",
+            "/register",
+            "/feed",
+            "/rss",
+            "/podcast",
+            "/video",
+            "/author",
+            "/sobre",
+            "/contato",
+            "/privacy",
+            "/termos",
+            "/cadastro",
+            "/homepage-nova",
+            "/arte-e-lazer/mercedita",
+            "/tag/",
+            "/categoria/",
+            "/author/",
+            "/page/",
+            "?s=",
+            "?p=",
         ]
         if any(p in url_lower for p in skip_url_substrings):
             return False
@@ -510,5 +818,5 @@ class RealPortalScanner:
         words = title_lower.split()
         if len(words) >= 4 and len(set(words)) <= 2:
             return False
-        
+
         return True

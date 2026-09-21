@@ -1,0 +1,3 @@
+interface:
+  display_name: "QA e Confiabilidade"
+  short_description: "Testes orientados a risco e prevenção de regressões"

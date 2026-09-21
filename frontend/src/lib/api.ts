@@ -15,7 +15,12 @@ export type Article = {
   sources?: Array<{ url: string; name?: string; title?: string }>;
   tags?: string[];
   is_curiosity?: boolean;
+  region?: "ms";
   source?: string;
+  importance_score?: number;
+  engagement_score?: number;
+  final_score?: number;
+  priority_tier?: "TIER_1" | "TIER_2" | "TIER_3" | "REJECT";
 };
 
 export type TrendSignal = {
@@ -34,6 +39,7 @@ export type NewsResponse = {
   offset: number;
   category?: string | null;
   reporter_slug?: string | null;
+  region?: "ms" | null;
   sort_by?: "recent" | "trend";
   news: Article[];
 };
@@ -62,7 +68,7 @@ function articleFromJson(value: unknown): Article {
   return article;
 }
 
-export async function fetchNews(params?: { category?: string; reporterSlug?: string; limit?: number; offset?: number; sortBy?: "recent" | "trend" }): Promise<Article[]> {
+export async function fetchNews(params?: { category?: string; reporterSlug?: string; region?: "ms"; limit?: number; offset?: number; sortBy?: "recent" | "trend" }): Promise<Article[]> {
   const data = await fetchNewsResponse(params);
   return data.news;
 }
@@ -71,11 +77,12 @@ function apiUrl(path: string, qs?: string): string {
   const base = typeof window !== "undefined" ? "" : getApiBase();
   return `${base}${path}${qs ? `?${qs}` : ""}`;
 }
-export async function fetchNewsResponse(params?: { category?: string; reporterSlug?: string; limit?: number; offset?: number; sortBy?: "recent" | "trend" }): Promise<NewsResponse> {
+export async function fetchNewsResponse(params?: { category?: string; reporterSlug?: string; region?: "ms"; limit?: number; offset?: number; sortBy?: "recent" | "trend" }): Promise<NewsResponse> {
   try {
     const search = new URLSearchParams();
     if (params?.category) search.set("category", params.category);
     if (params?.reporterSlug) search.set("reporter_slug", params.reporterSlug);
+    if (params?.region) search.set("region", params.region);
     if (params?.limit !== undefined) search.set("limit", String(params.limit));
     if (params?.offset !== undefined) search.set("offset", String(params.offset));
     if (params?.sortBy) search.set("sort_by", params.sortBy);
@@ -93,6 +100,7 @@ export async function fetchNewsResponse(params?: { category?: string; reporterSl
       offset: Number(data.offset ?? params?.offset ?? 0),
       category: (data.category ?? params?.category ?? null) as string | null,
       reporter_slug: (data.reporter_slug ?? params?.reporterSlug ?? null) as string | null,
+      region: (data.region ?? params?.region ?? null) as "ms" | null,
       sort_by: (data.sort_by ?? params?.sortBy ?? "recent") as "recent" | "trend",
       news: data.news.map(articleFromJson),
     };
@@ -144,6 +152,51 @@ export function sortArticlesByTrendScore(articles: Article[], trends: TrendSigna
     const bPublished = b.published_at || b.created_at || "";
     return bPublished.localeCompare(aPublished);
   });
+}
+
+function localCalendarDay(value: Date): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Campo_Grande",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(value);
+  const field = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+  return `${field("year")}-${field("month")}-${field("day")}`;
+}
+
+/** Prioritizes current-day local reporting, then editorial relevance and engagement. */
+export function rankHomepageArticles(articles: Article[], now = new Date()): Article[] {
+  const today = localCalendarDay(now);
+  const rank = (article: Article) => {
+    const date = new Date(article.published_at || article.created_at || 0);
+    const validDate = !Number.isNaN(date.valueOf());
+    return {
+      isToday: validDate && localCalendarDay(date) === today ? 1 : 0,
+      final: article.final_score ?? 0,
+      importance: article.importance_score ?? 0,
+      engagement: article.engagement_score ?? 0,
+      timestamp: validDate ? date.valueOf() : 0,
+    };
+  };
+  return [...articles].sort((a, b) => {
+    const left = rank(a);
+    const right = rank(b);
+    return right.isToday - left.isToday || right.final - left.final || right.importance - left.importance || right.engagement - left.engagement || right.timestamp - left.timestamp;
+  });
+}
+
+const DYNAMIC_POOL_MULTIPLIER = 4;
+const ROTATION_INTERVAL_MS = 60_000;
+
+/** Rotates a fresh, local-news selection without repeating articles already on the home. */
+export function selectDynamicLocalNews(articles: Article[], excluded: Article[], limit: number, now = new Date()): Article[] {
+  const excludedKeys = new Set(excluded.map((article) => article.slug || article.title));
+  const candidates = rankHomepageArticles(articles, now).filter((article) => !excludedKeys.has(article.slug || article.title));
+  const pool = candidates.slice(0, Math.max(limit * DYNAMIC_POOL_MULTIPLIER, limit));
+  if (!pool.length) return [];
+  const offset = Math.floor(now.getTime() / ROTATION_INTERVAL_MS) % pool.length;
+  return Array.from({ length: Math.min(limit, pool.length) }, (_, index) => pool[(offset + index) % pool.length]);
 }
 
 // Helper para sitemap/build, mantido para consumir a API real.

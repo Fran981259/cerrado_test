@@ -4,11 +4,11 @@ Curiosidades — Portal Cerrado
 Gerador e classificador de curiosidades para distribuição entre segmentos.
 """
 
-import random
 import logging
+import random
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
 from enum import Enum
+from typing import Dict, List, Optional
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 class CuriosityCategory(Enum):
     """Categorias de curiosidade por segmento."""
+
     TECHNOLOGY = "technology"
     SPORTS = "sports"
     SECURITY = "security"
@@ -30,10 +31,10 @@ class CuriosityCategory(Enum):
 class CuriosityPatterns:
     """
     Padrões que indicam que uma matéria é uma curiosidade.
-    
+
     Usado para DETECTAR curiosidades externas E gerar curiosidades próprias.
     """
-    
+
     DETECTION_PATTERNS = {
         # English
         "did you know": "curiosity",
@@ -47,7 +48,6 @@ class CuriosityPatterns:
         "amazing": "curiosity",
         "incredible": "curiosity",
         "strange but true": "curiosity",
-        
         # Portuguese
         "você sabia": "curiosity",
         "sabia que": "curiosity",
@@ -68,17 +68,17 @@ class CuriosityPatterns:
         "recorde": "curiosity",
         "nunca imaginou": "curiosity",
     }
-    
+
     ENGAGEMENT_BOOST = 1.3  # Curiosidades têm +30% de engajamento
 
 
 class CuriosityTemplates:
     """
     Templates de curiosidade por segmento.
-    
+
     Estes são usados para GERAR curiosidades próprias baseadas em fatos reais.
     """
-    
+
     TEMPLATES = {
         CuriosityCategory.TECHNOLOGY: [
             "Você sabia que o primeiro computador pesava cerca de 30 toneladas e ocupava um cômodo inteiro?",
@@ -189,7 +189,7 @@ class CuriosityTemplates:
             "O Brasil já venceu o Oscar de cinema três vezes com filmes como Central do Brasil e Cidade de Deus.",
         ],
     }
-    
+
     # Templates de abertura para curiosidade
     OPENINGS = [
         "Você sabia que",
@@ -208,15 +208,15 @@ class CuriosityTemplates:
 class CuriosityGenerator:
     """
     Gerador de curiosidades para cada segmento.
-    
+
     Pode gerar curiosidades próprias OU detectar e potencializar curiosidades externas.
     """
-    
+
     def __init__(self):
         self.templates = CuriosityTemplates()
         self.patterns = CuriosityPatterns()
         self._load_reporters()
-    
+
     def _load_reporters(self):
         """Carrega mapeamento de repórteres por categoria."""
         self.reporter_map = {
@@ -230,142 +230,142 @@ class CuriosityGenerator:
             CuriosityCategory.AGRICULTURE: "bia.fernandes",
             CuriosityCategory.CULTURE: "leon.vaz",
         }
-    
+
     def detect_curiosity(self, article: Dict) -> bool:
         """Detecta se um artigo é uma curiosidade."""
-        title = article.get('title', '').lower()
-        summary = article.get('summary', '').lower()
-        combined = title + ' ' + summary
-        
+        title = article.get("title", "").lower()
+        summary = article.get("summary", "").lower()
+        combined = title + " " + summary
+
         for pattern in self.patterns.DETECTION_PATTERNS.keys():
             if pattern in combined:
                 return True
-        
+
         return False
-    
+
     def boost_engagement(self, article: Dict) -> Dict:
         """Aumenta score de engajamento para curiosidades."""
         if self.detect_curiosity(article):
-            current = article.get('classification', {}).get('engagement_score', 3.0)
+            current = article.get("classification", {}).get("engagement_score", 3.0)
             boosted = min(5.0, current * self.patterns.ENGAGEMENT_BOOST)
-            
-            if 'classification' not in article:
-                article['classification'] = {}
-            article['classification']['engagement_score'] = round(boosted, 2)
-            article['classification']['is_curiosity'] = True
-        
+
+            if "classification" not in article:
+                article["classification"] = {}
+            article["classification"]["engagement_score"] = round(boosted, 2)
+            article["classification"]["is_curiosity"] = True
+
         return article
-    
-    def generate_curiosity(self, category: CuriosityCategory) -> Dict:
+
+    def generate_curiosity(self, category: CuriosityCategory) -> Optional[Dict]:
         """Gera uma curiosidade própria para uma categoria."""
         templates = self.templates.TEMPLATES.get(category, [])
-        
+
         if not templates:
             return None
-        
+
         # Escolhe curiosidade aleatória
         content = random.choice(templates)
         opening = random.choice(self.templates.OPENINGS)
-        
+
         # Monta título com abertura
         if not any(content.startswith(o) for o in self.templates.OPENINGS):
             title = f"{opening} {content.split('.')[0]}!"
         else:
-            title = content.split('.')[0] + "!"
-        
+            title = content.split(".")[0] + "!"
+
         curiosity = {
-            'title': title.capitalize(),
-            'summary': content,
-            'source': 'Curiosidade Própria',
-            'source_url': '',
-            'source_lang': 'pt-BR',
-            'category': category.value,
-            'image_url': None,
-            'published_at': datetime.now(timezone.utc).isoformat(),
-            'mined_at': datetime.now(timezone.utc).isoformat(),
-            'hash': f"curiosity_{category.value}_{random.randint(1000, 9999)}",
-            'requires_translation': False,
-            'is_curiosity': True,
-            'is_original_content': True,
-            'reporter_slug': self.reporter_map.get(category),
-            'classification': {
-                'importance_score': 2.0,
-                'engagement_score': 4.5,  # Curiosidades têm alto engajamento
-                'final_score': 3.2,  # Bônus de engajamento
-                'importance_level': 'LOW',
-                'engagement_level': 'VIRAL',
-                'priority_tier': 'TIER_2',
-                'is_curiosity': True,
-                'classified_at': datetime.now(timezone.utc).isoformat(),
+            "title": title.capitalize(),
+            "summary": content,
+            "source": "Curiosidade Própria",
+            "source_url": "",
+            "source_lang": "pt-BR",
+            "category": category.value,
+            "image_url": None,
+            "published_at": datetime.now(timezone.utc).isoformat(),
+            "mined_at": datetime.now(timezone.utc).isoformat(),
+            "hash": f"curiosity_{category.value}_{random.randint(1000, 9999)}",
+            "requires_translation": False,
+            "is_curiosity": True,
+            "is_original_content": True,
+            "reporter_slug": self.reporter_map.get(category),
+            "classification": {
+                "importance_score": 2.0,
+                "engagement_score": 4.5,  # Curiosidades têm alto engajamento
+                "final_score": 3.2,  # Bônus de engajamento
+                "importance_level": "LOW",
+                "engagement_level": "VIRAL",
+                "priority_tier": "TIER_2",
+                "is_curiosity": True,
+                "classified_at": datetime.now(timezone.utc).isoformat(),
             },
         }
-        
+
         return curiosity
-    
+
     def generate_daily_curiosities(self) -> List[Dict]:
         """Gera lote diário de curiosidades (1 por categoria)."""
         curiosities = []
-        
+
         for category in CuriosityCategory:
             curiosity = self.generate_curiosity(category)
             if curiosity:
                 curiosities.append(curiosity)
-        
+
         return curiosities
 
 
 class CuriosityMixer:
     """
     Misturador de curiosidades no fluxo de publicação.
-    
+
     Adiciona curiosidades em momentos estratégicos do dia.
     """
-    
+
     def __init__(self):
         self.generator = CuriosityGenerator()
-    
-    def inject_curiosities(self, articles: List[Dict], 
-                          daily_target: int = 50,
-                          curiosity_ratio: float = 0.15) -> List[Dict]:
+
+    def inject_curiosities(
+        self, articles: List[Dict], daily_target: int = 50, curiosity_ratio: float = 0.15
+    ) -> List[Dict]:
         """
         Injeta curiosidades no fluxo de artigos.
-        
+
         Args:
             articles: Lista de artigos classificados
             daily_target: Meta diária de publicação
             curiosity_ratio: % de curiosidades no total (15% = ~8 curiosidades/dia)
-        
+
         Returns:
             Lista de artigos com curiosidades injetadas
         """
         # Quantidade de curiosidades a gerar
         n_curiosities = max(3, int(daily_target * curiosity_ratio))
-        
+
         # Gera curiosidades
         generated = self.generator.generate_daily_curiosities()
-        
+
         # Limita se necessário
         if len(generated) > n_curiosities:
             random.shuffle(generated)
             generated = generated[:n_curiosities]
-        
+
         # Intercala curiosidades na lista de artigos
         result = []
         cur_idx = 0
-        
+
         for i, article in enumerate(articles):
             result.append(article)
-            
+
             # A cada ~7 artigos, injeta uma curiosidade
             if (i + 1) % 7 == 0 and cur_idx < len(generated):
                 result.append(generated[cur_idx])
                 cur_idx += 1
-        
+
         # Adiciona curiosidades restantes no final
         while cur_idx < len(generated):
             result.append(generated[cur_idx])
             cur_idx += 1
-        
+
         return result
 
 

@@ -41,7 +41,6 @@ export const CAPITAL_MENU: MenuItem[] = [
     ],
   },
   { label: "Esportes", href: "/categoria/sports" },
-  { label: "Internacional", href: "/categoria/world", highlight: true },
 ];
 
 const linkCls = (on: boolean, highlight: boolean = false) =>

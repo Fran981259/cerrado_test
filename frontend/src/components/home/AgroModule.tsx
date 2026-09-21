@@ -42,16 +42,15 @@ export function AgroModule({ articles }: { articles: Article[] }) {
   const feature = articles[0];
   const support = articles.slice(1, 3);
 
+  // Ausência de pauta não é conteúdo editorial: não reserve um módulo vazio.
+  if (!feature) return null;
+
   return (
     <section aria-labelledby="agro-heading" className="container-editorial py-8">
       <SectionHeading eyebrow="Cerrado Agro" title="Agro, campo e negócios rurais" id="agro-heading" href="/categoria/agriculture" linkLabel="ver agronegócio" />
       <div className="mt-6 grid gap-10 lg:grid-cols-12">
         <div className="lg:col-span-8">
-          {feature ? (
-            <AgroFeature article={feature} />
-          ) : (
-            <p className="rounded border border-dashed border-black/15 bg-black/[0.02] p-6 text-sm text-text-muted">Sem cobertura de agronegócio no momento.</p>
-          )}
+          <AgroFeature article={feature} />
           {support.length > 0 && (
             <div className="mt-8 grid gap-x-8 gap-y-6 sm:grid-cols-2">
               {support.map((article) => (

@@ -5,24 +5,24 @@ import re
 from datetime import datetime, timezone
 
 from app.celery_app import celery_app
+from app.contracts import category_name, sources_list
+from app.editorial import review_natural_writing
 from app.llm_client import LLMClient
 from app.rewriter import load_reporters_config
-from app.scanner import RealPortalScanner
-from app.contracts import category_name, sources_list
 
 logger = logging.getLogger(__name__)
 
 
 def source_name_from_url(url: str) -> str:
-    if 'msnews.com.br' in url:
-        return 'MS News'
-    if 'mstododia.com.br' in url:
-        return 'MS Todo Dia'
-    if 'agenciadenoticias.ms.gov.br' in url:
-        return 'Agência de Notícias MS'
-    if 'oestadoonline.com.br' in url:
-        return 'O Estado Online'
-    return 'Portal de Notícias'
+    if "msnews.com.br" in url:
+        return "MS News"
+    if "mstododia.com.br" in url:
+        return "MS Todo Dia"
+    if "agenciadenoticias.ms.gov.br" in url:
+        return "Agência de Notícias MS"
+    if "oestadoonline.com.br" in url:
+        return "O Estado Online"
+    return "Portal de Notícias"
 
 
 def _find_related_sources(article: dict, max_related: int = 3) -> list:
@@ -30,15 +30,19 @@ def _find_related_sources(article: dict, max_related: int = 3) -> list:
     try:
         from app.database import get_session
         from app.schema import NewsArticle
+
         db = get_session()
         try:
             title = article.get("title", "").lower()
             keywords = [w for w in re.findall(r"\w+", title) if len(w) >= 4][:6]
             if not keywords:
                 return []
-            candidates = db.query(NewsArticle).filter(
-                NewsArticle.status.in_(["classified", "rewritten", "published"])
-            ).limit(300).all()
+            candidates = (
+                db.query(NewsArticle)
+                .filter(NewsArticle.status.in_(["classified", "rewritten", "published"]))
+                .limit(300)
+                .all()
+            )
             scored = []
             for a in candidates:
                 urls = [s["url"] for s in sources_list(a.sources)]
@@ -47,12 +51,17 @@ def _find_related_sources(article: dict, max_related: int = 3) -> list:
                 t = (a.title or "").lower()
                 score = sum(1 for kw in keywords if kw in t)
                 if score >= 2:
-                    scored.append((score, {
-                        "title": a.title,
-                        "summary": a.summary or "",
-                        "url": urls[0] if urls else "",
-                        "source": source_name_from_url(urls[0] if urls else ""),
-                    }))
+                    scored.append(
+                        (
+                            score,
+                            {
+                                "title": a.title,
+                                "summary": a.summary or "",
+                                "url": urls[0] if urls else "",
+                                "source": source_name_from_url(urls[0] if urls else ""),
+                            },
+                        )
+                    )
             scored.sort(key=lambda x: x[0], reverse=True)
             return [a for _, a in scored[:max_related]]
         finally:
@@ -68,7 +77,7 @@ def _find_related_sources(article: dict, max_related: int = 3) -> list:
     max_retries=3,
     time_limit=600,
     soft_time_limit=540,
-    rate_limit="15/m"
+    rate_limit="15/m",
 )
 def rewrite_pending_articles(self):
     """
@@ -90,7 +99,7 @@ def rewrite_pending_articles(self):
             .filter(NewsArticle.status == "classified")
             .order_by(NewsArticle.final_score.desc())
             .with_for_update(skip_locked=True)
-            .limit(5)
+            .limit(15)
             .all()
         )
 
@@ -148,7 +157,7 @@ def rewrite_pending_articles(self):
                     import time as _time
 
                     # Espaçamento p/ respeitar RPM do tier gratuito do Gemini (flash-lite: ~10 RPM)
-                    _time.sleep(12)
+                    _time.sleep(20)
                     result_llm = llm.rewrite_article(
                         article_data,
                         reporter.get_system_prompt(),
@@ -168,6 +177,21 @@ def rewrite_pending_articles(self):
                     failed += 1
                     continue
 
+                writing_findings = review_natural_writing(content)
+
+                # Atualiza o repórter no banco de dados
+                db_reporter = db.query(Reporter).filter(Reporter.slug == reporter.slug).first()
+                if not db_reporter:
+                    db_reporter = Reporter(
+                        slug=reporter.slug,
+                        display_name=reporter.display_name,
+                        role=reporter.role,
+                        email=f"{reporter.slug}@portalcerrado.com.br",
+                    )
+                    db.add(db_reporter)
+                    db.flush()
+                art.reporter_id = db_reporter.id
+
                 if new_title and len(new_title) > 5:
                     art.title = new_title[:500]
                 if new_summary and len(new_summary) > 5:
@@ -176,7 +200,16 @@ def rewrite_pending_articles(self):
                     art.summary = (art.summary or "")[:2000]
 
                 art.content = content
-                art.status = "rewritten"
+                # A finding never grants automatic publication. The draft stays
+                # available to a human editor, who can compare it with sources.
+                # The publication gate repeats hard checks as a failsafe.
+                art.status = "review" if writing_findings else "rewritten"
+                if writing_findings:
+                    logger.info(
+                        "[REWRITE] artigo %s encaminhado para revisão: %s",
+                        art.id,
+                        ", ".join(finding.code for finding in writing_findings),
+                    )
                 art.updated_at = datetime.now(timezone.utc)
                 rewritten += 1
             except Exception as e:

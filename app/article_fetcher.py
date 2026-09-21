@@ -9,11 +9,10 @@ Extrai a PÁGINA REAL de cada matéria (não apenas o card da listagem):
 """
 
 import json
-import re
 import logging
-from datetime import datetime
+import re
 from typing import Dict, List, Optional
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup
@@ -26,8 +25,7 @@ class ArticleFetcher:
     """Baixa e extrai conteúdo completo de uma página de notícia."""
 
     USER_AGENT = (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/125.0 Safari/537.36"
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36"
     )
     TIMEOUT = 20
     # Parágrafos com estas situações são ruído/boilerplate
@@ -55,6 +53,7 @@ class ArticleFetcher:
         # Enforce robots.txt for article URL
         try:
             from app.robots import is_allowed
+
             if not is_allowed(url):
                 logger.warning(f"[ROBOTS] Artigo bloqueado por robots.txt: {url}")
                 return {"status": "blocked", "url": url, "reason": "robots.txt disallow"}
@@ -149,13 +148,40 @@ class ArticleFetcher:
     # ----------------------------------------------------------
     def _strip_noise(self, soup: BeautifulSoup) -> None:
         for tag in soup.find_all(
-            ["script", "style", "noscript", "nav", "header", "footer", "aside",
-             "form", "iframe", "svg", "button", "ad", "ins"]
+            [
+                "script",
+                "style",
+                "noscript",
+                "nav",
+                "header",
+                "footer",
+                "aside",
+                "form",
+                "iframe",
+                "svg",
+                "button",
+                "ad",
+                "ins",
+            ]
         ):
             tag.decompose()
-        for sel in [".advertisement", ".ads", ".ad", ".banner", ".menu",
-                    ".footer", ".header", ".sidebar", ".related", ".comments",
-                    ".share", ".social", ".newsletter", ".tags", "figcaption"]:
+        for sel in [
+            ".advertisement",
+            ".ads",
+            ".ad",
+            ".banner",
+            ".menu",
+            ".footer",
+            ".header",
+            ".sidebar",
+            ".related",
+            ".comments",
+            ".share",
+            ".social",
+            ".newsletter",
+            ".tags",
+            "figcaption",
+        ]:
             for el in soup.select(sel):
                 el.decompose()
 
@@ -164,11 +190,9 @@ class ArticleFetcher:
     # ----------------------------------------------------------
     def _meta(self, soup: BeautifulSoup, names: List[str]) -> Optional[str]:
         for name in names:
-            el = soup.find("meta", attrs={"property": name}) or soup.find(
-                "meta", attrs={"name": name}
-            )
+            el = soup.find("meta", attrs={"property": name}) or soup.find("meta", attrs={"name": name})
             if el and el.get("content"):
-                return el["content"]
+                return str(el["content"])
         return None
 
     def _text(self, soup: BeautifulSoup, selector: str) -> str:
@@ -203,7 +227,7 @@ class ArticleFetcher:
             return jsonld["dateModified"]
         time_el = soup.find("time")
         if time_el and time_el.get("datetime"):
-            return time_el["datetime"]
+            return str(time_el["datetime"])
         return None
 
     def _extract_author(self, soup: BeautifulSoup, jsonld: Optional[Dict]) -> Optional[str]:
@@ -214,18 +238,27 @@ class ArticleFetcher:
             if isinstance(a, list):
                 return ", ".join(x.get("name", "") for x in a if isinstance(x, dict))
             return str(a)
-        for sel in ['meta[name="author"]', 'meta[property="article:author"]',
-                    'a[rel="author"]', ".author a", ".byline", ".autor"]:
+        for sel in [
+            'meta[name="author"]',
+            'meta[property="article:author"]',
+            'a[rel="author"]',
+            ".author a",
+            ".byline",
+            ".autor",
+        ]:
             try:
                 el = soup.select_one(sel)
             except Exception:
                 el = None
             if el and (el.get("content") or el.get_text(strip=True)):
-                return el.get("content") or el.get_text(strip=True)
+                content = el.get("content")
+                return str(content) if content else el.get_text(strip=True)
         # fallback via find
-        meta_author = soup.find("meta", attrs={"name": "author"}) or soup.find("meta", attrs={"property": "article:author"})
+        meta_author = soup.find("meta", attrs={"name": "author"}) or soup.find(
+            "meta", attrs={"property": "article:author"}
+        )
         if meta_author and meta_author.get("content"):
-            return meta_author["content"]
+            return str(meta_author["content"])
         return None
 
     def _extract_image(self, soup: BeautifulSoup, jsonld: Optional[Dict], page_url: str = "") -> Optional[str]:
@@ -236,8 +269,9 @@ class ArticleFetcher:
                 return self._abs_url(val, page_url)
         # 1b) link rel="image_src"
         link = soup.find("link", rel="image_src")
-        if link and link.get("href") and self._is_valid_image_url(link["href"]):
-            return self._abs_url(link["href"], page_url)
+        href = link.get("href") if link else None
+        if href and self._is_valid_image_url(str(href)):
+            return self._abs_url(str(href), page_url)
         # 2) JSON-LD
         if jsonld and jsonld.get("image"):
             img = jsonld["image"]
@@ -274,7 +308,7 @@ class ArticleFetcher:
                     return self._abs_url(src, page_url)
             # background-image em divs dentro do container
             for el in container.find_all(style=re.compile(r"background-image", re.I)):
-                m = re.search(r"url\(['\"]?([^'\")]+)['\"]?\)", el.get("style", ""))
+                m = re.search(r"url\(['\"]?([^'\")]+)['\"]?\)", str(el.get("style", "")))
                 if m and self._is_valid_image_url(m.group(1)):
                     return self._abs_url(m.group(1), page_url)
         # 4) fallback global: primeira imagem válida na página que não seja ícone
@@ -302,13 +336,35 @@ class ArticleFetcher:
             return False
         low = url.lower()
         # descarta ícones, logos, placeholders, tracking pixels e genéricos repetidos
-        bad = ["icone", "icon", "logo", "placeholder", "avatar", "sprite", "pixel", "blank",
-               "facebook.png", "instagram.png", "twitter.png", "youtube.png", "tiktok", "brasao",
-               "fb_marca", "fb_", "default", "no-image", "sem-imagem"]
+        bad = [
+            "icone",
+            "icon",
+            "logo",
+            "placeholder",
+            "avatar",
+            "sprite",
+            "pixel",
+            "blank",
+            "facebook.png",
+            "instagram.png",
+            "twitter.png",
+            "youtube.png",
+            "tiktok",
+            "brasao",
+            "fb_marca",
+            "fb_",
+            "default",
+            "no-image",
+            "sem-imagem",
+        ]
         if any(b in low for b in bad):
             return False
         # deve parecer imagem
-        if not re.search(r"\.(jpg|jpeg|png|webp|avif)(\?|$|#)", low) and "wp-content/uploads" not in low and "image" not in low:
+        if (
+            not re.search(r"\.(jpg|jpeg|png|webp|avif)(\?|$|#)", low)
+            and "wp-content/uploads" not in low
+            and "image" not in low
+        ):
             # permite urls sem extensão mas com padrão de CDN de imagem
             if not re.search(r"/(img|image|foto|thumb|media)/", low):
                 return False
@@ -337,9 +393,21 @@ class ArticleFetcher:
         # Avalia candidatos específicos primeiro
         scored = []
         # id="single" é o container principal da Agência MS
-        for sel in ["#single", "#content", "#post", ".post", ".entry-content", ".post-content",
-                    ".article-content", ".single-content", ".noticia-conteudo", ".conteudo", ".texto",
-                    "main", "[role=main]"]:
+        for sel in [
+            "#single",
+            "#content",
+            "#post",
+            ".post",
+            ".entry-content",
+            ".post-content",
+            ".article-content",
+            ".single-content",
+            ".noticia-conteudo",
+            ".conteudo",
+            ".texto",
+            "main",
+            "[role=main]",
+        ]:
             el = soup.select_one(sel)
             if el:
                 txt = self._paragraphs_to_text(el)
@@ -390,7 +458,7 @@ class ArticleFetcher:
                 continue
             parts.append(text)
         # limita a não' duplicar parágrafos idênticos consecutivos
-        deduped = []
+        deduped: List[str] = []
         for p in parts:
             if not deduped or p != deduped[-1]:
                 deduped.append(p)
@@ -419,13 +487,19 @@ class ArticleFetcher:
         text = re.sub(
             r"^(Utilidade Pública|Notícias|Geral|Política|Economia|Saúde|"
             r"Esporte|Cultura|Educação|Agronegócio|Segurança)("
-            r"(?=[A-ZÁÉÍÓÚÂÊÔÀ]))", "", text, flags=re.IGNORECASE
+            r"(?=[A-ZÁÉÍÓÚÂÊÔÀ]))",
+            "",
+            text,
+            flags=re.IGNORECASE,
         )
         # remove sufixo de veículo grudado no título ("Notícia - O Estado Online")
         text = re.sub(
             r"\s*[-–—|/]\s*(O Estado Online|G1( MS)?|MS News|MS Todo Dia|"
             r"Agência( de Notícias)? MS|MS Notícias|Correio do Estado|"
-            r"Campo Grande News|UOL)\s*$", "", text, flags=re.IGNORECASE
+            r"Campo Grande News|UOL)\s*$",
+            "",
+            text,
+            flags=re.IGNORECASE,
         )
         text = re.sub(r"\b(\w{4,})\s+\1\b", r"\1", text, flags=re.IGNORECASE)
         return text.strip()

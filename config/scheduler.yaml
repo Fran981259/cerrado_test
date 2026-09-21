@@ -1,50 +1,47 @@
 # ============================================================
 # CONFIGURAÇÃO: Volume e Scheduler — Portal Cerrado
 # ============================================================
-# Mínimo: 50 matérias/dia
+# Meta: cobertura local com qualidade, não volume artificial.
 # Atualização: a cada 30 minutos
 # ============================================================
 
 volume:
   # Meta diária
-  min_articles_per_day: 50
-  ideal_articles_per_day: 70
-  max_articles_per_day: 100
+  min_articles_per_day: 12
+  ideal_articles_per_day: 20
+  max_articles_per_day: 30
   
   # Atualização
   update_interval_minutes: 30
   runs_per_day: 48  # 24h * 2 (a cada 30 min)
   
   # Distribuição por ciclo (a cada 30 min)
-  articles_per_cycle: 3
-  # 3 artigos * 48 runs = 144/dia (suficiente para garantir 50+)
-  # Filtros de qualidade rejeitam ~60% mantendo só os melhores
+  articles_per_cycle: 2
+  # O limite é um teto de seleção; não preencha a home para cumprir volume.
 
   # Distribuição por categoria (% do total diário)
   distribution:
-    technology: 0.16      # 8/dia
-    economy: 0.14         # 7/dia
-    geopolitics: 0.14     # 7/dia
-    sports: 0.12          # 6/dia
-    security: 0.10        # 5/dia
-    politics: 0.10        # 5/dia
-    health: 0.08          # 4/dia
-    culture: 0.06         # 3/dia
-    education: 0.05       # 2-3/dia
-    agriculture: 0.05     # 2-3/dia
+    agriculture: 0.22
+    politics: 0.16
+    economy: 0.14
+    security: 0.13
+    clima: 0.10
+    education: 0.08
+    health: 0.06
+    sports: 0.05
+    culture: 0.03
+    science: 0.02
+    tech: 0.01
     
-  # Curiosidades (15% do volume diário = ~7-8/dia)
+  # Curiosidades não entram na operação automática de jornalismo local.
   curiosities:
-    enabled: true
-    daily_target: 8
-    ratio: 0.15  # 15% do total
+    enabled: false
+    daily_target: 0
+    ratio: 0
     boost_engagement: 1.3  # +30%
     distribution:
-      - "1 por categoria (9 categorias)"
-      - "Intercaladas a cada 7 artigos"
-    sources:
-      - "templates próprios (gerados)"
-      - "detecção de artigos externos com padrões de curiosidade"
+      - "desativadas"
+    sources: []
 
 # ============================================================
 # CLASSIFICAÇÃO DE PRIORIDADE
@@ -84,30 +81,30 @@ randomization:
     max: 20
 
 # ============================================================
-# HORÁRIOS DE PICO (volume maior)
+# HORÁRIOS DE PICO
 # ============================================================
 peak_hours:
   # Manhã — pico de leitura
   morning:
     start: "06:00"
     end: "10:00"
-    articles_per_cycle: 4  # Maior volume
+    articles_per_cycle: 2
     
   # Almoço — segundo pico
   lunch:
     start: "11:30"
     end: "14:00"
-    articles_per_cycle: 4
+    articles_per_cycle: 2
     
   # Noite — pico noturno
   evening:
     start: "18:00"
     end: "22:00"
-    articles_per_cycle: 4
+    articles_per_cycle: 2
     
   # Demais horários — volume normal
   normal:
-    articles_per_cycle: 3
+    articles_per_cycle: 2
 
 # ============================================================
 # ANTI-SPAM / ANTI-REPETIÇÃO

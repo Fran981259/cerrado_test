@@ -4,80 +4,76 @@ import os
 import sys
 
 # Carrega .env manualmente
-env_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
+env_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
 if os.path.exists(env_file):
     with open(env_file) as f:
         for line in f:
             line = line.strip()
-            if line and not line.startswith('#') and '=' in line:
-                key, value = line.split('=', 1)
+            if line and not line.startswith("#") and "=" in line:
+                key, value = line.split("=", 1)
                 os.environ[key] = value
+
 
 def test_llm():
     """Testa Gemini/OpenAI."""
-    from app.llm_client import LLMClient, SUPPORTED_PROVIDERS, test_llm_connection
-    
+    from app.llm_client import SUPPORTED_PROVIDERS, LLMClient, test_llm_connection
+
     provider = os.getenv("LLM_PROVIDER", "gemini").lower()
     if provider not in SUPPORTED_PROVIDERS:
         provider = "gemini"
-    
-    print("="*60)
-    print(f"TESTE: {provider.upper()}")
-    print("="*60)
 
-    print("\n" + "="*60)
+    print("=" * 60)
+    print(f"TESTE: {provider.upper()}")
+    print("=" * 60)
+
+    print("\n" + "=" * 60)
     print("TESTE: Conexão básica")
-    print("="*60)
-    
+    print("=" * 60)
+
     if test_llm_connection(provider=provider):
         print("\n✅ Conexão OK!")
     else:
         print("\n❌ Falha na conexão")
         return False
-    
-    print("\n" + "="*60)
+
+    print("\n" + "=" * 60)
     print("TESTE: Tradução EN→PT")
-    print("="*60)
-    
+    print("=" * 60)
+
     client = LLMClient(provider=provider)
-    
+
     text_en = """OpenAI has announced GPT-5, its most advanced AI model yet.
-The new system shows unprecedented reasoning capabilities and is 
+The new system shows unprecedented reasoning capabilities and is
 expected to revolutionize the technology industry."""
-    
+
     print(f"\nOriginal: {text_en[:80]}...")
     translated = client.translate_to_pt_br(text_en)
     print(f"Traduzido: {translated[:80]}..." if translated else "❌ Sem tradução")
-    
-    print("\n" + "="*60)
+
+    print("\n" + "=" * 60)
     print("TESTE: Reescrita como repórter")
-    print("="*60)
-    
+    print("=" * 60)
+
     article = {
-        'title': 'AI Breakthrough Announced',
-        'summary': 'OpenAI launches new AI model with unprecedented capabilities.',
-        'source': 'TechCrunch',
-        'url': 'https://techcrunch.com/news/ai',
-        'category': 'tech',
+        "title": "AI Breakthrough Announced",
+        "summary": "OpenAI launches new AI model with unprecedented capabilities.",
+        "source": "TechCrunch",
+        "url": "https://techcrunch.com/news/ai",
+        "category": "tech",
     }
-    
+
     reporter_prompt = """Você é Enzo Bianchi, repórter de tecnologia do Portal Cerrado.
 Escreva de forma clara, técnica e acessível. Use dados quando disponíveis."""
-    
-    result = client.rewrite_article(
-        article,
-        reporter_prompt,
-        "Por Enzo Bianchi, do Portal Cerrado",
-        category="tech"
-    )
-    
-    if result.get('rewritten_content'):
-        print(f"\n✅ Reescrito com sucesso!")
-        print(f"\nConteúdo (primeiras 200 chars):")
-        print(result['rewritten_content'][:200] + "...")
+
+    result = client.rewrite_article(article, reporter_prompt, "Por Enzo Bianchi, do Portal Cerrado", category="tech")
+
+    if result.get("rewritten_content"):
+        print("\n✅ Reescrito com sucesso!")
+        print("\nConteúdo (primeiras 200 chars):")
+        print(result["rewritten_content"][:200] + "...")
     else:
         print("\n❌ Falha na reescrita")
-    
+
     return True
 
 

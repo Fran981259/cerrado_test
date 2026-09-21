@@ -1,18 +1,16 @@
 """
 Tarefas de Curiosidades
 """
+
+import logging
+
 from app.celery_app import celery_app
 from app.curiosities import generate_all_daily_curiosities
-import logging
 
 logger = logging.getLogger(__name__)
 
 
-@celery_app.task(
-    name="app.tasks.curiosity_tasks.generate_daily_curiosities",
-    bind=True,
-    max_retries=3
-)
+@celery_app.task(name="app.tasks.curiosity_tasks.generate_daily_curiosities", bind=True, max_retries=3)
 def generate_daily_curiosities(self):
     """
     Gera curiosidades para todas as categorias.
@@ -21,8 +19,10 @@ def generate_daily_curiosities(self):
     try:
         logger.info("[CELERY] Iniciando generate_daily_curiosities")
         curiosities = generate_all_daily_curiosities()
-        from app.tasks.scan_tasks import _persist_articles
         import hashlib
+
+        from app.tasks.scan_tasks import _persist_articles
+
         for article in curiosities:
             digest = hashlib.sha256(article["summary"].encode()).hexdigest()
             article["identity_key"] = "curiosity:" + digest

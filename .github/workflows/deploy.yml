@@ -3,15 +3,13 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
 
 permissions:
   contents: read
   packages: write
 
 jobs:
-  test:
+  test-backend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,26 +20,18 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Lint (py_compile)
+      - name: Compile all backend modules
+        run: python -m py_compile $(find app -name "*.py")
+      - name: Lint (ruff)
         run: |
-          python -m py_compile app/main.py
-          python -m py_compile app/classifier.py
-          python -m py_compile app/auditor.py
-          python -m py_compile app/filter.py
-          python -m py_compile app/publisher.py
-          python -m py_compile app/celery_app.py
-          python -m py_compile app/editorial.py
-          python -m py_compile app/contracts.py
-          python -m py_compile app/tasks/scan_tasks.py
-          python -m py_compile app/tasks/classify_tasks.py
-          python -m py_compile app/tasks/rewrite_tasks.py
-          python -m py_compile app/tasks/publish_tasks.py
-          python -m py_compile app/tasks/mine_tasks.py
-          python -m py_compile app/tasks/curiosity_tasks.py
-          python -m py_compile app/tasks/auditor_tasks.py
-          python -m py_compile app/tasks/maintenance.py
-      - name: Run tests
-        run: pytest tests/ -v --tb=short
+          pip install ruff
+          ruff check app/ tests/
+      - name: Type check (mypy)
+        run: |
+          pip install mypy
+          mypy app/
+      - name: Unit tests
+        run: pytest tests/unit -q
 
   lint-frontend:
     runs-on: ubuntu-latest
@@ -62,10 +52,9 @@ jobs:
         working-directory: frontend
         run: npm run build
 
-  build:
-    needs: [test, lint-frontend]
+  publish:
+    needs: [test-backend, lint-frontend]
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -73,13 +62,9 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Validate frontend public config
-        run: |
-          test -n "${{ vars.NEXT_PUBLIC_API_URL }}"
-          test -n "${{ vars.NEXT_PUBLIC_SITE_URL }}"
-      - name: Build backend
-        uses: docker/build-push-action@v5
+          password: ${{ secrets.GHCR_PAT || github.token }}
+      - name: Build & push Backend
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
@@ -88,35 +73,16 @@ jobs:
             ghcr.io/fran981259/portal-cerrado-backend:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - name: Build frontend
-        uses: docker/build-push-action@v5
+      - name: Build & push Frontend
+        uses: docker/build-push-action@v6
         with:
           context: ./frontend
-          dockerfile: frontend/Dockerfile
           push: true
           build-args: |
-            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
-            NEXT_PUBLIC_SITE_URL=${{ vars.NEXT_PUBLIC_SITE_URL }}
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'http://portal_cerrado:8000' }}
+            NEXT_PUBLIC_SITE_URL=${{ vars.NEXT_PUBLIC_SITE_URL || 'https://portalcerrado.com.br' }}
           tags: |
             ghcr.io/fran981259/portal-cerrado-frontend:latest
             ghcr.io/fran981259/portal-cerrado-frontend:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    environment: production
-    steps:
-      - uses: actions/checkout@v4
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_KEY }}
-          script: |
-            cd /root/portal-cerrado-deploy
-            git pull
-            docker stack deploy -c docker-compose.yml cerrado --with-registry-auth

@@ -1,0 +1,3 @@
+interface:
+  display_name: "Arquitetura Software"
+  short_description: "Decisões arquiteturais e planos seguros de evolução"

@@ -7,13 +7,14 @@ import { TrendPanel } from "@/components/TrendPanel";
 import { Pagination } from "@/components/Pagination";
 import { parsePage } from "@/lib/pagination";
 import { NewsCard } from "@/components/NewsCard";
+import { getPublicSiteUrl } from "@/lib/siteUrl";
 
 export const revalidate = 300;
 
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ page?: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const { page } = await searchParams;
-  const base = process.env.NEXT_PUBLIC_SITE_URL || "http://100.95.111.24:3000";
+  const base = getPublicSiteUrl();
   const r = Object.hasOwn(REPORTERS, slug) ? REPORTERS[slug] : undefined;
   if (!r) return { title: "Repórter não encontrado" };
   const currentPage = parsePage(page);
@@ -45,7 +46,7 @@ export default async function ReporterPage({ params, searchParams }: { params: P
   const offset = (currentPage - 1) * perPage;
 
   const [newsResult, trends] = await Promise.all([
-    fetchNewsResponse({ reporterSlug: slug, limit: perPage, offset, sortBy: "trend" }),
+    fetchNewsResponse({ reporterSlug: slug, region: "ms", limit: perPage, offset, sortBy: "trend" }),
     fetchTrends(5),
   ]);
   const mine = newsResult.news;

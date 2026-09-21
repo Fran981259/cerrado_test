@@ -25,5 +25,10 @@ Portal de noticias automatizado com backend FastAPI, fila Celery, banco PostgreS
 - `OPERACAO.md` - status operacional consolidado.
 - `SPEC.md` - especificacao tecnica resumida.
 
+## Fonte de configuração
+
+- `config/scheduler.yaml` controla a meta mínima diária e a cadência do pipeline Celery.
+- `config/orchestrator.yaml` é referência de produto; não altera o runtime.
+
 ## Regra
 - Este repositorio deve tratar os documentos em `documento/` como fonte ativa.

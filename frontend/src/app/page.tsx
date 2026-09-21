@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { fetchNewsResponse, type Article } from "@/lib/api";
+import { fetchNewsResponse, rankHomepageArticles, selectDynamicLocalNews, type Article } from "@/lib/api";
 import { HeroGrid } from "@/components/home/HeroGrid";
 import { AgroModule } from "@/components/home/AgroModule";
 import { PoderModule } from "@/components/home/PoderModule";
 import { Columnists } from "@/components/home/Columnists";
+import { getPublicSiteUrl } from "@/lib/siteUrl";
 
-const BASE = process.env.NEXT_PUBLIC_SITE_URL || "http://100.95.111.24:3000";
+const BASE = getPublicSiteUrl();
 
 export const revalidate = 60;
 
@@ -26,18 +27,17 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-function pickHero(recent: Article[]): { main?: Article; feature?: Article; rail: Article[] } {
-  const picked: string[] = [];
-  const used = (article: Article): boolean => {
+function pickHero(recent: Article[]): { main?: Article; side: Article[]; rail: Article[]; latest: Article[] } {
+  const unique = recent.filter((article, index, all) => {
     const key = article.slug || article.title;
-    if (picked.includes(key)) return true;
-    picked.push(key);
-    return false;
+    return all.findIndex((item) => (item.slug || item.title) === key) === index;
+  });
+  return {
+    main: unique[0],
+    side: unique.slice(1, 3),
+    rail: unique.slice(3, 6),
+    latest: unique.slice(6, 10),
   };
-  const main = recent.find((a) => !used(a));
-  const feature = recent.find((a) => !used(a));
-  const rail = recent.filter((a) => !used(a)).slice(0, 2);
-  return { main, feature, rail };
 }
 
 const ORGANIZATION_JSON_LD = {
@@ -69,22 +69,19 @@ const ORGANIZATION_JSON_LD = {
 
 export default async function Home() {
   const settled = await Promise.allSettled([
-    fetchNewsResponse({ limit: 40, sortBy: "recent" }),
-    fetchNewsResponse({ category: "agriculture", limit: 5, sortBy: "recent" }),
-    fetchNewsResponse({ category: "politics", limit: 3, sortBy: "recent" }),
-    fetchNewsResponse({ category: "economy", limit: 3, sortBy: "recent" }),
-    fetchNewsResponse({ category: "security", limit: 2, sortBy: "recent" }),
+    fetchNewsResponse({ region: "ms", limit: 80, sortBy: "recent" }),
+    fetchNewsResponse({ region: "ms", category: "agriculture", limit: 5, sortBy: "recent" }),
   ]);
 
-  const [recentResult, agroResult, politicsResult, economyResult, securityResult] = settled;
+  const [recentResult, agroResult] = settled;
   const recent = recentResult.status === "fulfilled" ? recentResult.value.news : [];
   const agro = agroResult.status === "fulfilled" ? agroResult.value.news : [];
-  const politics = politicsResult.status === "fulfilled" ? politicsResult.value.news : [];
-  const economy = economyResult.status === "fulfilled" ? economyResult.value.news : [];
-  const security = securityResult.status === "fulfilled" ? securityResult.value.news : [];
 
-  const { main, feature, rail } = pickHero(recent);
-  const hardError = settled.every((r) => r.status === "rejected");
+  const { main, side, rail, latest } = pickHero(rankHomepageArticles(recent));
+  const heroArticles = [main, ...side, ...rail, ...latest].filter((article): article is Article => Boolean(article));
+  const rankedAgro = rankHomepageArticles(agro);
+  const dynamicLocalNews = selectDynamicLocalNews(recent, [...heroArticles, ...rankedAgro], 6);
+  const hardError = settled.every((result) => result.status === "rejected");
 
   return (
     <div className="bg-canvas">
@@ -96,11 +93,11 @@ export default async function Home() {
         </div>
       )}
 
-      <HeroGrid main={main} feature={feature} rail={rail} />
+      <HeroGrid main={main} side={side} rail={rail} latest={latest} />
 
-      <AgroModule articles={agro} />
+      <AgroModule articles={rankedAgro} />
 
-      <PoderModule politics={politics} economy={economy} security={security} rural={agro.slice(1, 3)} />
+      <PoderModule articles={dynamicLocalNews} />
 
       <Suspense
         fallback={
@@ -109,10 +106,11 @@ export default async function Home() {
             <div className="mt-2 h-7 w-72 rounded bg-black/10" />
             <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-                <div key={i} className="h-56 rounded-md border border-black/10 bg-surface p-5">
-                  <div className="h-11 w-11 rounded-full bg-black/10" />
-                  <div className="mt-4 h-3 w-3/4 rounded bg-black/10" />
-                  <div className="mt-2 h-3 w-1/2 rounded bg-black/10" />
+                <div key={i} className="rounded-md">
+                  <div className="aspect-[16/10] rounded-md bg-black/10" />
+                  <div className="mt-4 h-3 w-1/4 rounded bg-black/10" />
+                  <div className="mt-3 h-5 w-11/12 rounded bg-black/10" />
+                  <div className="mt-2 h-5 w-3/4 rounded bg-black/10" />
                 </div>
               ))}
             </div>

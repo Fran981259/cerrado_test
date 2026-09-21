@@ -9,9 +9,9 @@
 ## Runtime Real
 - Provider LLM: Groq (configurado como LLM_PROVIDER=gemini com GROQ_API_KEY).
 - Classificador: heuristico com keywords PT-BR e EN, normalizado via contracts.category_name().
-- 11 categorias canonicas: technology, culture, health, sports, politics, economy, security, agriculture, education, clima, general.
-- 9 reporeres digitais definidos em config/reporters.yml.
-- Deploy via update.sh (docker stack deploy), nao CI/CD automatico.
+- Categorias canônicas: tech, culture, health, science, sports, politics, economy, security, agriculture, education, clima, world e general.
+- Repórteres digitais são definidos em config/reporters.yml, inclusive cobertura internacional para world.
+- O servidor ainda executa o Portal Cerrado legado por Docker Compose; a migração para Swarm é pendente.
 
 ## Regras Fixas
 - Nao misturar docs de planejamento com docs de operacao.
@@ -29,3 +29,14 @@
 
 ## Observacao
 - Esta memoria e para consistencia, nao para planejamento.
+
+## Migração Swarm Pendente
+- O destino oficial é Docker Swarm, com stack `cerrado`; nenhuma nova configuração deve introduzir o nome `botgram`.
+- O runtime legado confirmado em 2026-09-18 é Docker Compose, projeto `botgram`, em `/home/razuk/BotGram`, com rede bridge `botgram_portal_cerrado_net` e volumes `botgram_postgres_data` e `botgram_app_data`.
+- Esse legado não pode ser parado, removido, renomeado ou alterado até haver aprovação explícita de cutover e encerramento da janela de rollback.
+- AP2WEB ocupa a porta pública 8000 no Swarm. Portal Cerrado não deve publicar API nessa porta.
+- A porta 443 está ocupada por Tailscale no host. Antes do corte público, definir a estratégia TLS/proxy: liberar 443, usar outro IP/host, ou usar Tailscale Serve/Funnel. Não assumir que Caddy pode bindar 443.
+- Para validação em ambiente de teste, a abordagem recomendada é uma stack paralela `cerrado_test`: rede overlay isolada, PostgreSQL e Redis novos, sem reutilizar volumes `botgram_*`, Caddy exposto somente em porta temporária não conflitante (por exemplo 8081) e API/frontend internos.
+- A stack Swarm final deve usar nomes de serviço `postgres`, `redis`, `api`, `worker`, `beat`, `frontend` e `caddy`; Caddy deve resolver `api:8000` e `frontend:3000` por DNS de serviço, nunca por `container_name`.
+- Antes de qualquer rollout: concluir validações locais, gerar imagens imutáveis por SHA, validar migrations em banco novo e legado simulado, confirmar espaço em disco e documentar backup, rollback e verificação.
+- Preflight remoto de 2026-09-18: Swarm manager ativo, cerca de 6,5 GB livres no host, nenhuma stack Swarm `cerrado` ativa e nenhum Caddy do Portal em execução.

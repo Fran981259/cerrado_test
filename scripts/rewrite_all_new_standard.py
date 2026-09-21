@@ -5,15 +5,16 @@ aplica correção de categorias e normaliza assinatura para
 "Por <Nome>, direto da redação".
 Uso: .venv/bin/python scripts/rewrite_all_new_standard.py
 """
+
 import logging
 import re
 import time
 from datetime import datetime, timezone
 
 from app.database import get_session
-from app.schema import NewsArticle
 from app.llm_client import LLMClient
 from app.rewriter import load_reporters_config
+from app.schema import NewsArticle
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 logger = logging.getLogger("rewrite_all")
@@ -23,12 +24,31 @@ TAIL_OLD = re.compile(r"Por ([A-ZÀ-ÚÂÊÎÔÛÃÕÇÉÍÓÚÜÑ ]+?), do Port
 
 # id -> categoria correta (tempo sai de esporte; general redistribuído)
 CATFIX = {
-    1: "culture", 2: "economy", 3: "culture", 4: "culture", 5: "economy",
-    12: "security", 13: "security", 14: "politics", 17: "economy",
-    20: "security", 21: "security", 23: "culture", 24: "security",
-    28: "politics", 30: "clima", 32: "security", 33: "security",
-    34: "security", 37: "clima", 39: "clima", 40: "security",
-    41: "economy", 43: "security", 44: "politics", 45: "security",
+    1: "culture",
+    2: "economy",
+    3: "culture",
+    4: "culture",
+    5: "economy",
+    12: "security",
+    13: "security",
+    14: "politics",
+    17: "economy",
+    20: "security",
+    21: "security",
+    23: "culture",
+    24: "security",
+    28: "politics",
+    30: "clima",
+    32: "security",
+    33: "security",
+    34: "security",
+    37: "clima",
+    39: "clima",
+    40: "security",
+    41: "economy",
+    43: "security",
+    44: "politics",
+    45: "security",
     46: "security",
 }
 
@@ -65,10 +85,10 @@ def main():
 
     # 2) reescrita
     arts = db.query(NewsArticle).filter(NewsArticle.status == "published").order_by(NewsArticle.id).all()
-    by_slug = {}
     for r in db.query(NewsArticle.reporter_id).distinct():
         pass
     from app.schema import Reporter
+
     rep_by_id = {r.id: r for r in db.query(Reporter).all()}
 
     ok, kept, failed = 0, 0, []
@@ -89,9 +109,16 @@ def main():
         try:
             body_in = (art.content or "")[:3000]
             res = llm.rewrite_article(
-                {"title": art.title, "summary": (art.summary or "")[:600], "source": name or "Portal de Notícias",
-                 "url": url, "body": body_in},
-                profile.get_system_prompt(), attribution, related_sources=None,
+                {
+                    "title": art.title,
+                    "summary": (art.summary or "")[:600],
+                    "source": name or "Portal de Notícias",
+                    "url": url,
+                    "body": body_in,
+                },
+                profile.get_system_prompt(),
+                attribution,
+                related_sources=None,
             )
             text = (res.get("rewritten_content") or "").strip()
             # garante assinatura exata no fecho (modelo às vezes varia ou omite)
@@ -107,7 +134,11 @@ def main():
             else:
                 art.content = text
                 paras = [p.strip() for p in text.split("\n\n") if p.strip()]
-                art.summary = (paras[0][:300].rsplit(" ", 1)[0] + "...") if paras and len(paras[0]) > 300 else (paras[0] if paras else art.summary)
+                art.summary = (
+                    (paras[0][:300].rsplit(" ", 1)[0] + "...")
+                    if paras and len(paras[0]) > 300
+                    else (paras[0] if paras else art.summary)
+                )
                 art.updated_at = datetime.now(timezone.utc)
                 ok += 1
                 logger.info(f"[{art.id}] reescrita ({why}): {art.title[:50]}")
@@ -123,7 +154,7 @@ def main():
     norm = 0
     for art in db.query(NewsArticle).filter(NewsArticle.status == "published").all():
         rep = rep_by_id.get(art.reporter_id)
-        disp = (rep.display_name.title() if rep else "")
+        disp = rep.display_name.title() if rep else ""
         new_tail = f"Por {disp}, direto da redação" if disp else ""
         if art.content and TAIL_OLD.search(art.content) and new_tail:
             art.content = TAIL_OLD.sub(new_tail, art.content)

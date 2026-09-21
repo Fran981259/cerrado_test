@@ -41,11 +41,13 @@ def test_guess_topic_uses_keywords_when_category_is_generic():
     from app.ml_editorial import EditorialTrendAnalyzer
 
     analyzer = EditorialTrendAnalyzer()
-    topic = analyzer.guess_topic({
-        "title": "Polícia investiga roubo em Campo Grande",
-        "summary": "A ocorrência mobilizou a polícia e a investigação.",
-        "category": "general",
-    })
+    topic = analyzer.guess_topic(
+        {
+            "title": "Polícia investiga roubo em Campo Grande",
+            "summary": "A ocorrência mobilizou a polícia e a investigação.",
+            "category": "general",
+        }
+    )
 
     assert topic == "security"
 
@@ -54,19 +56,37 @@ def test_guess_topic_handles_multiword_phrase():
     from app.ml_editorial import EditorialTrendAnalyzer
 
     analyzer = EditorialTrendAnalyzer()
-    topic = analyzer.guess_topic({
-        "title": "Inteligência artificial avança nas redações",
-        "summary": "",
-        "category": "general",
-    })
+    topic = analyzer.guess_topic(
+        {
+            "title": "Inteligência artificial avança nas redações",
+            "summary": "",
+            "category": "general",
+        }
+    )
 
     assert topic == "tech"
 
 
+def test_trend_analyzer_does_not_publish_generic_as_a_trend():
+    from app.ml_editorial import EditorialTrendAnalyzer
+
+    trends = EditorialTrendAnalyzer().build_trends(
+        [
+            {
+                "title": "Um texto sem assunto editorial identificável",
+                "summary": "Sem palavras-chave de editoria.",
+                "category": "general",
+            }
+        ]
+    )
+
+    assert trends == []
+
+
 def test_refresh_trend_signals_uses_real_db_rows():
     from app.database import get_session
-    from app.schema import NewsArticle, Reporter, EditorialTrendSignal
     from app.ml_editorial import EditorialTrendAnalyzer
+    from app.schema import EditorialTrendSignal, NewsArticle, Reporter
 
     db = get_session()
     reporter = db.query(Reporter).first()
@@ -100,7 +120,9 @@ def test_refresh_trend_signals_uses_real_db_rows():
         assert after >= before
         assert any(t["topic"] == "politics" for t in trends)
     finally:
-        db.query(EditorialTrendSignal).filter(EditorialTrendSignal.evidence.like(f'%{slug}%')).delete(synchronize_session=False)
+        db.query(EditorialTrendSignal).filter(EditorialTrendSignal.evidence.like(f"%{slug}%")).delete(
+            synchronize_session=False
+        )
         db.query(NewsArticle).filter(NewsArticle.slug == slug).delete(synchronize_session=False)
         db.commit()
         db.close()

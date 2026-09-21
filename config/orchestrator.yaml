@@ -1,5 +1,6 @@
-# Configuração do Orquestrador — Portal Cerrado
-# Responsável por gerenciar o workflow diário e as regras de publicação
+# Referência de produto — Portal Cerrado
+# Não é carregado pelo runtime. A política operacional de cadência e volume
+# está em config/scheduler.yaml; contratos de deploy estão em docker-compose.yml.
 
 orchestrator:
   name: "Portal Cerrado"

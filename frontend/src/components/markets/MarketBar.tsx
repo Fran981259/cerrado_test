@@ -20,6 +20,11 @@ function DirectionArrow({ direction, pct, label }: { direction: string; pct: num
 
 export async function MarketBar() {
   const feed = await getMarketFeed();
+  const availableItems = feed.items.filter((item) => item.status === "ok");
+
+  // A permanent strip of failures harms the masthead more than it informs.
+  // The market module returns only when there is at least one verified quote.
+  if (!availableItems.length) return null;
 
   return (
     <div className="sticky top-0 z-40 bg-accent-soil text-white shadow-[0_2px_12px_rgba(22,26,22,0.25)]" role="region" aria-label="Commodities e cotações agro">
@@ -29,7 +34,7 @@ export async function MarketBar() {
           <span className="text-[10px] font-black uppercase tracking-[0.2em]">Commodities &amp; Cotações Agro</span>
         </div>
         <div className="no-scrollbar flex flex-1 items-stretch overflow-x-auto snap-x">
-          {feed.items.map((item) => (
+          {availableItems.map((item) => (
             <Link
               key={item.id}
               href={item.sourceHref}
@@ -58,7 +63,7 @@ export async function MarketBar() {
         </div>
         <div className="hidden shrink-0 items-center pl-4 lg:flex" aria-hidden="true">
           <span className="text-[10px] leading-tight text-white/55">
-            Fonte: {Array.from(new Set(feed.items.map((item) => item.source))).join(" · ")}
+            Fonte: {Array.from(new Set(availableItems.map((item) => item.source))).join(" · ")}
             {feed.degraded ? <span className="block text-amber-200">· parcialmente indisponível</span> : null}
           </span>
         </div>

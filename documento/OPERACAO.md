@@ -1,11 +1,9 @@
 # OPERACAO - Portal Cerrado
 
 ## Status Consolidado
-- Backend funcional e operando em Docker Swarm via Tailscale.
-- Frontend funcional consumindo API real.
-- Pipeline de conteudo ativo: scan, classify, rewrite, publish.
-- 125 artigos publicados, 0 categorias invalidas, 0 artigos em geral.
-- 77 testes passando, lint e py_compile validados.
+- Validação local em 20/09/2026: 84 testes backend, Ruff e mypy aprovados; ESLint e build Next aprovados.
+- A validação acima não confirma o estado do Docker Swarm, serviços externos, banco de produção ou provedor LLM.
+- O pipeline mede e retorna a duração de scan, classificação, reescrita, publicação e total por execução.
 
 ## Stack em Produção
 - Backend: FastAPI + Celery + Redis + PostgreSQL
@@ -57,7 +55,7 @@
 | 3 - Frontend | done | API/URL/metadata errados | frontend usa API real |
 | 4 - Build e Registry | done | imagem nao publicada | build local funcional |
 | 5 - Portainer/Swarm | done | stack fora do contrato | services 1/1 |
-| 6 - Validacao Final | done | teste/lint/health falhando | 77 testes, 0 categorias invalidas |
+| 6 - Validacao Final | local done | divergência entre ambiente local e produção | 84 testes; Ruff, mypy, ESLint e build Next aprovados em 20/09/2026 |
 
 ## Guia Operacional
 1. Validar banco, API e frontend.

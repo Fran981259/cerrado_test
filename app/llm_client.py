@@ -68,7 +68,9 @@ class LLMClient:
     RETRYABLE_STATUS = {429, 500, 502, 503}
     MAX_ATTEMPTS = 6
 
-    def _post_with_backoff(self, url: str, payload: Dict, headers: Optional[Dict] = None, params: Optional[Dict] = None) -> requests.Response:
+    def _post_with_backoff(
+        self, url: str, payload: Dict, headers: Optional[Dict] = None, params: Optional[Dict] = None
+    ) -> requests.Response:
         """POST com retry e backoff exponencial rigoroso para erros transientes (429/5xx)."""
         import random
         import time
@@ -79,7 +81,13 @@ class LLMClient:
                 response = requests.post(url, json=payload, headers=headers, params=params, timeout=self.timeout)
                 if response.status_code in self.RETRYABLE_STATUS and attempt < self.MAX_ATTEMPTS:
                     wait = 10 * (2 ** (attempt - 1)) + random.uniform(0, 3)
-                    logger.warning("LLM HTTP %s (tentativa %d/%d). Aguardando %.1fs...", response.status_code, attempt, self.MAX_ATTEMPTS, wait)
+                    logger.warning(
+                        "LLM HTTP %s (tentativa %d/%d). Aguardando %.1fs...",
+                        response.status_code,
+                        attempt,
+                        self.MAX_ATTEMPTS,
+                        wait,
+                    )
                     time.sleep(wait)
                     continue
                 return response
@@ -87,7 +95,13 @@ class LLMClient:
                 last_exc = e
                 if attempt < self.MAX_ATTEMPTS:
                     wait = 10 * (2 ** (attempt - 1)) + random.uniform(0, 3)
-                    logger.warning("LLM erro de rede %s (tentativa %d/%d). Aguardando %.1fs...", type(e).__name__, attempt, self.MAX_ATTEMPTS, wait)
+                    logger.warning(
+                        "LLM erro de rede %s (tentativa %d/%d). Aguardando %.1fs...",
+                        type(e).__name__,
+                        attempt,
+                        self.MAX_ATTEMPTS,
+                        wait,
+                    )
                     time.sleep(wait)
                     continue
                 raise
@@ -108,7 +122,11 @@ class LLMClient:
         headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
 
         try:
-            url = "https://api.groq.com/openai/v1/chat/completions" if self.provider == "groq" else "https://api.openai.com/v1/chat/completions"
+            url = (
+                "https://api.groq.com/openai/v1/chat/completions"
+                if self.provider == "groq"
+                else "https://api.openai.com/v1/chat/completions"
+            )
             response = self._post_with_backoff(url, payload, headers=headers)
             response.raise_for_status()
             data = response.json()
@@ -149,7 +167,9 @@ class LLMClient:
             logger.error("Erro ao chamar Gemini (%s)", type(e).__name__)
             return ""
 
-    def rewrite_article(self, article: Dict, reporter_prompt: str, attribution: str, related_sources: list = None, **_: object) -> Dict:
+    def rewrite_article(
+        self, article: Dict, reporter_prompt: str, attribution: str, related_sources: Optional[list] = None, **_: object
+    ) -> Dict:
         title = article.get("title_pt") or article.get("title", "")
         summary = article.get("summary_pt") or article.get("summary", "")
         source = article.get("source", "Portal de Notícias")
@@ -160,7 +180,7 @@ class LLMClient:
         if related_sources:
             related_text = "\nOUTRAS FONTES SOBRE O MESMO FATO:\n"
             for i, rs in enumerate(related_sources[:3], 1):
-                related_text += f"{i}. {rs.get('title','')} — {rs.get('source','')} ({rs.get('url','')})\n   Resumo: {rs.get('summary','')[:200]}\n"
+                related_text += f"{i}. {rs.get('title', '')} — {rs.get('source', '')} ({rs.get('url', '')})\n   Resumo: {rs.get('summary', '')[:200]}\n"
 
         body_text = ""
         if body:
@@ -197,9 +217,10 @@ CORPO:
 [Escreva aqui o corpo da notícia reescrita em português]"""
 
         rewritten = self.complete(prompt=user_prompt, system_prompt=reporter_prompt, max_tokens=5000, temperature=0.65)
-        
+
         # Extrair Título, Resumo e Corpo
         import re
+
         parsed_title = title
         parsed_summary = summary
         parsed_body = rewritten
@@ -212,21 +233,25 @@ CORPO:
         else:
             # Fallback se o LLM ignorar o formato
             # Tenta limpar as tags TÍTULO:, etc se ele gerou bagunçado
-            parsed_body = re.sub(r"^(TÍTULO:|RESUMO:|CORPO:).*\n?", "", rewritten, flags=re.IGNORECASE | re.MULTILINE).strip()
+            parsed_body = re.sub(
+                r"^(TÍTULO:|RESUMO:|CORPO:).*\n?", "", rewritten, flags=re.IGNORECASE | re.MULTILINE
+            ).strip()
 
         return {
-            **article, 
+            **article,
             "rewritten_title": parsed_title,
             "rewritten_summary": parsed_summary,
-            "rewritten_content": parsed_body, 
-            "rewritten_at": datetime.now(timezone.utc).isoformat(), 
-            "llm_provider": self.provider, 
-            "llm_model": self.model
+            "rewritten_content": parsed_body,
+            "rewritten_at": datetime.now(timezone.utc).isoformat(),
+            "llm_provider": self.provider,
+            "llm_model": self.model,
         }
 
     def translate_to_pt_br(self, text: str, source_lang: str = "en") -> str:
         system_prompt = f"Você é um tradutor especializado em jornalismo. Traduza de {source_lang} para Português Brasileiro (pt-BR) com fluidez natural e tom jornalístico."
-        return self.complete(prompt=f"Traduza para pt-BR:\n\n{text}", system_prompt=system_prompt, max_tokens=2000, temperature=0.3)
+        return self.complete(
+            prompt=f"Traduza para pt-BR:\n\n{text}", system_prompt=system_prompt, max_tokens=2000, temperature=0.3
+        )
 
 
 class TranslationGlossary:

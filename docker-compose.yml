@@ -1,8 +1,15 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   postgres:
     image: postgres:15
     container_name: portal_cerrado_postgres
     restart: unless-stopped
+    logging: *default-logging
     environment:
       POSTGRES_DB: portal_cerrado
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER obrigatorio}
@@ -22,6 +29,7 @@ services:
     image: redis:7-alpine
     container_name: portal_cerrado_redis
     restart: unless-stopped
+    logging: *default-logging
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}
     networks:
       portal_cerrado_net:
@@ -39,6 +47,7 @@ services:
       dockerfile: Dockerfile
     container_name: portal_cerrado_app
     restart: unless-stopped
+    logging: *default-logging
     ports:
       - "8000:8000"
     environment:
@@ -83,6 +92,7 @@ services:
       dockerfile: Dockerfile
     container_name: portal_cerrado_worker
     restart: unless-stopped
+    logging: *default-logging
     command: celery -A app.celery_app worker -c 1 -l info
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
@@ -123,6 +133,7 @@ services:
       dockerfile: Dockerfile
     container_name: portal_cerrado_beat
     restart: unless-stopped
+    logging: *default-logging
     command: celery -A app.celery_app beat -l info
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
@@ -161,6 +172,7 @@ services:
       dockerfile: Dockerfile
     container_name: portal_cerrado_flower
     restart: unless-stopped
+    logging: *default-logging
     command: celery -A app.celery_app flower --port=5555 --basic-auth=${FLOWER_USER:?FLOWER_USER obrigatorio}:${FLOWER_PASSWORD:?FLOWER_PASSWORD obrigatorio}
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
@@ -195,6 +207,7 @@ services:
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?NEXT_PUBLIC_SITE_URL obrigatorio}
     container_name: portal_cerrado_frontend
     restart: unless-stopped
+    logging: *default-logging
     ports:
       - "3000:3000"
     environment:
@@ -217,6 +230,7 @@ services:
     image: caddy:2-alpine
     container_name: portal_cerrado_caddy
     restart: unless-stopped
+    logging: *default-logging
     ports:
       - "80:80"
       - "443:443"
@@ -238,5 +252,5 @@ volumes:
 
 networks:
   portal_cerrado_net:
-    driver: ${DOCKER_NETWORK_DRIVER:-bridge}
+    driver: ${DOCKER_NETWORK_DRIVER:-overlay}
     attachable: true

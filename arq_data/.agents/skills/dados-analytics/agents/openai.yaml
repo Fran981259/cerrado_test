@@ -1,0 +1,3 @@
+interface:
+  display_name: "Dados Analytics"
+  short_description: "Dados, métricas e pipelines com proveniência verificável"
