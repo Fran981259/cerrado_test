@@ -1,0 +1,62 @@
+# Contrato operacional de observabilidade do Portal Cerrado.
+# Não contém credenciais nem é carregado diretamente pelo runtime.
+version: 1
+timezone: America/Campo_Grande
+
+log_policy:
+  format: structured
+  required_fields: [timestamp, level, service, event]
+  forbidden_fields: [password, token, api_key, authorization, email, ip_address]
+  retention_days: 30
+
+service_metrics:
+  api:
+    - name: http_request_duration_ms
+      target: p95 < 500
+    - name: http_5xx_ratio
+      target: < 0.01
+  pipeline:
+    - name: scan_duration_seconds
+    - name: classification_duration_seconds
+    - name: rewrite_duration_seconds
+    - name: publication_duration_seconds
+    - name: pipeline_duration_seconds
+  dependencies:
+    - name: database_health
+    - name: redis_health
+    - name: celery_worker_heartbeat
+    - name: celery_beat_heartbeat
+    - name: disk_usage_ratio
+
+alerts:
+  - id: api_error_rate_high
+    severity: critical
+    condition: http_5xx_ratio > 0.05 for 10m
+    action: page_on_call
+  - id: publication_stale
+    severity: high
+    condition: published_ms_articles == 0 for 2h
+    action: inspect_beat_worker_sources
+  - id: dependency_unhealthy
+    severity: critical
+    condition: database_health == fail or redis_health == fail for 5m
+    action: stop_writers_and_follow_rollback
+  - id: worker_heartbeat_missing
+    severity: high
+    condition: celery_worker_heartbeat missing for 10m
+    action: inspect_queue_and_worker_logs
+  - id: disk_pressure
+    severity: high
+    condition: disk_usage_ratio > 0.85 for 15m
+    action: stop_nonessential_jobs_and_rotate_logs
+
+backup_policy:
+  frequency: daily
+  retention_days: 30
+  restore_test_frequency: monthly
+  required_evidence: [sha256, source_database, target_isolation, operator, result]
+
+rollback_policy:
+  trigger: failed_healthcheck_or_regression
+  order: [stop_writers, preserve_logs, restore_previous_image, verify_health, resume_writers]
+  production_requires_explicit_approval: true

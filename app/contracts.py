@@ -2,25 +2,43 @@
 
 from datetime import datetime, timezone
 from urllib.parse import urlsplit
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import DateTime
 from sqlalchemy.types import TypeDecorator
 
+UTC = timezone.utc
+DISPLAY_TIMEZONE_NAME = "America/Campo_Grande"
+DISPLAY_TIMEZONE = ZoneInfo(DISPLAY_TIMEZONE_NAME)
 
-def as_utc(value):
+
+def as_utc(value) -> datetime | None:
     if value is None:
         return None
     if isinstance(value, str):
         value = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
 
-def utcnow():
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+def utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
-def iso_utc(value):
-    return as_utc(value).isoformat() if value is not None else None
+def iso_utc(value) -> str | None:
+    normalized = as_utc(value)
+    return normalized.isoformat() if normalized is not None else None
+
+
+def as_display(value) -> datetime | None:
+    """Converte um timestamp persistido em UTC para o fuso de apresentação."""
+    normalized = as_utc(value)
+    return normalized.astimezone(DISPLAY_TIMEZONE) if normalized is not None else None
+
+
+def iso_display(value) -> str | None:
+    """Serializa um timestamp no fuso oficial de apresentação do portal."""
+    localized = as_display(value)
+    return localized.isoformat() if localized is not None else None
 
 
 class UTCDateTime(TypeDecorator):

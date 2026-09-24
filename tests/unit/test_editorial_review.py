@@ -2,13 +2,15 @@
 
 from datetime import datetime, timezone
 
+from fastapi.routing import APIRoute
+
 from app.database import get_session
 from app.schema import NewsArticle, Reporter
 
 
 def test_editorial_queue_includes_local_publications_only():
     """Published local articles remain available for category correction."""
-    from app.main import list_articles_for_review
+    from app.editorial_routes import list_articles_for_review
 
     db = get_session()
     marker = str(datetime.now(timezone.utc).timestamp()).replace(".", "-")
@@ -33,6 +35,31 @@ def test_editorial_queue_includes_local_publications_only():
         db.query(Reporter).filter(Reporter.slug == reporter.slug).delete()
         db.commit()
         db.close()
+
+
+def test_editorial_and_analytics_routes_have_one_registration():
+    """Protect routes moved to specialized routers from shadow registrations."""
+    from app.main import app
+
+    registered_routes = list(_route_keys(app.routes))
+    expected_routes = {
+        ("/api/publish", "POST"),
+        ("/api/editorial/review", "GET"),
+        ("/api/editorial/review/{slug}", "PUT"),
+        ("/api/analytics/track", "POST"),
+    }
+
+    for route in expected_routes:
+        assert registered_routes.count(route) == 1
+
+
+def _route_keys(routes):
+    """Yield HTTP route keys, including nested routers in current FastAPI."""
+    for route in routes:
+        if isinstance(route, APIRoute):
+            yield from ((route.path, method) for method in route.methods or set())
+        elif nested_router := getattr(route, "original_router", None):
+            yield from _route_keys(nested_router.routes)
 
 
 def _article(reporter: Reporter, marker: str, suffix: str, region: str, visibility: str) -> NewsArticle:

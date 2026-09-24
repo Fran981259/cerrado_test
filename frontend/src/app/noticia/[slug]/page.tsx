@@ -4,32 +4,25 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { fetchArticleBySlug, fetchNewsResponse } from '@/lib/api';
 import type { Article } from '@/lib/api';
-import { formatArticleContent, readingTimeMinutes, serializeJsonLd } from '@/lib/formatArticle';
-import { getCategory, PATTERN_IMAGES } from '@/lib/categories';
+import {
+  cleanArticleText,
+  formatArticleContent,
+  formatArticleDate,
+  readingTimeMinutes,
+  serializeJsonLd,
+} from '@/lib/formatArticle';
+import { categorySlug, getCategory, PATTERN_IMAGES } from '@/lib/categories';
+import { ArticleQuickGuide } from '@/components/article/ArticleQuickGuide';
+import { ArticleShareActions } from '@/components/article/ArticleShareActions';
+import { ArticleSidebar } from '@/components/article/ArticleSidebar';
 import { getReporter, reporterInitials } from '@/lib/reporters';
+import { REPORTERS } from '@/lib/reporters';
+import { buildArticleJsonLd } from '@/lib/articleSeo';
 import { Icon } from '@/components/Icon';
 import { ScrollProgress } from '@/components/ScrollProgress';
 import { getPublicSiteUrl } from '@/lib/siteUrl';
 
 export const revalidate = 300;
-
-function formatDate(value?: string) {
-  if (!value) return '';
-  return new Date(value).toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function cleanText(value?: string) {
-  return (value || '')
-    .replace(/[#*_>`]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
 
 export async function generateMetadata({
   params,
@@ -41,6 +34,7 @@ export async function generateMetadata({
   try {
     const article = await fetchArticleBySlug(slug);
     if (!article) return { title: 'Notícia não encontrada' };
+    const image = article.image_url || PATTERN_IMAGES[article.category] || PATTERN_IMAGES.general;
     return {
       title: article.title,
       description: article.summary || article.title,
@@ -50,11 +44,13 @@ export async function generateMetadata({
         description: article.summary,
         type: 'article',
         url: `${base}/noticia/${slug}`,
+        images: [{ url: image, alt: article.title }],
       },
       twitter: {
         card: 'summary_large_image',
         title: article.title,
         description: article.summary || article.title,
+        images: [{ url: image, alt: article.title }],
       },
     };
   } catch {
@@ -105,25 +101,22 @@ export default async function NoticiaPage({ params }: { params: Promise<{ slug: 
   const reporterSlug = article.reporter_slug || '';
   const base = getPublicSiteUrl();
   const canonicalUrl = `${base}/noticia/${article.slug || slug}`;
-  const updatedAt = (article as { updated_at?: string }).updated_at;
-  const lead = cleanText(article.summary || article.content).slice(0, 360);
+  const lead = cleanArticleText(article.summary || article.content).slice(0, 360);
   const primarySource = article.sources?.[0];
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'NewsArticle',
-    headline: article.title,
-    description: article.summary || article.title,
-    datePublished: article.published_at || article.created_at || undefined,
-    dateModified: updatedAt || article.published_at || article.created_at || undefined,
-    author: reporter ? { '@type': 'Person', name: reporter.name } : undefined,
-    publisher: { '@type': 'Organization', name: 'Portal Cerrado' },
-    mainEntityOfPage: canonicalUrl,
-    image: img,
-    url: canonicalUrl,
-  };
+  const authorUrl = Object.hasOwn(REPORTERS, reporterSlug)
+    ? `${base}/reporter/${reporterSlug}`
+    : undefined;
+  const jsonLd = buildArticleJsonLd({
+    article,
+    canonicalUrl,
+    categoryLabel: cat.label,
+    imageUrl: img,
+    reporterName: reporter.name,
+    reporterUrl: authorUrl,
+  });
 
   return (
-    <main className="bg-[radial-gradient(circle_at_top_left,rgba(200,138,44,0.1),transparent_40rem),linear-gradient(180deg,var(--color-canvas)_0%,#ffffff_100%)] pb-16">
+    <div className="bg-[radial-gradient(circle_at_top_left,rgba(200,138,44,0.1),transparent_40rem),linear-gradient(180deg,var(--color-canvas)_0%,#ffffff_100%)] pb-16">
       <ScrollProgress />
       <script
         type="application/ld+json"
@@ -195,7 +188,7 @@ export default async function NoticiaPage({ params }: { params: Promise<{ slug: 
                   Publicado
                 </dt>
                 <dd className="mt-1 font-bold text-text-primary">
-                  {formatDate(article.published_at)}
+                  {formatArticleDate(article.published_at)}
                 </dd>
               </div>
               <div className="rounded-2xl bg-canvas px-4 py-3">
@@ -205,6 +198,16 @@ export default async function NoticiaPage({ params }: { params: Promise<{ slug: 
                 <dd className="mt-1 font-bold text-text-primary">{minutes} min</dd>
               </div>
             </dl>
+          </div>
+
+          <div className="mx-5 mt-6 lg:hidden sm:mx-7">
+            <ArticleQuickGuide
+              categoryLabel={cat.label}
+              heading="Em resumo"
+              minutes={minutes}
+              reporterName={reporter.name}
+              source={primarySource}
+            />
           </div>
 
           <figure className="mx-5 mt-6 overflow-hidden rounded-[1.5rem] bg-zinc-100 sm:mx-7">
@@ -250,11 +253,15 @@ export default async function NoticiaPage({ params }: { params: Promise<{ slug: 
                   key={t}
                   className="rounded-full border border-zinc-200 bg-canvas px-3 py-1 text-xs font-bold uppercase tracking-wide text-text-muted"
                 >
-                  #{t}
+                  #{categorySlug(t) ? getCategory(t).label : t}
                 </span>
               ))}
             </div>
           )}
+
+          <div className="mx-5 mb-8 sm:mx-7">
+            <ArticleShareActions title={article.title} url={canonicalUrl} />
+          </div>
 
           {reporterSlug && (
             <Link
@@ -277,89 +284,15 @@ export default async function NoticiaPage({ params }: { params: Promise<{ slug: 
           )}
         </article>
 
-        <aside className="relative z-10 space-y-6 lg:sticky lg:top-6 lg:self-start">
-          <section className="rounded-[1.75rem] border border-black/5 bg-white p-6 shadow-[0_22px_70px_rgba(45,41,38,0.10)]">
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-accent-soil">
-              Guia rápido
-            </p>
-            <h2 className="mt-2 font-display text-2xl font-black text-text-primary">
-              Antes de ler
-            </h2>
-            <div className="mt-5 grid gap-3 text-sm">
-              <div className="flex items-center justify-between rounded-2xl bg-canvas px-4 py-3">
-                <span className="text-text-muted">Categoria</span>
-                <strong>{cat.label}</strong>
-              </div>
-              <div className="flex items-center justify-between rounded-2xl bg-canvas px-4 py-3">
-                <span className="text-text-muted">Tempo</span>
-                <strong>{minutes} min</strong>
-              </div>
-              <div className="flex items-center justify-between rounded-2xl bg-canvas px-4 py-3">
-                <span className="text-text-muted">Repórter</span>
-                <strong>{reporter.name}</strong>
-              </div>
-            </div>
-            {primarySource && (
-              <a
-                href={primarySource.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-5 flex items-center justify-between rounded-2xl bg-accent-soil px-4 py-3 text-sm font-black text-white transition hover:bg-text-primary"
-              >
-                <span>Fonte original</span>
-                <span aria-hidden="true">↗</span>
-              </a>
-            )}
-          </section>
-
-          <section className="rounded-[1.75rem] border border-black/5 bg-white p-6 shadow-sm">
-            <h3 className="font-display text-xl font-black text-text-primary">Mais lidas</h3>
-            <div className="mt-4 space-y-4">
-              {latest.map((r, i) => (
-                <Link
-                  key={r.slug || r.title}
-                  href={r.slug ? `/noticia/${r.slug}` : '#'}
-                  className="group flex gap-4 rounded-2xl p-2 transition hover:bg-canvas"
-                >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-canvas font-display text-lg font-black text-accent-soil">
-                    {i + 1}
-                  </span>
-                  <span>
-                    <span className="block text-[11px] font-black uppercase tracking-wide text-accent-soil">
-                      {getCategory(r.category).label}
-                    </span>
-                    <span className="line-clamp-3 text-sm font-bold leading-snug text-text-primary group-hover:text-accent-soil">
-                      {r.title}
-                    </span>
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </section>
-
-          {related.length > 0 && (
-            <section className="rounded-[1.75rem] border border-black/5 bg-white p-6 shadow-sm">
-              <h3 className="font-display text-xl font-black text-text-primary">Do mesmo tema</h3>
-              <div className="mt-4 space-y-4">
-                {related.map((r) => (
-                  <Link
-                    key={r.slug || r.title}
-                    href={r.slug ? `/noticia/${r.slug}` : '#'}
-                    className="group block rounded-2xl border border-zinc-100 p-4 transition hover:border-accent-soil/30 hover:bg-canvas"
-                  >
-                    <span className="block text-[11px] font-black uppercase tracking-wide text-accent-soil">
-                      {getCategory(r.category).label}
-                    </span>
-                    <span className="line-clamp-3 text-sm font-bold leading-snug text-text-primary group-hover:text-accent-soil">
-                      {r.title}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
-        </aside>
+        <ArticleSidebar
+          categoryLabel={cat.label}
+          latestArticles={latest}
+          minutes={minutes}
+          relatedArticles={related}
+          reporterName={reporter.name}
+          source={primarySource}
+        />
       </div>
-    </main>
+    </div>
   );
 }

@@ -7,69 +7,21 @@ Gerador e classificador de curiosidades para distribuição entre segmentos.
 import logging
 import random
 from datetime import datetime, timezone
-from enum import Enum
 from typing import Dict, List, Optional
+
+from app.curiosity_models import CuriosityCategory, CuriosityPatterns
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class CuriosityCategory(Enum):
-    """Categorias de curiosidade por segmento."""
+def __getattr__(name):
+    """Preserva o import legado de ``CuriosityMixer`` sem ciclo estático."""
+    if name == "CuriosityMixer":
+        from app.curiosity_mixing import CuriosityMixer
 
-    TECHNOLOGY = "technology"
-    SPORTS = "sports"
-    SECURITY = "security"
-    POLITICS = "politics"
-    HEALTH = "health"
-    EDUCATION = "education"
-    AGRICULTURE = "agriculture"
-    CULTURE = "culture"
-    ECONOMY = "economy"
-
-
-class CuriosityPatterns:
-    """
-    Padrões que indicam que uma matéria é uma curiosidade.
-
-    Usado para DETECTAR curiosidades externas E gerar curiosidades próprias.
-    """
-
-    DETECTION_PATTERNS = {
-        # English
-        "did you know": "curiosity",
-        "you may not know": "curiosity",
-        "fun fact": "curiosity",
-        "interesting fact": "curiosity",
-        "little known": "curiosity",
-        "rarely known": "curiosity",
-        "surprising": "curiosity",
-        "unbelievable": "curiosity",
-        "amazing": "curiosity",
-        "incredible": "curiosity",
-        "strange but true": "curiosity",
-        # Portuguese
-        "você sabia": "curiosity",
-        "sabia que": "curiosity",
-        "curiosidade": "curiosity",
-        "fato interessante": "curiosity",
-        "poucos sabem": "curiosity",
-        "raramente conhecido": "curiosity",
-        "surpreendente": "curiosity",
-        "incrível": "curiosity",
-        "impressionante": "curiosity",
-        "será que": "curiosity",
-        "o número": "curiosity",
-        "quantos": "curiosity",
-        "quanto tempo": "curiosity",
-        "a maior": "curiosity",
-        "o menor": "curiosity",
-        "o mais": "curiosity",
-        "recorde": "curiosity",
-        "nunca imaginou": "curiosity",
-    }
-
-    ENGAGEMENT_BOOST = 1.3  # Curiosidades têm +30% de engajamento
+        return CuriosityMixer
+    raise AttributeError(name)
 
 
 class CuriosityTemplates:
@@ -314,61 +266,6 @@ class CuriosityGenerator:
         return curiosities
 
 
-class CuriosityMixer:
-    """
-    Misturador de curiosidades no fluxo de publicação.
-
-    Adiciona curiosidades em momentos estratégicos do dia.
-    """
-
-    def __init__(self):
-        self.generator = CuriosityGenerator()
-
-    def inject_curiosities(
-        self, articles: List[Dict], daily_target: int = 50, curiosity_ratio: float = 0.15
-    ) -> List[Dict]:
-        """
-        Injeta curiosidades no fluxo de artigos.
-
-        Args:
-            articles: Lista de artigos classificados
-            daily_target: Meta diária de publicação
-            curiosity_ratio: % de curiosidades no total (15% = ~8 curiosidades/dia)
-
-        Returns:
-            Lista de artigos com curiosidades injetadas
-        """
-        # Quantidade de curiosidades a gerar
-        n_curiosities = max(3, int(daily_target * curiosity_ratio))
-
-        # Gera curiosidades
-        generated = self.generator.generate_daily_curiosities()
-
-        # Limita se necessário
-        if len(generated) > n_curiosities:
-            random.shuffle(generated)
-            generated = generated[:n_curiosities]
-
-        # Intercala curiosidades na lista de artigos
-        result = []
-        cur_idx = 0
-
-        for i, article in enumerate(articles):
-            result.append(article)
-
-            # A cada ~7 artigos, injeta uma curiosidade
-            if (i + 1) % 7 == 0 and cur_idx < len(generated):
-                result.append(generated[cur_idx])
-                cur_idx += 1
-
-        # Adiciona curiosidades restantes no final
-        while cur_idx < len(generated):
-            result.append(generated[cur_idx])
-            cur_idx += 1
-
-        return result
-
-
 def generate_all_daily_curiosities() -> List[Dict]:
     """Gera curiosidades para todas as categorias."""
     generator = CuriosityGenerator()
@@ -377,5 +274,6 @@ def generate_all_daily_curiosities() -> List[Dict]:
 
 def mix_with_articles(articles: List[Dict], daily_target: int = 50) -> List[Dict]:
     """Mistura curiosidades com artigos normais."""
-    mixer = CuriosityMixer()
-    return mixer.inject_curiosities(articles, daily_target)
+    from app.curiosity_mixing import CuriosityMixer
+
+    return CuriosityMixer().inject_curiosities(articles, daily_target)

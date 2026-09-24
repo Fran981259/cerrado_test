@@ -12,7 +12,7 @@ from app.contracts import CATEGORIES, category_name, iso_utc
 from app.database import get_session
 from app.editorial import review_natural_writing
 from app.publisher import ArticlePublisher
-from app.schema import NewsArticle
+from app.schema import NewsArticle, PublicationLog
 from app.security import require_api_key
 
 router = APIRouter()
@@ -100,6 +100,15 @@ def update_article_review(slug: str, data: UpdateReviewRequest, _auth=Depends(re
             raise HTTPException(status_code=404, detail="Matéria não encontrada")
         _apply_review_changes(article, data.model_dump(exclude_unset=True), db)
         article.updated_at = datetime.now(timezone.utc)
+        changed_fields = ",".join(sorted(data.model_dump(exclude_unset=True))) or "none"
+        db.add(
+            PublicationLog(
+                article_id=article.id,
+                action="editorial_review",
+                reporter_id=article.reporter_id,
+                details=f"Campos alterados: {changed_fields}",
+            )
+        )
         db.commit()
         return {"status": "success", "slug": slug}
     except HTTPException:
@@ -116,7 +125,8 @@ def _review_payload(article: NewsArticle) -> dict:
     """Serialize only fields needed by the editorial dashboard."""
     return {
         "slug": article.slug, "title": article.title, "summary": article.summary, "content": article.content,
-        "original_text": article.original_text, "writing_review": [finding.as_dict() for finding in review_natural_writing(article.content or "")],
+        "original_text": article.original_text,
+        "writing_review": [finding.as_dict() for finding in review_natural_writing(str(article.content or ""))],
         "category": article.category, "importance_score": article.importance_score,
         "engagement_score": article.engagement_score, "status": article.status,
         "published_at": iso_utc(article.published_at), "created_at": iso_utc(article.created_at),

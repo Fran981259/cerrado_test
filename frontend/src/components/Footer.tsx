@@ -5,7 +5,7 @@ const CITIES = ["Campo Grande", "Dourados", "Três Lagoas", "Corumbá", "Ponta P
 
 const EDITORIAS = [
   { label: "Política e Poder", href: "/categoria/politics" },
-  { label: "Polícia e Justiça", href: "/categoria/security" },
+  { label: "Segurança e Justiça", href: "/categoria/security" },
   { label: "Economia", href: "/categoria/economy" },
   { label: "Agronegócio", href: "/categoria/agriculture" },
   { label: "Cotidiano e Clima", href: "/categoria/clima" },

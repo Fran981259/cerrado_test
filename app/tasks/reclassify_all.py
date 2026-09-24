@@ -5,7 +5,7 @@ Normaliza categorias via contracts.category_name() para garantir nomes canônico
 
 import logging
 
-from app.classifier import NewsClassifier
+from app.category_inference import infer_category
 from app.contracts import CATEGORIES, category_name
 from app.database import get_session
 from app.schema import NewsArticle
@@ -16,15 +16,13 @@ logger = logging.getLogger(__name__)
 
 def reclassify_all():
     db = get_session()
-    classifier = NewsClassifier()
-
     articles = db.query(NewsArticle).all()
     updated = 0
     fixed_invalid = 0
 
     for art in articles:
         text = ((art.title or "") + " " + (art.summary or "")).lower()
-        new_cat = classifier.classify_category(text)
+        new_cat = infer_category(text)
 
         raw_cat = art.category or "general"
         normalized = category_name(raw_cat)

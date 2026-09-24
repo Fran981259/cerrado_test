@@ -1,0 +1,5 @@
+"""Constantes do minerador global."""
+
+MIN_ARTICLES_PER_DAY = 50
+ARTICLES_PER_CYCLE = 3
+RANDOM_CATEGORY_PROBABILITY = 0.85

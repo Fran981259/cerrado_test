@@ -9,7 +9,7 @@ type MenuItem = { label: string; href?: string; subs?: Sub[]; highlight?: boolea
 
 export const CAPITAL_MENU: MenuItem[] = [
   { label: "Política", href: "/categoria/politics" },
-  { label: "Policial", href: "/categoria/security" },
+  { label: "Segurança e Justiça", href: "/categoria/security" },
   {
     label: "Economia & Agro",
     subs: [

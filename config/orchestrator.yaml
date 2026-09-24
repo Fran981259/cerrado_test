@@ -5,7 +5,7 @@
 orchestrator:
   name: "Portal Cerrado"
   version: "1.0.0"
-  timezone: "America/Sao_Paulo"
+  timezone: "America/Campo_Grande"
   run_mode: "production"  # production, development, dry_run
   
   # Frequência padrão de verificação

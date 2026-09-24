@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
     useTypeScriptCli: false,
   },
   images: {
+    // Allowlist only the image CDNs used by editorial fallbacks and known portals.
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "picsum.photos" },
@@ -16,7 +17,6 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "**.campograndenews.com.br" },
       { protocol: "https", hostname: "**.correiodoestado.com.br" },
       { protocol: "https", hostname: "**.capitalnews.com.br" },
-      { protocol: "https", hostname: "**" },
     ],
   },
   async rewrites() {

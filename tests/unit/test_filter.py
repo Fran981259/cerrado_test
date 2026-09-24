@@ -1,7 +1,5 @@
 """Unit tests para ContentFilter, DuplicateDetector, SensitiveContentFilter e scanner _is_valid_article."""
 
-import time
-
 from app.filter import DEDUP_TTL_SECONDS, ContentFilter, DuplicateDetector, SensitiveContentFilter
 from app.scanner import RealPortalScanner
 
@@ -45,9 +43,11 @@ def _filter_with_fake_redis():
     return f
 
 
-def test_dedup_prunes_expired_entry():
+def test_dedup_prunes_expired_entry(monkeypatch):
     f = _filter_with_fake_redis()
-    old = time.time() - DEDUP_TTL_SECONDS - 100
+    reference_timestamp = 1_700_000_000
+    monkeypatch.setattr("app.filter.time.time", lambda: reference_timestamp)
+    old = reference_timestamp - DEDUP_TTL_SECONDS - 100
     url = "https://ex.com/velha"
     import hashlib
 

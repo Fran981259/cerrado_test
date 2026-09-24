@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { fetchNewsResponse, rankHomepageArticles, selectDynamicLocalNews, type Article } from "@/lib/api";
+import { fetchNewsResponse, rankHomepageArticles, type Article } from "@/lib/api";
+import { prioritizeElectionCoverage, selectPoliticalCoverage } from "@/lib/electionCoverage";
 import { HeroGrid } from "@/components/home/HeroGrid";
 import { AgroModule } from "@/components/home/AgroModule";
 import { PoderModule } from "@/components/home/PoderModule";
 import { Columnists } from "@/components/home/Columnists";
+import { DEFAULT_SOCIAL_IMAGE } from "@/lib/siteMetadata";
 import { getPublicSiteUrl } from "@/lib/siteUrl";
 
 const BASE = getPublicSiteUrl();
 
-export const revalidate = 60;
+// A barra de cotações usa fetch no-store; a home precisa permanecer dinâmica.
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -23,7 +26,9 @@ export async function generateMetadata(): Promise<Metadata> {
       type: "website",
       locale: "pt_BR",
       siteName: "Portal Cerrado",
+      images: [DEFAULT_SOCIAL_IMAGE],
     },
+    twitter: { card: "summary_large_image", images: [DEFAULT_SOCIAL_IMAGE] },
   };
 }
 
@@ -71,16 +76,18 @@ export default async function Home() {
   const settled = await Promise.allSettled([
     fetchNewsResponse({ region: "ms", limit: 80, sortBy: "recent" }),
     fetchNewsResponse({ region: "ms", category: "agriculture", limit: 5, sortBy: "recent" }),
+    fetchNewsResponse({ region: "ms", category: "politics", limit: 24, sortBy: "recent" }),
   ]);
 
-  const [recentResult, agroResult] = settled;
+  const [recentResult, agroResult, politicsResult] = settled;
   const recent = recentResult.status === "fulfilled" ? recentResult.value.news : [];
   const agro = agroResult.status === "fulfilled" ? agroResult.value.news : [];
+  const politics = politicsResult.status === "fulfilled" ? politicsResult.value.news : [];
 
-  const { main, side, rail, latest } = pickHero(rankHomepageArticles(recent));
+  const { main, side, rail, latest } = pickHero(prioritizeElectionCoverage(rankHomepageArticles(recent)));
   const heroArticles = [main, ...side, ...rail, ...latest].filter((article): article is Article => Boolean(article));
   const rankedAgro = rankHomepageArticles(agro);
-  const dynamicLocalNews = selectDynamicLocalNews(recent, [...heroArticles, ...rankedAgro], 6);
+  const politicalCoverage = selectPoliticalCoverage(politics, [...heroArticles, ...rankedAgro], 6);
   const hardError = settled.every((result) => result.status === "rejected");
 
   return (
@@ -97,7 +104,7 @@ export default async function Home() {
 
       <AgroModule articles={rankedAgro} />
 
-      <PoderModule articles={dynamicLocalNews} />
+      <PoderModule articles={politicalCoverage} />
 
       <Suspense
         fallback={

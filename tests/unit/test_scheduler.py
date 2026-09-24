@@ -3,6 +3,8 @@
 import importlib
 import os
 
+import pytest
+
 TEST_DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///:memory:")
 
 
@@ -94,6 +96,24 @@ def test_cors_default_no_wildcard(monkeypatch):
     origins = main_mod._cors_origins()
     assert "*" not in origins
     assert "http://100.95.111.24:3000" in origins
+
+
+def test_cors_production_requires_explicit_origins(monkeypatch):
+    monkeypatch.delenv("CORS_ALLOWED_ORIGINS", raising=False)
+    monkeypatch.delenv("CORS_ORIGINS", raising=False)
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    import app.main as main_mod
+
+    with pytest.raises(RuntimeError, match="obrigatório em produção"):
+        main_mod._cors_origins()
+
+
+def test_cors_rejects_wildcard_with_credentials(monkeypatch):
+    monkeypatch.setenv("CORS_ALLOWED_ORIGINS", "*")
+    import app.main as main_mod
+
+    with pytest.raises(RuntimeError, match="wildcard"):
+        main_mod._cors_origins()
 
 
 def test_database_fallback_dev(monkeypatch):

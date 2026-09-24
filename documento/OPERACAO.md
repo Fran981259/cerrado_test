@@ -64,11 +64,53 @@
 4. Validar healthchecks e logs.
 5. Validar deploy pela stack oficial do ambiente.
 
+## Backup e Restore do Banco
+
+- O utilitário oficial é `venv/bin/python scripts/database_backup.py`.
+- Backup local SQLite: `DATABASE_URL=sqlite:///data/portal_cerrado.db venv/bin/python scripts/database_backup.py backup --output /caminho/portal.db`.
+- Backup PostgreSQL: `DATABASE_URL="$DATABASE_URL" venv/bin/python scripts/database_backup.py backup --output /caminho/portal.dump`.
+- Restore exige confirmação explícita: `venv/bin/python scripts/database_backup.py restore --input /caminho/backup --confirm`.
+- Antes de restaurar, interromper writers, confirmar o arquivo e registrar o SHA-256 do backup.
+- Retenção operacional: manter backups diários por 30 dias; expurgar somente após confirmar um backup mais novo e um restore de teste.
+- O restore de teste deve usar banco isolado; produção permanece bloqueada até o relatório de aceite.
+- Evidência local: o round-trip SQLite foi executado em diretório temporário isolado,
+  com remoção do banco-fonte, restauração confirmada e validação do registro restaurado.
+
+## Rotação da Chave Editorial
+
+1. Gerar uma nova chave com `openssl rand -hex 32` em um gestor seguro.
+2. Definir `PUBLISH_API_KEY_PREVIOUS` com a chave atual e `PUBLISH_API_KEY` com a nova.
+3. Reiniciar gradualmente a API e testar `POST /api/publish` com a nova chave.
+4. Confirmar que todos os réplicas estão usando a nova configuração.
+5. Remover `PUBLISH_API_KEY_PREVIOUS` e reiniciar novamente.
+6. Invalidar a chave antiga no gestor de segredos e registrar horário/operador.
+
+A chave nunca deve aparecer em logs, commits, tickets ou mensagens de operação.
+
 ## Regras de Parada
 - Se uma fase falhar, nao avancar para a seguinte.
 - Se o erro for de build, corrigir antes de publicar.
 - Se o erro for de stack, corrigir antes de validar frontend.
 - Se o erro for de runtime, atualizar o plano antes de improvisar.
+
+## Observabilidade e Resposta a Incidentes
+
+- O contrato canônico está em `config/observability.yaml`; ele define métricas,
+  campos mínimos de log, campos proibidos, alertas, retenção e rollback.
+- Métricas mínimas: latência/erros HTTP, duração de cada etapa do pipeline,
+  saúde de banco/Redis, heartbeat de worker/beat e ocupação de disco.
+- `publication_stale` é acionado quando não há publicação pública de MS por 2h;
+  investigar Beat, worker, fila, fontes e falhas do provedor LLM antes de repetir jobs.
+- Em falha crítica, preservar logs e estado, interromper writers, restaurar a imagem
+  anterior por SHA e confirmar `/health` antes de retomar escritores.
+- Todo incidente deve registrar horário, operador, serviço, evidência, ação e resultado;
+  nunca registrar tokens, chaves, senhas, autorização, e-mail ou IP.
+- Produção exige aprovação explícita para rollback; ensaios devem usar banco isolado.
+- O comando `scripts/rollback.sh <sha>` é dry-run por padrão. A execução exige
+  simultaneamente `--confirm`, `ROLLBACK_APPROVED=yes`, Swarm ativo e SHA de 40–64
+  caracteres; sem esses requisitos nenhuma chamada Docker é feita.
+- Antes de qualquer ensaio real, executar `docker compose ... config` e `docker stack
+  config`; nesta etapa ambos passaram com imagens de teste e nenhum daemon foi alterado.
 
 ## Referencia Rapida
 - Se precisar saber o que mudar, use `PLANO_ACAO.md`.

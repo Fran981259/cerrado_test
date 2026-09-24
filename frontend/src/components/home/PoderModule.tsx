@@ -32,8 +32,8 @@ export function PoderModule({ articles }: { articles: Article[] }) {
   return (
     <section aria-labelledby="poder-heading" className="bg-charcoal text-white">
       <div className="container-editorial py-7 sm:py-8">
-        <SectionHeading eyebrow="Mais notícias de Mato Grosso do Sul" title="Atualizações locais em movimento" id="poder-heading" dark />
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/60">Seleção rotativa de pautas locais recentes, atualizada junto com a home.</p>
+        <SectionHeading eyebrow="Poder e eleições" title="Política que influencia Mato Grosso do Sul" id="poder-heading" dark />
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/60">Acompanhamento de política nacional, eleições e decisões com impacto no estado.</p>
         <div className="mt-6 grid gap-x-8 gap-y-7 border-t border-white/10 pt-6 sm:grid-cols-2 lg:grid-cols-3">
           {articles.map((article) => <PoderColumn key={article.slug || article.title} article={article} />)}
         </div>

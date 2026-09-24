@@ -7,6 +7,7 @@ import { TrendPanel } from "@/components/TrendPanel";
 import { Pagination } from "@/components/Pagination";
 import { parsePage } from "@/lib/pagination";
 import { NewsCard } from "@/components/NewsCard";
+import { DEFAULT_SOCIAL_IMAGE } from "@/lib/siteMetadata";
 import { getPublicSiteUrl } from "@/lib/siteUrl";
 
 export const revalidate = 300;
@@ -30,7 +31,9 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
       description: r.bio,
       url: canonical,
       type: "profile",
+      images: [DEFAULT_SOCIAL_IMAGE],
     },
+    twitter: { card: "summary_large_image", images: [DEFAULT_SOCIAL_IMAGE] },
   };
 }
 

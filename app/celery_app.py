@@ -8,6 +8,7 @@ import os
 from celery import Celery
 from celery.schedules import crontab
 
+from app.contracts import DISPLAY_TIMEZONE_NAME
 from app.runtime_config import get_scheduler_settings
 
 # Configuração do broker
@@ -41,7 +42,7 @@ celery_app.conf.update(
     task_serializer="json",
     accept_content=["json"],
     result_serializer="json",
-    timezone="America/Cuiaba",
+    timezone=DISPLAY_TIMEZONE_NAME,
     enable_utc=True,
     # Configurações de resultado
     result_expires=3600,  # Resultados expiram em 1 hora

@@ -4,6 +4,7 @@ import logging
 from datetime import datetime, timezone
 
 from app.celery_app import celery_app
+
 logger = logging.getLogger(__name__)
 
 

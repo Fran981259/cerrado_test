@@ -50,6 +50,26 @@ def sitemap_articles(after_id: int = Query(0, ge=0), through_id: int = Query(Non
         db.close()
 
 
+@router.get("/api/news-sitemap")
+def recent_news_sitemap_articles(limit: int = Query(1000, ge=1, le=1000)):
+    """Return recent public local articles with the fields required by a news sitemap."""
+    db = get_session()
+    try:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=2)
+        rows = (
+            _local_public_query(db)
+            .filter(NewsArticle.published_at >= cutoff, NewsArticle.slug.isnot(None))
+            .order_by(NewsArticle.published_at.desc(), NewsArticle.id.desc())
+            .limit(limit)
+            .all()
+        )
+        return {"articles": [_news_sitemap_record(row) for row in rows]}
+    except Exception:
+        raise HTTPException(status_code=503, detail="Sitemap de notícias temporariamente indisponível") from None
+    finally:
+        db.close()
+
+
 @router.get("/api/reporters")
 def list_reporters():
     """List active digital reporters."""
@@ -77,3 +97,13 @@ def _recent_count(db, cutoff: datetime) -> int:
 def _latest_article(db):
     """Select the newest public local article."""
     return _local_public_query(db).order_by(NewsArticle.published_at.desc()).first()
+
+
+def _news_sitemap_record(article):
+    """Serialize one public article for the Next.js news sitemap route."""
+    return {
+        "slug": article.slug,
+        "title": article.title,
+        "published_at": iso_utc(article.published_at),
+        "updated_at": iso_utc(article.updated_at),
+    }

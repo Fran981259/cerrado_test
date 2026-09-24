@@ -19,6 +19,7 @@ def classify_pending_articles(self):
     try:
         from datetime import datetime, timezone
 
+        from app.category_inference import infer_category
         from app.classifier import NewsClassifier
         from app.database import get_session
         from app.schema import NewsArticle
@@ -36,7 +37,7 @@ def classify_pending_articles(self):
                 .all()
             )
             for art in articles:
-                inferred_category = classifier.classify_category(f"{art.title or ''} {art.summary or ''}")
+                inferred_category = infer_category(f"{art.title or ''} {art.summary or ''}")
                 if inferred_category != "general":
                     art.category = inferred_category
                 data = {

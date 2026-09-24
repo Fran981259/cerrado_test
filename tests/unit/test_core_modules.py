@@ -124,12 +124,17 @@ def test_classifier_boosts_real_portal_categories():
 
 
 def test_classifier_corrects_sports_and_security_before_publication():
-    from app.classifier import NewsClassifier
+    from app.category_inference import infer_category
 
-    classifier = NewsClassifier()
+    assert infer_category("Brasil define vaga olímpica no Sul-Americano") == "sports"
+    assert infer_category("Polícia apreende maconha escondida em carga de milho") == "security"
 
-    assert classifier.classify_category("Brasil define vaga olímpica no Sul-Americano") == "sports"
-    assert classifier.classify_category("Polícia apreende maconha escondida em carga de milho") == "security"
+
+def test_category_inference_does_not_promote_fauna_or_sports_to_politics():
+    from app.category_inference import infer_category
+
+    assert infer_category("Pantanal e União ABC empatam na final do Estadual Sub-15") == "sports"
+    assert infer_category("Safári noturno registra briga entre onças no Pantanal") == "general"
 
 
 def test_trends_endpoint_uses_ml_snapshot(monkeypatch):
@@ -267,18 +272,18 @@ def test_list_news_passes_offset_for_recent(monkeypatch):
 
 def test_publisher_auth_dependency(monkeypatch):
     # Testa que require_api_key funciona
-    monkeypatch.setenv("PUBLISH_API_KEY", "secret123")
+    monkeypatch.setenv("PUBLISH_API_KEY", "s" * 32)
     monkeypatch.setenv("ENVIRONMENT", "production")
     from fastapi import HTTPException
 
-    from app.main import require_api_key
+    from app.security import require_api_key
 
     # Sem header -> 401
     with pytest.raises(HTTPException) as exc:
         require_api_key(None)
     assert exc.value.status_code == 401
     # Com header correto -> ok
-    assert require_api_key("secret123") is None
+    assert require_api_key("s" * 32) is None
     # Com header errado -> 401
     with pytest.raises(HTTPException):
         require_api_key("wrong")

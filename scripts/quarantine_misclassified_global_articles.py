@@ -14,11 +14,12 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import yaml
-from sqlalchemy.exc import OperationalError
+# O bootstrap de sys.path permite executar o script diretamente na raiz do projeto.
+import yaml  # noqa: E402
+from sqlalchemy.exc import OperationalError  # noqa: E402
 
-from app.database import get_session
-from app.schema import NewsArticle
+from app.database import get_session  # noqa: E402
+from app.schema import NewsArticle  # noqa: E402
 
 
 def host(url: str) -> str:

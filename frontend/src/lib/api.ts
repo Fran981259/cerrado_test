@@ -23,6 +23,13 @@ export type Article = {
   priority_tier?: "TIER_1" | "TIER_2" | "TIER_3" | "REJECT";
 };
 
+export type NewsSitemapArticle = {
+  slug: string;
+  title: string;
+  published_at: string;
+  updated_at?: string;
+};
+
 export type TrendSignal = {
   topic: string;
   category?: string;
@@ -221,4 +228,20 @@ export async function getAllRealArticles(): Promise<Array<Pick<Article, "slug" |
     if (articles.length > 49990) throw new Error("Sitemap requires partitioning before exceeding 50000 URLs");
   }
   return articles;
+}
+
+/** Returns only the current news window for the dedicated Google News sitemap. */
+export async function getRecentNewsSitemapArticles(): Promise<NewsSitemapArticle[]> {
+  const response = await fetch(`${getApiBase()}/api/news-sitemap?limit=1000`, {
+    cache: "no-store",
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!response.ok) throw new UpstreamError();
+  const data = await response.json();
+  if (!Array.isArray(data.articles)) throw new UpstreamError();
+  return data.articles.filter((article: unknown): article is NewsSitemapArticle => {
+    if (!article || typeof article !== "object") return false;
+    const record = article as Record<string, unknown>;
+    return typeof record.slug === "string" && typeof record.title === "string" && typeof record.published_at === "string";
+  });
 }

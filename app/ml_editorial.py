@@ -10,7 +10,6 @@ from __future__ import annotations
 import logging
 import re
 from collections import Counter, defaultdict
-from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Iterable, List
 
@@ -19,6 +18,7 @@ from sqlalchemy import func
 from app.contracts import category_name, iso_utc, utcnow
 from app.database import get_session
 from app.schema import EditorialTrendSignal, NewsArticle
+from app.trend_models import TOPIC_KEYWORDS, TrendItem
 
 logger = logging.getLogger(__name__)
 
@@ -29,96 +29,6 @@ def _as_utc(dt: datetime) -> datetime:
     if dt.tzinfo is None:
         return dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(timezone.utc)
-
-
-TOPIC_KEYWORDS = {
-    "politics": {
-        "governo",
-        "prefeito",
-        "governador",
-        "câmara",
-        "assembleia",
-        "eleição",
-        "política",
-        "stf",
-        "stj",
-        "tre",
-        "tse",
-        "câmara dos vereadores",
-        "assembleia legislativa",
-    },
-    "economy": {
-        "economia",
-        "mercado",
-        "emprego",
-        "juros",
-        "inflação",
-        "banco",
-        "investimento",
-        "arrecadação",
-        "salário",
-        "piso salarial",
-    },
-    "security": {
-        "polícia",
-        "crime",
-        "prisão",
-        "homicídio",
-        "roubo",
-        "furto",
-        "investigação",
-        "suspeito",
-        "flagrante",
-        "delegacia",
-    },
-    "health": {
-        "saúde",
-        "hospital",
-        "vacina",
-        "médico",
-        "paciente",
-        "uti",
-        "sus",
-        "dengue",
-        "tratamento",
-        "exame",
-        "pronto-socorro",
-    },
-    "agriculture": {
-        "agro",
-        "agronegócio",
-        "safra",
-        "soja",
-        "milho",
-        "pecuária",
-        "gado",
-        "colheita",
-        "plantio",
-        "produtor rural",
-    },
-    "sports": {"futebol", "esporte", "jogo", "time", "gol", "campeonato", "atleta", "torcida", "vitória", "partida"},
-    "tech": {
-        "tecnologia",
-        "ia",
-        "inteligência artificial",
-        "aprendizado de máquina",
-        "app",
-        "sistema",
-        "software",
-        "startup",
-        "digital",
-        "plataforma",
-    },
-}
-
-
-@dataclass
-class TrendItem:
-    topic: str
-    category: str
-    score: int
-    article_count: int
-    evidence: List[Dict[str, Any]]
 
 
 class EditorialTrendAnalyzer:

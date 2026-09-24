@@ -1,5 +1,8 @@
 import os
+import socket
 import tempfile
+
+import pytest
 
 _test_dir = tempfile.mkdtemp(prefix="portal-cerrado-tests-")
 os.environ.setdefault("ENVIRONMENT", "test")
@@ -14,6 +17,7 @@ os.environ.setdefault("LLM_PROVIDER", "gemini")
 
 
 def pytest_configure():
+    """Inicializa o banco temporário compartilhado pela suíte unitária."""
     from app.database import get_session, init_db
     from app.schema import Reporter
 
@@ -32,3 +36,14 @@ def pytest_configure():
             db.commit()
     finally:
         db.close()
+
+
+@pytest.fixture(autouse=True)
+def block_network_access(monkeypatch):
+    """Impede que testes unitários acionem serviços externos por engano."""
+
+    def deny_connection(*_args, **_kwargs):
+        raise AssertionError("testes unitários não podem acessar a rede")
+
+    monkeypatch.setattr(socket, "create_connection", deny_connection)
+    monkeypatch.setattr(socket.socket, "connect", deny_connection)

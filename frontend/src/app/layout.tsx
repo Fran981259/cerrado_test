@@ -8,6 +8,7 @@ import "@fontsource/zilla-slab/latin-600.css";
 import "@fontsource/zilla-slab/latin-700.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { DEFAULT_SOCIAL_IMAGE } from "@/lib/siteMetadata";
 import { getPublicSiteUrl } from "@/lib/siteUrl";
 import "./globals.css";
 
@@ -23,10 +24,11 @@ export const metadata: Metadata = {
     type: "website",
     locale: "pt_BR",
     siteName: "Portal Cerrado",
-    title: "Portal Cerrado — Notícias de MS",
+    title: "Portal Cerrado — Notícias de Mato Grosso do Sul",
     description: "Portal de notícias de Mato Grosso do Sul com atualização 24h.",
+    images: [DEFAULT_SOCIAL_IMAGE],
   },
-  twitter: { card: "summary_large_image" },
+  twitter: { card: "summary_large_image", images: [DEFAULT_SOCIAL_IMAGE] },
   robots: { index: true, follow: true },
   metadataBase: new URL(getPublicSiteUrl()),
 };

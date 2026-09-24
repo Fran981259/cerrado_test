@@ -4,6 +4,26 @@
  * Aqui convertemos para HTML semântico com classes do .article-body.
  */
 
+/** Formats the publication time with the editorial article date style. */
+export function formatArticleDate(value?: string): string {
+  if (!value) return "";
+  return new Date(value).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/** Removes presentation markup before using article content as a text lead. */
+export function cleanArticleText(value?: string): string {
+  return (value || "")
+    .replace(/[#*_>`]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")

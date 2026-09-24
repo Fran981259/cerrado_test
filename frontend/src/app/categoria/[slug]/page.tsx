@@ -8,6 +8,7 @@ import { TrendPanel } from "@/components/TrendPanel";
 import { Pagination } from "@/components/Pagination";
 import { parsePage } from "@/lib/pagination";
 import { Icon } from "@/components/Icon";
+import { DEFAULT_SOCIAL_IMAGE } from "@/lib/siteMetadata";
 import { getPublicSiteUrl } from "@/lib/siteUrl";
 
 export const revalidate = 60;
@@ -34,7 +35,9 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
       description: `Notícias de ${cat.label} em Mato Grosso do Sul`,
       url: canonical,
       type: "website",
+      images: [DEFAULT_SOCIAL_IMAGE],
     },
+    twitter: { card: "summary_large_image", images: [DEFAULT_SOCIAL_IMAGE] },
   };
 }
 

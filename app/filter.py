@@ -10,10 +10,13 @@ import logging
 import os
 import re
 import time
-import unicodedata
 from difflib import SequenceMatcher
 from typing import Dict, List, Optional, Set
 from urllib.parse import urlsplit, urlunsplit
+
+from app.duplicate_detection import DuplicateDetector, SensitiveContentFilter
+
+__all__ = ["ContentFilter", "DuplicateDetector", "SensitiveContentFilter"]
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -247,87 +250,3 @@ class ContentFilter:
             score += 0.5
 
         return max(0.0, min(10.0, score))
-
-
-class DuplicateDetector:
-    """Detector avançado de duplicatas."""
-
-    @staticmethod
-    def are_duplicates(article1: Dict, article2: Dict, threshold: float = 0.85) -> bool:
-        """Verifica se dois artigos são duplicatas."""
-
-        # Compara títulos
-        title1 = article1.get("title", "").lower()
-        title2 = article2.get("title", "").lower()
-
-        if not title1 or not title2:
-            return False
-
-        similarity = SequenceMatcher(None, title1, title2).ratio()
-        if similarity >= threshold:
-            return True
-
-        return DuplicateDetector.are_semantically_similar(title1, title2)
-
-    @staticmethod
-    def get_keywords(text: str) -> set:
-        """Extrai o núcleo de palavras-chave do texto (ignora stopwords comuns)."""
-        if not text:
-            return set()
-        stopwords = {"para", "como", "sobre", "pelo", "pela", "onde", "mais", "isso", "esse", "esta", "entre", "ainda"}
-        # Normaliza e remove acentos
-        n_text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii").lower()
-        words = set(re.findall(r"\b[a-z]{4,}\b", n_text))
-        return words - stopwords
-
-    @staticmethod
-    def are_semantically_similar(text1: str, text2: str) -> bool:
-        """Verifica se dois textos partilham as mesmas palavras-chave fundamentais."""
-        kw1 = DuplicateDetector.get_keywords(text1)
-        kw2 = DuplicateDetector.get_keywords(text2)
-
-        if not kw1 or not kw2:
-            return False
-
-        intersection = kw1.intersection(kw2)
-        overlap_ratio = len(intersection) / min(len(kw1), len(kw2))
-
-        # Se compartilham pelo menos 3 palavras chaves fortes e mais de 45% de sobreposição
-        return len(intersection) >= 3 and overlap_ratio >= 0.45
-
-    @staticmethod
-    def find_duplicates(articles: List[Dict], threshold: float = 0.85) -> List[List[Dict]]:
-        """Encontra grupos de duplicatas."""
-        groups = []
-        used = set()
-
-        for i, a1 in enumerate(articles):
-            if i in used:
-                continue
-
-            group = [a1]
-            used.add(i)
-
-            for j, a2 in enumerate(articles[i + 1 :], i + 1):
-                if j in used:
-                    continue
-
-                if DuplicateDetector.are_duplicates(a1, a2, threshold):
-                    group.append(a2)
-                    used.add(j)
-
-            if len(group) > 1:
-                groups.append(group)
-
-        return groups
-
-
-class SensitiveContentFilter:
-    """Filtro de conteúdo sensível — desativado: portal publica fatos sem censura."""
-
-    SENSITIVE_TOPICS: Dict[str, Dict] = {}
-
-    @staticmethod
-    def check(article: Dict) -> Dict:
-        """Desativado: sempre retorna não sensível (nenhum termo filtra)."""
-        return {"is_sensitive": False}

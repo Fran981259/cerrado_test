@@ -6,7 +6,6 @@ from urllib.parse import urlsplit
 
 import yaml
 
-
 ROOT = Path(__file__).resolve().parents[1]
 EXCLUDED_CITIES = {"fortaleza", "nacional"}
 LOCAL_CONTEXT_TERMS = (

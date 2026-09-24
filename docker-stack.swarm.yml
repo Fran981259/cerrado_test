@@ -1,0 +1,247 @@
+services:
+  postgres:
+    image: postgres:15
+    logging: &id001
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    environment:
+      POSTGRES_DB: portal_cerrado
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER obrigatorio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}
+    volumes:
+    - cerrado_test_postgres_data:/var/lib/postgresql/data
+    networks:
+      cerrado_test_net: {}
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -U ${POSTGRES_USER:?POSTGRES_USER obrigatorio} -d portal_cerrado
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+  redis:
+    image: redis:7-alpine
+    logging: *id001
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}
+    networks:
+      cerrado_test_net: {}
+    healthcheck:
+      test:
+      - CMD
+      - redis-cli
+      - -a
+      - ${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}
+      - ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+    volumes: []
+  portal_cerrado:
+    image: ${BACKEND_IMAGE:?BACKEND_IMAGE SHA obrigatoria}
+    logging: *id001
+    ports:
+    - 8000:8000
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}@redis:6379/0
+      LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-lite-latest}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      SITE_URL: ${NEXT_PUBLIC_SITE_URL:?NEXT_PUBLIC_SITE_URL obrigatorio}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?NEXT_PUBLIC_SITE_URL obrigatorio}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://portal_cerrado:8000}
+      CELERY_SCHEDULER: '1'
+      PUBLISH_API_KEY: ${PUBLISH_API_KEY:?PUBLISH_API_KEY obrigatorio}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?CORS_ALLOWED_ORIGINS obrigatorio}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      SIMILARITY_THRESHOLD: ${SIMILARITY_THRESHOLD:-0.35}
+      DATABASE_CONNECT_RETRIES: ${DATABASE_CONNECT_RETRIES:-10}
+      DATABASE_CONNECT_RETRY_DELAY: ${DATABASE_CONNECT_RETRY_DELAY:-1}
+    volumes:
+    - cerrado_test_app_data:/app/data
+    networks:
+      cerrado_test_net: {}
+    healthcheck:
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:8000/health
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+  celery_worker:
+    image: ${BACKEND_IMAGE:?BACKEND_IMAGE SHA obrigatoria}
+    logging: *id001
+    command: celery -A app.celery_app worker -c 1 -l info
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}@redis:6379/0
+      LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-lite-latest}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      SITE_URL: ${NEXT_PUBLIC_SITE_URL:?NEXT_PUBLIC_SITE_URL obrigatorio}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?NEXT_PUBLIC_SITE_URL obrigatorio}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      SIMILARITY_THRESHOLD: ${SIMILARITY_THRESHOLD:-0.35}
+      DATABASE_CONNECT_RETRIES: ${DATABASE_CONNECT_RETRIES:-10}
+      DATABASE_CONNECT_RETRY_DELAY: ${DATABASE_CONNECT_RETRY_DELAY:-1}
+    volumes:
+    - cerrado_test_app_data:/app/data
+    networks:
+    - cerrado_test_net
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - python -c "import os, redis; redis.from_url(os.environ['REDIS_URL']).ping()"
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 30s
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+  celery_beat:
+    image: ${BACKEND_IMAGE:?BACKEND_IMAGE SHA obrigatoria}
+    logging: *id001
+    command: celery -A app.celery_app beat -l info
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}@redis:6379/0
+      LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-lite-latest}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      SITE_URL: ${NEXT_PUBLIC_SITE_URL:?NEXT_PUBLIC_SITE_URL obrigatorio}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?NEXT_PUBLIC_SITE_URL obrigatorio}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      SIMILARITY_THRESHOLD: ${SIMILARITY_THRESHOLD:-0.35}
+      DATABASE_CONNECT_RETRIES: ${DATABASE_CONNECT_RETRIES:-10}
+      DATABASE_CONNECT_RETRY_DELAY: ${DATABASE_CONNECT_RETRY_DELAY:-1}
+    volumes:
+    - cerrado_test_app_data:/app/data
+    networks:
+    - cerrado_test_net
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - python -c "import os, redis; redis.from_url(os.environ['REDIS_URL']).ping()"
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 30s
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+  flower:
+    image: ${BACKEND_IMAGE:?BACKEND_IMAGE SHA obrigatoria}
+    logging: *id001
+    command: celery -A app.celery_app flower --port=5555 --basic-auth=${FLOWER_USER:?FLOWER_USER obrigatorio}:${FLOWER_PASSWORD:?FLOWER_PASSWORD obrigatorio}
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}@redis:6379/0
+      LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-lite-latest}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    networks:
+    - cerrado_test_net
+    healthcheck:
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:5555/healthcheck
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+    volumes: []
+  frontend:
+    image: ${FRONTEND_IMAGE:?FRONTEND_IMAGE SHA obrigatoria}
+    logging: *id001
+    environment:
+      NEXT_PUBLIC_API_URL: http://portal_cerrado:8000
+      API_URL: http://portal_cerrado:8000
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?NEXT_PUBLIC_SITE_URL obrigatorio}
+    networks:
+    - cerrado_test_net
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget -qO /dev/null http://localhost:3000/ || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+    volumes: []
+  caddy:
+    image: caddy:2-alpine
+    logging: *id001
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://localhost:80/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    ports:
+    - ${HTTP_PORT:-8081}:80
+    - ${HTTPS_PORT:-8443}:443
+    - ${HTTPS_PORT:-8443}:443/udp
+    volumes:
+    - ./Caddyfile:/etc/caddy/Caddyfile
+    - cerrado_test_caddy_data:/data
+    - cerrado_test_caddy_config:/config
+    networks:
+    - cerrado_test_net
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+volumes:
+  cerrado_test_postgres_data: {}
+  cerrado_test_app_data: {}
+  cerrado_test_caddy_data: {}
+  cerrado_test_caddy_config: {}
+networks:
+  cerrado_test_net:
+    driver: overlay
+    attachable: true
+version: '3.9'

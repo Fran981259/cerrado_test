@@ -15,6 +15,14 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+def _age_days(birth_date: Optional[datetime]) -> int:
+    """Calcula idade em dias e trata datas ausentes como idade zero."""
+    normalized = as_utc(birth_date)
+    if normalized is None:
+        return 0
+    return (datetime.now(timezone.utc) - normalized).days
+
+
 class EvolutionStage(Enum):
     """Estágios de evolução de um repórter digital."""
 
@@ -81,7 +89,7 @@ class PersonalityEvolution:
             return EvolutionStage.NEWBORN
 
         data = self.reporter_data[slug]
-        age_days = (datetime.now(timezone.utc) - as_utc(data["birth_date"])).days
+        age_days = _age_days(data["birth_date"])
 
         cumulative_days = 0
         for stage, duration in self.STAGE_DURATIONS.items():
@@ -269,7 +277,7 @@ Total de matérias publicadas: {data.get("articles_published", 0)}
             "slug": data["slug"],
             "specialty": data["specialty"],
             "current_stage": stage.value,
-            "age_days": (datetime.now(timezone.utc) - as_utc(data["birth_date"])).days,
+            "age_days": _age_days(data["birth_date"]),
             "articles_published": data["articles_published"],
             "experience_points": data["experience_points"],
             "personality_traits": data["personality_traits"],
