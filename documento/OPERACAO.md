@@ -110,6 +110,12 @@ Antes de promover `cerrado_test` para produção:
 - Se o erro for de stack, corrigir antes de validar frontend.
 - Se o erro for de runtime, atualizar o plano antes de improvisar.
 
+## Stack de Teste Swarm
+
+- O serviço Caddy usa o Docker Config `caddyfile` definido no manifesto; não depende de bind mount no diretório interno do Portainer.
+- Após alterar o manifesto, atualizar o repositório Git da stack `cerrado_test` e executar redeploy pelo Portainer.
+- A stack de teste é isolada por nomes de volumes, rede e portas; não remover os containers standalone existentes.
+
 ## Observabilidade e Resposta a Incidentes
 
 - O contrato canônico está em `config/observability.yaml`; ele define métricas,

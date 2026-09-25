@@ -226,8 +226,10 @@ services:
     - ${HTTP_PORT:-8181}:80
     - ${HTTPS_PORT:-8843}:443
     - ${HTTPS_PORT:-8843}:443/udp
+    configs:
+    - source: caddyfile
+      target: /etc/caddy/Caddyfile
     volumes:
-    - ./Caddyfile:/etc/caddy/Caddyfile
     - cerrado_test_caddy_data:/data
     - cerrado_test_caddy_config:/config
     networks:
@@ -237,6 +239,9 @@ services:
       restart_policy:
         condition: on-failure
         max_attempts: 3
+configs:
+  caddyfile:
+    file: ./Caddyfile
 volumes:
   cerrado_test_postgres_data: {}
   cerrado_test_app_data: {}
@@ -246,4 +251,3 @@ networks:
   cerrado_test_net:
     driver: overlay
     attachable: true
-version: '3.9'
