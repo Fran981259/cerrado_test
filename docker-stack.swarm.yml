@@ -227,7 +227,7 @@ services:
     - ${HTTPS_PORT:-8843}:443
     - ${HTTPS_PORT:-8843}:443/udp
     configs:
-    - source: caddyfile
+    - source: caddyfile_test_http_v2
       target: /etc/caddy/Caddyfile
     volumes:
     - cerrado_test_caddy_data:/data
@@ -240,7 +240,7 @@ services:
         condition: on-failure
         max_attempts: 3
 configs:
-  caddyfile:
+  caddyfile_test_http_v2:
     file: ./Caddyfile.test
 volumes:
   cerrado_test_postgres_data: {}
