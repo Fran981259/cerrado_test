@@ -16,6 +16,7 @@
 - Artefatos de build ou `node_modules` pendentes: nenhum detectado.
 - `git diff --check`: aprovado.
 - Commit candidato: `2eac2448bb16c2fa8cbd2803464cdeb4c20770a7`.
+- Stack de teste: portas externas reservadas `8100`, `3100`, `8181` e `8843`.
 
 ## Bloqueios
 

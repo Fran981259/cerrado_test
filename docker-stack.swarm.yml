@@ -52,7 +52,7 @@ services:
     image: ${BACKEND_IMAGE:?BACKEND_IMAGE SHA obrigatoria}
     logging: *id001
     ports:
-    - 8000:8000
+    - ${BACKEND_PORT:-8100}:8000
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}@redis:6379/0
@@ -192,6 +192,8 @@ services:
   frontend:
     image: ${FRONTEND_IMAGE:?FRONTEND_IMAGE SHA obrigatoria}
     logging: *id001
+    ports:
+    - ${FRONTEND_PORT:-3100}:3000
     environment:
       NEXT_PUBLIC_API_URL: http://portal_cerrado:8000
       API_URL: http://portal_cerrado:8000
@@ -221,9 +223,9 @@ services:
       timeout: 10s
       retries: 3
     ports:
-    - ${HTTP_PORT:-8081}:80
-    - ${HTTPS_PORT:-8443}:443
-    - ${HTTPS_PORT:-8443}:443/udp
+    - ${HTTP_PORT:-8181}:80
+    - ${HTTPS_PORT:-8843}:443
+    - ${HTTPS_PORT:-8843}:443/udp
     volumes:
     - ./Caddyfile:/etc/caddy/Caddyfile
     - cerrado_test_caddy_data:/data
