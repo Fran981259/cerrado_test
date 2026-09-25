@@ -87,6 +87,23 @@
 
 A chave nunca deve aparecer em logs, commits, tickets ou mensagens de operação.
 
+## Checklist de Promoção para Produção
+
+Antes de promover `cerrado_test` para produção:
+
+1. Confirmar o repositório e branch oficiais de produção; o remote
+   `git@github.com:Fran981259/cerrado_test.git` é exclusivo do teste.
+2. Publicar novas imagens no registry aprovado e registrar os digests SHA-256 do
+   backend e frontend; nunca reutilizar a tag `latest`.
+3. Alterar nome da stack, portas públicas, URLs, CORS e domínios para os valores
+   produtivos; manter `8100`, `3100`, `8181` e `8843` somente no teste.
+4. Criar secrets de produção separadamente e validar força de `PUBLISH_API_KEY`;
+   não copiar `.env.example` ou credenciais do teste como valores reais.
+5. Executar backup, restore em banco isolado, migrations, smoke de API/frontend,
+   healthchecks e validação de sitemap no candidato produtivo.
+6. Definir janela de rollback por digest, preservar os containers standalone e só
+   removê-los após aceite, observação e aprovação explícita do cutover.
+
 ## Regras de Parada
 - Se uma fase falhar, nao avancar para a seguinte.
 - Se o erro for de build, corrigir antes de publicar.

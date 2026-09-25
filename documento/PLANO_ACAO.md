@@ -12,7 +12,7 @@
 
 | Gate | Estado | Evidência atual |
 | --- | --- | --- |
-| Git limpo e commit candidato | aprovado | `2eac2448bb16c2fa8cbd2803464cdeb4c20770a7` local |
+| Git limpo e commit candidato | aprovado | `e9dbb16801d041af11ef5873d58882aae17f35d4` local/remoto |
 | Ruff backend | aprovado | `ruff check app tests scripts` sem violações |
 | Mypy backend | aprovado | `mypy app` sem erros em 65 arquivos |
 | Testes backend | aprovado | 120 unitários + 8 integração aprovados |

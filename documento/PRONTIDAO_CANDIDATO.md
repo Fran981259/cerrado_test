@@ -15,8 +15,16 @@
 - Arquivos novos não rastreados: 52.
 - Artefatos de build ou `node_modules` pendentes: nenhum detectado.
 - `git diff --check`: aprovado.
-- Commit candidato: `2eac2448bb16c2fa8cbd2803464cdeb4c20770a7`.
+- Commit candidato: `e9dbb16801d041af11ef5873d58882aae17f35d4`.
 - Stack de teste: portas externas reservadas `8100`, `3100`, `8181` e `8843`.
+
+## Mudanças obrigatórias antes da produção
+
+- Trocar remote/branch de teste pelo repositório oficial de produção.
+- Trocar nome da stack, portas, domínios, CORS, URLs e volumes.
+- Publicar imagens novas por digest no registry produtivo.
+- Recriar secrets de produção sem copiar valores de teste.
+- Confirmar TLS, backup, rollback e encerramento dos containers standalone.
 
 ## Bloqueios
 

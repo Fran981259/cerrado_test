@@ -40,3 +40,11 @@
 - A stack Swarm final deve usar nomes de serviço `postgres`, `redis`, `api`, `worker`, `beat`, `frontend` e `caddy`; Caddy deve resolver `api:8000` e `frontend:3000` por DNS de serviço, nunca por `container_name`.
 - Antes de qualquer rollout: concluir validações locais, gerar imagens imutáveis por SHA, validar migrations em banco novo e legado simulado, confirmar espaço em disco e documentar backup, rollback e verificação.
 - Preflight remoto de 2026-09-18: Swarm manager ativo, cerca de 6,5 GB livres no host, nenhuma stack Swarm `cerrado` ativa e nenhum Caddy do Portal em execução.
+
+## Separação Teste e Produção
+- O repositório remoto de teste é `git@github.com:Fran981259/cerrado_test.git`; produção deve usar um repositório/branch definido explicitamente antes do cutover.
+- A stack de teste usa `cerrado_test`, volumes `cerrado_test_*`, rede isolada e portas externas 8100 (API), 3100 (frontend), 8181 (HTTP) e 8843 (HTTPS).
+- Produção deve trocar nome da stack, volumes, portas públicas, `SITE_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_API_URL` e `CORS_ALLOWED_ORIGINS` antes da aplicação.
+- Imagens de produção devem ser publicadas no registry aprovado por digest SHA-256; nunca promover `latest` nem reutilizar imagens do teste.
+- Secrets de produção (`PUBLISH_API_KEY`, banco, Redis, LLM, Flower e registry) devem ser recriados no gestor de segredos; não copiar `.env` de teste.
+- O cutover exige backup/restore validado, janela de rollback, TLS/proxy confirmado e encerramento explícito dos containers standalone legados.
