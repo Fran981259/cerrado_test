@@ -23,6 +23,8 @@
 2. Criar commit candidato e registrar seu SHA.
 3. Executar Lighthouse em navegador disponível.
 4. Aprovar explicitamente o ensaio Docker/Swarm de teste.
+5. Confirmar o endpoint correto: no nó `100.95.111.24` não existe stack `cerrado`;
+   apenas `ap2web` e `n8n_2026_evo-go` foram observadas.
 
 ## Regra de promoção
 

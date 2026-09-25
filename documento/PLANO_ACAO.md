@@ -275,6 +275,9 @@ Restaurar uma base reproduzível, testável e operável antes de qualquer evolu�
 - Auditoria de prontidão registrou 50 arquivos modificados e 52 novos não rastreados;
   não há artefatos de build pendentes. O candidato continua bloqueado até revisão,
   commits lógicos, Lighthouse e aprovação explícita do ensaio Docker/Swarm.
+- O acesso autorizado ao nó `100.95.111.24` foi validado por SSH: Swarm ativo,
+  nó líder `Razuk`, Engine 26.1.5. A stack `cerrado` não existe nesse endpoint;
+  somente `ap2web` e `n8n_2026_evo-go` estão presentes. Nenhuma stack foi aplicada.
 - Auditoria local de performance/SEO: Lighthouse não está instalado no ambiente;
   o build produziu 1,36 MB de assets estáticos e 2,06 MB de server bundle, não há
   tags `<img>` cruas no frontend, as três rotas de metadata existem e `npm audit`
