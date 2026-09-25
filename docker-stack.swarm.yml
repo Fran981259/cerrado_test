@@ -241,7 +241,7 @@ services:
         max_attempts: 3
 configs:
   caddyfile:
-    file: ./Caddyfile
+    file: ./Caddyfile.test
 volumes:
   cerrado_test_postgres_data: {}
   cerrado_test_app_data: {}
