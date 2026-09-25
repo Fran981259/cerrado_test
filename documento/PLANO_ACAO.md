@@ -298,6 +298,18 @@ Restaurar uma base reproduzível, testável e operável antes de qualquer evolu�
   executada por blocos equivalentes (incluindo publisher e robots): 120/120 testes
   passaram. A execução agregada excede o limite interativo de 30s desta sessão,
   mas a cobertura total foi executada e o gate unitário está aprovado por blocos.
+- Correção técnica de runtime Swarm em 25/09/2026:
+  - Causa: Backend falhava com `ModuleNotFoundError: No module named 'psycopg'` porque
+    o SQLAlchemy 2.1+ adota psycopg v3 como DBAPI padrão para `postgresql://`, enquanto
+    a imagem possui `psycopg2-binary`. Adicionalmente, o healthcheck do Caddy no Swarm
+    requisita `/healthz`, não implementado no frontend Next.js.
+  - Arquivos afetados: `app/database.py`, `docker-stack.swarm.yml`, `docker-compose.yml`.
+  - Validação: Os 8 serviços da stack `cerrado_test` convergiram e estão `1/1` (healthy).
+    Smoke test confirmou HTTP 200 na porta 8181 (Caddy com CSP e security headers), porta
+    3100 (Frontend Next.js) e porta 8100 (API FastAPI `/health` com banco conectado).
+    Testes locais `test_runtime_contract.py`, `test_security_headers.py`, Ruff e Mypy verdes.
+  - Risco residual: Baixo; fallback defensivo no código Python e drivers explícitos no Compose/Swarm,
+    sem impacto nos containers da produção standalone existente.
 
 ### Fase 10 — Candidato de deploy
 

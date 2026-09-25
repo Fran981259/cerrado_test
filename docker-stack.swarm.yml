@@ -54,7 +54,7 @@ services:
     ports:
     - ${BACKEND_PORT:-8100}:8000
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}@redis:6379/0
       LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
@@ -95,7 +95,7 @@ services:
     logging: *id001
     command: celery -A app.celery_app worker -c 1 -l info
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}@redis:6379/0
       LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
@@ -130,7 +130,7 @@ services:
     logging: *id001
     command: celery -A app.celery_app beat -l info
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}@redis:6379/0
       LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
@@ -165,7 +165,7 @@ services:
     logging: *id001
     command: celery -A app.celery_app flower --port=5555 --basic-auth=${FLOWER_USER:?FLOWER_USER obrigatorio}:${FLOWER_PASSWORD:?FLOWER_PASSWORD obrigatorio}
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}@redis:6379/0
       LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
@@ -218,7 +218,7 @@ services:
     image: caddy:2-alpine
     logging: *id001
     healthcheck:
-      test: ["CMD", "wget", "-qO", "/dev/null", "http://localhost:80/healthz"]
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://localhost:80/"]
       interval: 30s
       timeout: 10s
       retries: 3

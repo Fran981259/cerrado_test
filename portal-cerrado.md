@@ -114,6 +114,7 @@
 - frontend/src/lib/editorialApi.ts → protected editorial queue client
 - frontend/src/components/admin/ → editorial review dashboard UI
 - config/scheduler.yaml → local publication policy
+- documento/FONTES_RASPAGEM.md → catálogo de fontes, URLs e status de integração
 
 ## Database Tables
 

@@ -32,11 +32,23 @@ def _connect_postgres(url: str):
             connect_args={"check_same_thread": False},
             echo=False,
         )
+
+    normalized_url = url.strip()
+    if normalized_url.startswith("postgresql://"):
+        try:
+            import psycopg  # noqa: F401
+        except ImportError:
+            try:
+                import psycopg2  # noqa: F401
+                normalized_url = "postgresql+psycopg2://" + normalized_url[len("postgresql://"):]
+            except ImportError:
+                pass
+
     retries = int(os.getenv("DATABASE_CONNECT_RETRIES", "10"))
     delay = float(os.getenv("DATABASE_CONNECT_RETRY_DELAY", "1"))
     last_error = None
     engine = create_engine(
-        url,
+        normalized_url,
         poolclass=QueuePool,
         pool_size=5,
         max_overflow=10,

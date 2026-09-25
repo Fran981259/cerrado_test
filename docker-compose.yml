@@ -51,7 +51,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}@redis:6379/0
       LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
@@ -95,7 +95,7 @@ services:
     logging: *default-logging
     command: celery -A app.celery_app worker -c 1 -l info
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}@redis:6379/0
       LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
@@ -136,7 +136,7 @@ services:
     logging: *default-logging
     command: celery -A app.celery_app beat -l info
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}@redis:6379/0
       LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
@@ -175,7 +175,7 @@ services:
     logging: *default-logging
     command: celery -A app.celery_app flower --port=5555 --basic-auth=${FLOWER_USER:?FLOWER_USER obrigatorio}:${FLOWER_PASSWORD:?FLOWER_PASSWORD obrigatorio}
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}@redis:6379/0
       LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
