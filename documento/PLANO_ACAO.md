@@ -281,6 +281,8 @@ Restaurar uma base reproduzível, testável e operável antes de qualquer evolu�
 - Passo 2 concluído: a stack de teste foi parametrizada para publicar API em `8100`,
   frontend em `3100`, Caddy HTTP em `8181` e HTTPS em `8843`; `docker stack config`
   confirmou os quatro ports sem aplicar a stack.
+- CI publicado com todos os jobs verdes; manifests GHCR consultados no host de teste
+  e digests registrados no relatório de prontidão. Nenhuma stack foi aplicada.
 - Auditoria local de performance/SEO: Lighthouse não está instalado no ambiente;
   o build produziu 1,36 MB de assets estáticos e 2,06 MB de server bundle, não há
   tags `<img>` cruas no frontend, as três rotas de metadata existem e `npm audit`
