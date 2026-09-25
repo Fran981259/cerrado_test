@@ -281,35 +281,8 @@ Restaurar uma base reproduzível, testável e operável antes de qualquer evolu�
 - Passo 2 concluído: a stack de teste foi parametrizada para publicar API em `8100`,
   frontend em `3100`, Caddy HTTP em `8181` e HTTPS em `8843`; `docker stack config`
   confirmou os quatro ports sem aplicar a stack.
-- CI publicado com todos os jobs verdes; manifests GHCR consultados no host de teste
-  e digests registrados no relatório de prontidão. Nenhuma stack foi aplicada.
-- Auditoria local de performance/SEO: Lighthouse não está instalado no ambiente;
-  o build produziu 1,36 MB de assets estáticos e 2,06 MB de server bundle, não há
-  tags `<img>` cruas no frontend, as três rotas de metadata existem e `npm audit`
-  offline não encontrou vulnerabilidades altas.
-- A auditoria de higiene não encontrou `console.log` ou `debugger`; o `.env.example`
-  tinha `portal_pass` como senha reutilizável e foi convertido para placeholder
-  `CHANGE_ME_LOCAL_PASSWORD`. Arquivos legados acima de 300 linhas permanecem sem
-  alteração e foram registrados como dívida técnica para uma fase própria.
-- A auditoria Ruff completa de `app`, `tests` e `scripts` encontrou apenas o
-  bootstrap intencional de `sys.path`; os quatro imports receberam justificativa
-  `E402` localizada e a auditoria foi aprovada.
-- A suíte de integração passou com 8 testes em 3,47s. A suíte unitária foi
-  executada por blocos equivalentes (incluindo publisher e robots): 120/120 testes
-  passaram. A execução agregada excede o limite interativo de 30s desta sessão,
-  mas a cobertura total foi executada e o gate unitário está aprovado por blocos.
-- Correção técnica de runtime Swarm em 25/09/2026:
-  - Causa: Backend falhava com `ModuleNotFoundError: No module named 'psycopg'` porque
-    o SQLAlchemy 2.1+ adota psycopg v3 como DBAPI padrão para `postgresql://`, enquanto
-    a imagem possui `psycopg2-binary`. Adicionalmente, o healthcheck do Caddy no Swarm
-    requisita `/healthz`, não implementado no frontend Next.js.
-  - Arquivos afetados: `app/database.py`, `docker-stack.swarm.yml`, `docker-compose.yml`.
-  - Validação: Os 8 serviços da stack `cerrado_test` convergiram e estão `1/1` (healthy).
-    Smoke test confirmou HTTP 200 na porta 8181 (Caddy com CSP e security headers), porta
-    3100 (Frontend Next.js) e porta 8100 (API FastAPI `/health` com banco conectado).
-    Testes locais `test_runtime_contract.py`, `test_security_headers.py`, Ruff e Mypy verdes.
-  - Risco residual: Baixo; fallback defensivo no código Python e drivers explícitos no Compose/Swarm,
-    sem impacto nos containers da produção standalone existente.
+- Evidências detalhadas de CI, performance, higiene, testes e runtime Swarm estão em
+  `documento/EVIDENCIAS_VALIDACAO.md`.
 
 ### Fase 10 — Candidato de deploy
 
