@@ -115,6 +115,8 @@ Antes de promover `cerrado_test` para produção:
 - O serviço Caddy usa o Docker Config `caddyfile` definido no manifesto; não depende de bind mount no diretório interno do Portainer.
 - Após alterar o manifesto, atualizar o repositório Git da stack `cerrado_test` e executar redeploy pelo Portainer.
 - A stack de teste é isolada por nomes de volumes, rede e portas; não remover os containers standalone existentes.
+- As imagens GHCR são privadas e exigem um registry endpoint no Portainer com usuário GitHub e token de leitura `read:packages`; não colocar esse token no compose, `.env` ou Git.
+- O redeploy só é considerado aprovado quando cada serviço de imagem SHA estiver `1/1`; falha `No such image` significa autenticação/pull pendente e bloqueia o aceite.
 
 ## Observabilidade e Resposta a Incidentes
 
