@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from app.celery_app import celery_app
 from app.contracts import category_name, sources_list
 from app.editorial import review_natural_writing
-from app.llm_client import LLMClient
+from app.llm_client import LLMClient, LLMUnavailableError
 from app.rewriter import load_reporters_config
 
 logger = logging.getLogger(__name__)
@@ -37,6 +37,8 @@ def _find_related_sources(article: dict, max_related: int = 3) -> list:
             keywords = [w for w in re.findall(r"\w+", title) if len(w) >= 4][:6]
             if not keywords:
                 return []
+            if db.bind.dialect.name == "postgresql":
+                return _find_related_sources_fts(db, title, article.get("url", ""), max_related)
             candidates = (
                 db.query(NewsArticle)
                 .filter(NewsArticle.status.in_(["classified", "rewritten", "published"]))
@@ -69,6 +71,24 @@ def _find_related_sources(article: dict, max_related: int = 3) -> list:
     except Exception as e:
         logger.warning(f"[REWRITE] falha ao buscar fontes relacionadas: {e}")
         return []
+
+
+def _find_related_sources_fts(db, title: str, current_url: str, max_related: int) -> list:
+    """Use PostgreSQL ranking and project only fields needed for attribution."""
+    from sqlalchemy import func
+
+    from app.schema import NewsArticle
+
+    query_text = " & ".join(word for word in re.findall(r"\w+", title.lower()) if len(word) >= 4)[:500]
+    vector = func.to_tsvector("portuguese", NewsArticle.title)
+    ranked = db.query(NewsArticle.title, NewsArticle.summary, NewsArticle.sources, func.ts_rank_cd(vector, func.plainto_tsquery("portuguese", query_text)).label("rank")).filter(NewsArticle.status.in_(["classified", "rewritten", "published"]), vector.op("@@")(func.plainto_tsquery("portuguese", query_text))).order_by(func.ts_rank_cd(vector, func.plainto_tsquery("portuguese", query_text)).desc()).limit(max_related * 3).all()
+    related = []
+    for candidate_title, summary, sources, _rank in ranked:
+        urls = [source["url"] for source in sources_list(sources)]
+        if not urls or current_url in urls:
+            continue
+        related.append({"title": candidate_title, "summary": summary or "", "url": urls[0], "source": source_name_from_url(urls[0])})
+    return related[:max_related]
 
 
 @celery_app.task(
@@ -212,6 +232,11 @@ def rewrite_pending_articles(self):
                     )
                 art.updated_at = datetime.now(timezone.utc)
                 rewritten += 1
+            except LLMUnavailableError:
+                logger.warning("[REWRITE] LLM indisponível; artigo %s ficará classificado", art.id)
+                art.status = "classified"
+                art.updated_at = datetime.now(timezone.utc)
+                failed += 1
             except Exception as e:
                 logger.error("[REWRITE] erro num artigo (%s)", type(e).__name__)
                 art.status = "classified"

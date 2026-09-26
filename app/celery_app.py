@@ -88,6 +88,7 @@ celery_app.conf.update(
         "system-health-check": {
             "task": "app.tasks.maintenance.system_health_check",
             "schedule": 300.0,  # A cada 5 minutos
+            "options": {"queue": "monitoring", "expires": 270},
         },
         # ================================
         # MÉTRICAS (1x por hora)
@@ -95,6 +96,7 @@ celery_app.conf.update(
         "report-metrics": {
             "task": "app.tasks.maintenance.report_metrics",
             "schedule": crontab(minute=0),  # A cada hora (minuto 0)
+            "options": {"queue": "monitoring", "expires": 270},
         },
         # ================================
         # HORUS — AUDITORIA (1x por hora)

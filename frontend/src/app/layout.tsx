@@ -38,14 +38,12 @@ import { Tracker } from "@/components/Tracker";
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" className="h-full">
-      <head>
-        <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/3.0.0/uicons-regular-rounded/css/uicons-regular-rounded.css" />
-        <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/3.0.0/uicons-solid-rounded/css/uicons-solid-rounded.css" />
-      </head>
+      <head />
       <body className="min-h-full flex flex-col font-sans antialiased">
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-accent-soil focus:px-4 focus:py-2 focus:text-white">Pular para o conteúdo</a>
         <Tracker />
         <Header />
-        <main className="flex-1">{children}</main>
+        <main id="main-content" className="flex-1">{children}</main>
         <Footer />
       </body>
     </html>

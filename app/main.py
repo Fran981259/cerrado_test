@@ -20,13 +20,14 @@ from typing import Literal, Optional
 
 import sentry_sdk
 import uvicorn
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from loguru import logger
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from app.analytics_routes import router as analytics_router
-from app.database import get_session, init_db
+from app.database import get_db, get_session, init_db
 from app.editorial_routes import router as editorial_router
 from app.ml_editorial import get_latest_trend_signals
 from app.operations_routes import router as operations_router
@@ -45,8 +46,8 @@ SENTRY_DSN = os.getenv("SENTRY_DSN")
 if SENTRY_DSN:
     sentry_sdk.init(
         dsn=SENTRY_DSN,
-        traces_sample_rate=1.0,
-        profiles_sample_rate=1.0,
+        traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.1")),
+        profiles_sample_rate=float(os.getenv("SENTRY_PROFILES_SAMPLE_RATE", "0.05")),
     )
     logger.info("Sentry configurado e ativo.")
 
@@ -124,6 +125,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(
+    ProxyHeadersMiddleware,
+    trusted_hosts=[host.strip() for host in os.getenv("TRUSTED_PROXY_HOSTS", "127.0.0.1,::1").split(",") if host.strip()],
+)
 app.include_router(operations_router)
 app.include_router(editorial_router)
 app.include_router(analytics_router)
@@ -140,11 +145,13 @@ def root():
 
 
 @app.get("/health")
-def health_check():
+def health_check(db=Depends(get_db)):
     """Verifica saúde do sistema."""
-    db = None
+    owns_session = False
     try:
-        db = get_session()
+        if not hasattr(db, "query"):
+            db = get_session()
+            owns_session = True
         count = db.query(NewsArticle).count()
         return {
             "status": "healthy",
@@ -154,7 +161,7 @@ def health_check():
     except Exception:
         return JSONResponse(status_code=503, content={"status": "unhealthy", "database": "unavailable"})
     finally:
-        if db is not None:
+        if owns_session:
             db.close()
 
 
@@ -171,9 +178,10 @@ def list_news(
     reporter_slug: str = Query(None),
     region: Optional[Literal["ms"]] = Query(None),
     sort_by: str = Query("recent", pattern="^(recent|trend)$"),
+    db=Depends(get_db),
 ):
     """Lista as notícias publicadas (do banco REAL)."""
-    publisher = ArticlePublisher()
+    publisher = ArticlePublisher(db if hasattr(db, "query") else None)
     try:
         # Direct Python callers (including internal tests) receive FastAPI's
         # Query sentinel as the default; only a resolved string is a filter.
@@ -202,11 +210,13 @@ def list_news(
 
 
 @app.get("/api/news/{slug}")
-def get_article(slug: str):
+def get_article(slug: str, db=Depends(get_db)):
     """Busca uma matéria por slug."""
-    db = None
-    try:
+    owns_session = False
+    if not hasattr(db, "query"):
         db = get_session()
+        owns_session = True
+    try:
         article = (
             db.query(NewsArticle)
             .filter(NewsArticle.slug == slug, NewsArticle.status == "published", NewsArticle.region == "ms")
@@ -224,7 +234,7 @@ def get_article(slug: str):
         logger.error("Materia indisponivel (%s)", type(e).__name__)
         raise HTTPException(status_code=503, detail="Materia temporariamente indisponivel") from None
     finally:
-        if db is not None:
+        if owns_session:
             db.close()
 
 

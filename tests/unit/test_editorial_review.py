@@ -46,6 +46,7 @@ def test_editorial_and_analytics_routes_have_one_registration():
         ("/api/publish", "POST"),
         ("/api/editorial/review", "GET"),
         ("/api/editorial/review/{slug}", "PUT"),
+        ("/api/editorial/review/{slug}/writing-check", "GET"),
         ("/api/analytics/track", "POST"),
     }
 

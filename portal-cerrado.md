@@ -18,6 +18,7 @@
 - config/ → source, scheduler and reporter policies
 - frontend/src/app/ → public Next.js routes
 - frontend/src/components/ → reusable public UI components
+- frontend/src/components/Icon.tsx → local lucide icon vocabulary
 - frontend/src/components/article/ → reading guide, sharing actions and article sidebar
 - frontend/src/lib/ → API client and shared frontend utilities
 - tests/ → unit and pipeline tests
@@ -41,18 +42,24 @@
 - app/contracts.py → contratos de categoria, fontes e timestamps UTC/apresentação
 - app/main.py → CORS fail-closed e endpoints FastAPI
 - app/rate_limit.py → contador Redis compartilhado para endpoints públicos
+- TRUSTED_PROXY_HOSTS → allowlist de proxies confiáveis para X-Forwarded-For
 - app/security.py → autenticação por chave com política de força em produção
 - app/editorial_routes.py → revisão editorial e registro de auditoria
 - tests/unit/test_security.py → contrato de força da chave editorial
 - tests/unit/test_env_contract.py → variáveis documentadas versus runtime
 - tests/unit/test_operations_sitemap.py → filtro de artigos do news sitemap
 - .env.example → contrato de ambiente sem chaves legadas
+- SENTRY_TRACES_SAMPLE_RATE / SENTRY_PROFILES_SAMPLE_RATE → amostragem configurável do Sentry
+- LLM_FALLBACK_CHAIN → ordem de failover dos provedores LLM
 - .env.example → placeholders sem senha reutilizável para desenvolvimento
 - documento/OPERACAO.md → procedimento de backup e rotação de chave editorial
 - app/editorial_routes.py → fonte única das rotas editoriais protegidas
 - app/analytics_routes.py → fonte única do tracking de primeira parte
+- app/database.py → sessões FastAPI com rollback e fechamento garantidos
 - app/tasks/scan_tasks.py → orquestração Celery do pipeline de coleta
+- app/translation_glossary.py → glossário compartilhado de tradução LLM
 - app/tasks/scan_persistence.py → persistência e deduplicação de rascunhos coletados
+- alembic/versions/b3a8e4f7c2d1_add_news_title_fts_index.py → índice FTS PostgreSQL para fontes relacionadas
 - app/personality.py → evolução temporal dos repórteres com datas normalizadas
 - scripts/quarantine_misclassified_global_articles.py → auditoria segura de fontes globais
 - app/duplicate_detection.py → regras compartilhadas de duplicação e conteúdo sensível
@@ -82,6 +89,7 @@
 - app/publisher.py → publication and public feed rules
 - app/local_news_policy.py → local editorial source gate
 - frontend/src/lib/api.ts → frontend API client and home ranking
+- frontend/src/lib/formatArticle.ts → article formatting and DOMPurify sanitization
 - frontend/src/lib/electionCoverage.ts → deterministic election and politics selection for the home
 - app/category_inference.py → conservative category inference for the publication pipeline
 - tests/conftest.py → banco temporário e bloqueio de rede para testes unitários
@@ -97,11 +105,14 @@
 - frontend/src/app/robots.ts → metadata de robots
 - frontend/src/app/sitemap.ts → sitemap público
 - frontend/src/app/news-sitemap.xml/route.ts → sitemap de notícias com fallback 503
+- frontend/src/app/not-found.tsx → fallback editorial de rota inexistente
+- frontend/src/app/noticia/[slug]/loading.tsx → skeleton da leitura de notícia
 - documento/PRONTIDAO_CANDIDATO.md → gates finais e bloqueios para promoção
 - Caddyfile → CSP, Permissions-Policy e headers HTTP de segurança
 - tests/unit/test_security_headers.py → contrato estático dos headers do proxy
 - docker-compose.local.yml → override local com bridge e portas temporárias
 - docker-stack.swarm.yml → stack Swarm de teste com imagens por digest
+- celery_monitoring → worker Celery dedicado à fila de healthcheck e métricas
 - tests/unit/test_runtime_contract.py → serviços, healthchecks e isolamento Swarm
 - tests/unit/test_ci_contract.py → promoção manual e tags imutáveis
 - .github/workflows/deploy.yml → workflow manual por SHA e inventário de dependências

@@ -69,6 +69,14 @@ def test_celery_schedule_keeps_only_local_editorial_pipeline(monkeypatch):
     assert "generate-daily-curiosities" not in schedule
 
 
+def test_monitoring_tasks_use_dedicated_expiring_queue():
+    from app.celery_app import celery_app
+
+    schedule = celery_app.conf.beat_schedule
+    for name in ("system-health-check", "report-metrics"):
+        assert schedule[name]["options"] == {"queue": "monitoring", "expires": 270}
+
+
 def test_retired_global_mining_task_is_a_noop():
     from app.tasks.mine_tasks import mine_global_news
 

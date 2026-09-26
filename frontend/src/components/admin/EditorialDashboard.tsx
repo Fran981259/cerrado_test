@@ -5,7 +5,7 @@ import { CATEGORY_LIST } from "@/lib/categories";
 import { type EditorialArticle, type EditorialChanges, type EditorialStatus, fetchEditorialQueue } from "@/lib/editorialApi";
 import { EditorialReviewCard } from "./EditorialReviewCard";
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 50;
 
 /** Provides a protected, paginated workspace for editorial corrections. */
 export function EditorialDashboard() {
@@ -17,16 +17,18 @@ export function EditorialDashboard() {
   const [status, setStatus] = useState<EditorialStatus | "all">("all");
   const [category, setCategory] = useState("all");
   const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
 
-  const loadQueue = async (key = apiKey) => {
+  const loadQueue = async (key = apiKey, nextPage = 0) => {
     if (!key.trim()) return setError("Informe a chave editorial para abrir a fila.");
     setIsLoading(true);
     setError("");
     try {
-      const queue = await fetchEditorialQueue(key.trim());
+      const queue = await fetchEditorialQueue(key.trim(), nextPage * PAGE_SIZE, PAGE_SIZE);
       setApiKey(key.trim());
-      setArticles(queue);
-      setPage(0);
+      setArticles(queue.articles);
+      setTotal(queue.total);
+      setPage(nextPage);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Não foi possível carregar a fila.");
     } finally {
@@ -38,8 +40,8 @@ export function EditorialDashboard() {
     const matchesText = `${article.title} ${article.summary ?? ""}`.toLocaleLowerCase().includes(query.toLocaleLowerCase());
     return matchesText && (status === "all" || article.status === status) && (category === "all" || article.category === category);
   }), [articles, category, query, status]);
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pageArticles = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const pageArticles = filtered;
 
   const saveArticle = (slug: string, changes: EditorialChanges) => {
     setArticles((current) => current.map((article) => article.slug === slug ? { ...article, ...changes } : article));
@@ -48,6 +50,7 @@ export function EditorialDashboard() {
     setApiKey("");
     setArticles([]);
     setError("");
+    setTotal(0);
   };
 
   if (!articles.length) return <AccessPanel apiKey={apiKey} error={error} isLoading={isLoading} onChange={setApiKey} onSubmit={() => loadQueue()} />;
@@ -66,14 +69,14 @@ export function EditorialDashboard() {
         <FilterInput label="Buscar" value={query} onChange={(value) => { setQuery(value); setPage(0); }} />
         <FilterSelect label="Status" value={status} onChange={(value) => { setStatus(value as EditorialStatus | "all"); setPage(0); }} options={[{ value: "all", label: "Todos" }, ...statusOptions()]} />
         <FilterSelect label="Categoria" value={category} onChange={(value) => { setCategory(value); setPage(0); }} options={[{ value: "all", label: "Todas" }, ...CATEGORY_LIST.map((item) => ({ value: item.slug, label: item.label }))]} />
-        <div className="rounded-md bg-canvas p-4"><p className="eyebrow">Na seleção</p><p className="mt-1 font-display text-2xl font-bold">{filtered.length}</p></div>
+        <div className="rounded-md bg-canvas p-4"><p className="eyebrow">Na fila</p><p className="mt-1 font-display text-2xl font-bold">{total}</p></div>
       </div>
 
       <div className="mt-6 grid gap-5">
         {pageArticles.map((article) => <EditorialReviewCard key={article.slug} article={article} apiKey={apiKey} onSaved={(changes) => saveArticle(article.slug, changes)} />)}
         {!pageArticles.length && <EmptyState onReset={() => { setQuery(""); setStatus("all"); setCategory("all"); }} />}
       </div>
-      <Pagination page={page} pageCount={pageCount} onChange={setPage} />
+      <Pagination page={page} pageCount={pageCount} onChange={(nextPage) => loadQueue(apiKey, nextPage)} />
     </section>
   );
 }

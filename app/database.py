@@ -5,6 +5,7 @@ PostgreSQL via SQLAlchemy
 
 import os
 import time
+from collections.abc import Generator
 
 try:
     from dotenv import load_dotenv
@@ -122,3 +123,15 @@ def init_db():
 def get_session():
     """Retorna uma sessão nova (para uso fora do FastAPI)."""
     return SessionLocal()
+
+
+def get_db() -> Generator:
+    """Yield one request-scoped session and rollback when the request fails."""
+    db = SessionLocal()
+    try:
+        yield db
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()

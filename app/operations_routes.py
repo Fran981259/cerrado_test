@@ -2,21 +2,24 @@
 
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
 from sqlalchemy import func
 
 from app.contracts import iso_utc
-from app.database import get_session
+from app.database import get_db, get_session
 from app.schema import NewsArticle, Reporter
 
 router = APIRouter()
 
 
 @router.get("/api/operations/status")
-def operations_status():
+def operations_status(db=Depends(get_db)):
     """Return a read-only, local-publication freshness signal."""
-    db = get_session()
+    owns_session = False
+    if not hasattr(db, "query"):
+        db = get_session()
+        owns_session = True
     try:
         now = datetime.now(timezone.utc)
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -33,13 +36,17 @@ def operations_status():
         logger.error("Status operacional indisponível (%s)", type(error).__name__)
         raise HTTPException(status_code=503, detail="Status operacional indisponível") from None
     finally:
-        db.close()
+        if owns_session:
+            db.close()
 
 
 @router.get("/api/sitemap")
-def sitemap_articles(after_id: int = Query(0, ge=0), through_id: int = Query(None, ge=0), limit: int = Query(1000, ge=1, le=1000)):
+def sitemap_articles(after_id: int = Query(0, ge=0), through_id: int = Query(None, ge=0), limit: int = Query(1000, ge=1, le=1000), db=Depends(get_db)):
     """Return one stable page of public local sitemap records."""
-    db = get_session()
+    owns_session = False
+    if not hasattr(db, "query"):
+        db = get_session()
+        owns_session = True
     try:
         upper = through_id if through_id is not None else (db.query(func.max(NewsArticle.id)).scalar() or 0)
         rows = _local_public_query(db).filter(NewsArticle.id > after_id, NewsArticle.id <= upper, NewsArticle.slug.isnot(None)).order_by(NewsArticle.id).limit(limit).all()
@@ -47,13 +54,17 @@ def sitemap_articles(after_id: int = Query(0, ge=0), through_id: int = Query(Non
     except Exception:
         raise HTTPException(status_code=503, detail="Sitemap temporariamente indisponivel") from None
     finally:
-        db.close()
+        if owns_session:
+            db.close()
 
 
 @router.get("/api/news-sitemap")
-def recent_news_sitemap_articles(limit: int = Query(1000, ge=1, le=1000)):
+def recent_news_sitemap_articles(limit: int = Query(1000, ge=1, le=1000), db=Depends(get_db)):
     """Return recent public local articles with the fields required by a news sitemap."""
-    db = get_session()
+    owns_session = False
+    if not hasattr(db, "query"):
+        db = get_session()
+        owns_session = True
     try:
         cutoff = datetime.now(timezone.utc) - timedelta(days=2)
         rows = (
@@ -67,13 +78,17 @@ def recent_news_sitemap_articles(limit: int = Query(1000, ge=1, le=1000)):
     except Exception:
         raise HTTPException(status_code=503, detail="Sitemap de notícias temporariamente indisponível") from None
     finally:
-        db.close()
+        if owns_session:
+            db.close()
 
 
 @router.get("/api/reporters")
-def list_reporters():
+def list_reporters(db=Depends(get_db)):
     """List active digital reporters."""
-    db = get_session()
+    owns_session = False
+    if not hasattr(db, "query"):
+        db = get_session()
+        owns_session = True
     try:
         reporters = db.query(Reporter).filter(Reporter.active).all()
         return {"reporters": [{"slug": reporter.slug, "name": reporter.display_name, "role": reporter.role, "articles_published": reporter.articles_published, "stage": reporter.personality_stage} for reporter in reporters]}
@@ -81,7 +96,8 @@ def list_reporters():
         logger.error("Reporteres indisponiveis (%s)", type(error).__name__)
         raise HTTPException(status_code=503, detail="Reporteres temporariamente indisponiveis") from None
     finally:
-        db.close()
+        if owns_session:
+            db.close()
 
 
 def _local_public_query(db):

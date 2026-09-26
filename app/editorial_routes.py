@@ -3,13 +3,14 @@
 from datetime import datetime, timezone
 from typing import List, Literal, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy import and_, or_
+from sqlalchemy.orm import load_only
 
 from app.contracts import CATEGORIES, category_name, iso_utc
-from app.database import get_session
+from app.database import get_db, get_session
 from app.editorial import review_natural_writing
 from app.publisher import ArticlePublisher
 from app.schema import NewsArticle, PublicationLog
@@ -66,34 +67,79 @@ def publish_article_endpoint(
 
 
 @router.get("/api/editorial/review")
-def list_articles_for_review(_auth=Depends(require_api_key)):
+def list_articles_for_review(
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    db=Depends(get_db),
+    _auth=Depends(require_api_key),
+):
     """Return pending items and local public articles available for correction."""
-    db = get_session()
+    owns_session = False
+    if not hasattr(db, "query"):
+        db = get_session()
+        owns_session = True
     try:
-        articles = (
-            db.query(NewsArticle)
-            .filter(
-                or_(
-                    NewsArticle.status.in_(["review", "classified", "draft"]),
-                    and_(NewsArticle.status == "published", NewsArticle.visibility == "public", NewsArticle.region == "ms"),
-                )
+        query = db.query(NewsArticle).filter(
+            or_(
+                NewsArticle.status.in_(["review", "classified", "draft"]),
+                and_(NewsArticle.status == "published", NewsArticle.visibility == "public", NewsArticle.region == "ms"),
             )
-            .order_by(NewsArticle.created_at.desc())
-            .limit(2000)
-            .all()
         )
-        return {"articles": [_review_payload(article) for article in articles]}
+        total = query.order_by(None).count()
+        resolved_limit = limit if isinstance(limit, int) else 50
+        resolved_offset = offset if isinstance(offset, int) else 0
+        articles = query.options(
+            load_only(
+                NewsArticle.id,  # type: ignore[arg-type]
+                NewsArticle.slug,  # type: ignore[arg-type]
+                NewsArticle.title,  # type: ignore[arg-type]
+                NewsArticle.summary,  # type: ignore[arg-type]
+                NewsArticle.category,  # type: ignore[arg-type]
+                NewsArticle.status,  # type: ignore[arg-type]
+                NewsArticle.importance_score,  # type: ignore[arg-type]
+                NewsArticle.engagement_score,  # type: ignore[arg-type]
+                NewsArticle.created_at,  # type: ignore[arg-type]
+                NewsArticle.published_at,  # type: ignore[arg-type]
+            )
+        ).order_by(NewsArticle.created_at.desc()).offset(resolved_offset).limit(resolved_limit).all()
+        return {"total": total, "limit": resolved_limit, "offset": resolved_offset, "articles": [_review_payload(article) for article in articles]}
     except Exception as error:
         logger.error("Falha ao listar matérias para curadoria (%s)", type(error).__name__)
         raise HTTPException(status_code=503, detail="Erro interno") from None
     finally:
-        db.close()
+        if owns_session:
+            db.close()
+
+
+@router.get("/api/editorial/review/{slug}/writing-check")
+def writing_check(slug: str, db=Depends(get_db), _auth=Depends(require_api_key)):
+    """Run the expensive writing review only for one requested article."""
+    owns_session = False
+    if not hasattr(db, "query"):
+        db = get_session()
+        owns_session = True
+    try:
+        article = db.query(NewsArticle).filter(NewsArticle.slug == slug).first()
+        if not article:
+            raise HTTPException(status_code=404, detail="Matéria não encontrada")
+        return {"slug": slug, "writing_review": [finding.as_dict() for finding in review_natural_writing(str(article.content or ""))]}
+    except HTTPException:
+        raise
+    except Exception as error:
+        logger.error("Falha na verificação de redação (%s)", type(error).__name__)
+        raise HTTPException(status_code=503, detail="Erro interno") from None
+    finally:
+        if owns_session:
+            db.close()
 
 
 @router.put("/api/editorial/review/{slug}")
-def update_article_review(slug: str, data: UpdateReviewRequest, _auth=Depends(require_api_key)):
+def update_article_review(slug: str, data: UpdateReviewRequest, db=Depends(get_db), _auth=Depends(require_api_key)):
     """Persist a deliberate category, score or status decision."""
-    db = get_session()
+    owns_session = False
+    if not hasattr(db, "query"):
+        db = get_session()
+        owns_session = True
     try:
         article = db.query(NewsArticle).filter(NewsArticle.slug == slug).with_for_update().first()
         if not article:
@@ -118,15 +164,15 @@ def update_article_review(slug: str, data: UpdateReviewRequest, _auth=Depends(re
         logger.error("Falha ao atualizar matéria (%s)", type(error).__name__)
         raise HTTPException(status_code=503, detail="Erro interno") from None
     finally:
-        db.close()
+        if owns_session:
+            db.close()
 
 
 def _review_payload(article: NewsArticle) -> dict:
     """Serialize only fields needed by the editorial dashboard."""
     return {
-        "slug": article.slug, "title": article.title, "summary": article.summary, "content": article.content,
-        "original_text": article.original_text,
-        "writing_review": [finding.as_dict() for finding in review_natural_writing(str(article.content or ""))],
+        "slug": article.slug, "title": article.title, "summary": article.summary,
+        "writing_review": None,
         "category": article.category, "importance_score": article.importance_score,
         "engagement_score": article.engagement_score, "status": article.status,
         "published_at": iso_utc(article.published_at), "created_at": iso_utc(article.created_at),

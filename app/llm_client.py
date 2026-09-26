@@ -10,10 +10,16 @@ from typing import Dict, Optional
 
 import requests
 
+from app.translation_glossary import TranslationGlossary  # noqa: F401
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 SUPPORTED_PROVIDERS = {"gemini", "openai", "groq"}
+
+
+class LLMUnavailableError(RuntimeError):
+    """Raised when a provider cannot complete a request after bounded retries."""
 
 
 class LLMClient:
@@ -61,12 +67,35 @@ class LLMClient:
             logger.error("LLM API key não configurada")
             return ""
 
+        last_error = None
+        for provider in self._fallback_chain():
+            client = self if provider == self.provider else LLMClient(provider=provider)
+            if not client.api_key:
+                continue
+            try:
+                return client._complete_provider(prompt, system_prompt, max_tokens, temperature)
+            except LLMUnavailableError as error:
+                last_error = error
+                logger.warning("LLM provider %s indisponível; tentando próximo", provider)
+        if last_error:
+            raise last_error
+        return ""
+
+    def _fallback_chain(self) -> list[str]:
+        """Resolve a cadeia configurável sem repetir ou aceitar provedores inválidos."""
+        raw = os.getenv("LLM_FALLBACK_CHAIN", self.provider)
+        chain = [item.strip().lower() for item in raw.split(",")]
+        return list(dict.fromkeys(item for item in chain if item in SUPPORTED_PROVIDERS)) or [self.provider]
+
+    def _complete_provider(self, prompt: str, system_prompt: str, max_tokens: int, temperature: float) -> str:
         if self.provider == "gemini":
             return self._complete_gemini(prompt, system_prompt, max_tokens, temperature)
         return self._complete_openai(prompt, system_prompt, max_tokens, temperature)
 
     RETRYABLE_STATUS = {429, 500, 502, 503}
-    MAX_ATTEMPTS = 6
+    MAX_ATTEMPTS = 3
+    MAX_RETRY_WAIT = 15
+
 
     def _post_with_backoff(
         self, url: str, payload: Dict, headers: Optional[Dict] = None, params: Optional[Dict] = None
@@ -80,7 +109,7 @@ class LLMClient:
             try:
                 response = requests.post(url, json=payload, headers=headers, params=params, timeout=self.timeout)
                 if response.status_code in self.RETRYABLE_STATUS and attempt < self.MAX_ATTEMPTS:
-                    wait = 10 * (2 ** (attempt - 1)) + random.uniform(0, 3)
+                    wait = min(self.MAX_RETRY_WAIT, 5 * (2 ** (attempt - 1))) + random.uniform(0, 1)
                     logger.warning(
                         "LLM HTTP %s (tentativa %d/%d). Aguardando %.1fs...",
                         response.status_code,
@@ -94,7 +123,7 @@ class LLMClient:
             except (requests.ConnectionError, requests.Timeout) as e:
                 last_exc = e
                 if attempt < self.MAX_ATTEMPTS:
-                    wait = 10 * (2 ** (attempt - 1)) + random.uniform(0, 3)
+                    wait = min(self.MAX_RETRY_WAIT, 5 * (2 ** (attempt - 1))) + random.uniform(0, 1)
                     logger.warning(
                         "LLM erro de rede %s (tentativa %d/%d). Aguardando %.1fs...",
                         type(e).__name__,
@@ -133,10 +162,10 @@ class LLMClient:
             return data["choices"][0]["message"]["content"].strip()
         except requests.HTTPError as e:
             logger.error("Erro OpenAI HTTP %s", e.response.status_code if e.response is not None else "?")
-            return ""
+            raise LLMUnavailableError("OpenAI/Groq HTTP indisponível") from e
         except Exception as e:
             logger.error("Erro ao chamar OpenAI (%s)", type(e).__name__)
-            return ""
+            raise LLMUnavailableError("OpenAI/Groq indisponível") from e
 
     def _complete_gemini(self, prompt: str, system_prompt: str, max_tokens: int, temperature: float) -> str:
         payload = {
@@ -156,16 +185,16 @@ class LLMClient:
             data = response.json()
             candidates = data.get("candidates", [])
             if not candidates:
-                return ""
+                raise LLMUnavailableError("Gemini retornou resposta vazia")
             parts = candidates[0].get("content", {}).get("parts", [])
             text = "".join(part.get("text", "") for part in parts).strip()
             return text
         except requests.HTTPError as e:
             logger.error("Erro Gemini HTTP %s", e.response.status_code if e.response is not None else "?")
-            return ""
+            raise LLMUnavailableError("Gemini HTTP indisponível") from e
         except Exception as e:
             logger.error("Erro ao chamar Gemini (%s)", type(e).__name__)
-            return ""
+            raise LLMUnavailableError("Gemini indisponível") from e
 
     def rewrite_article(
         self, article: Dict, reporter_prompt: str, attribution: str, related_sources: Optional[list] = None, **_: object
@@ -252,39 +281,6 @@ CORPO:
         return self.complete(
             prompt=f"Traduza para pt-BR:\n\n{text}", system_prompt=system_prompt, max_tokens=2000, temperature=0.3
         )
-
-
-class TranslationGlossary:
-    """Glossário de tradução para garantir consistência."""
-
-    TERMS = {
-        "AI": "inteligência artificial",
-        "ML": "machine learning",
-        "startup": "startup",
-        "IPO": "oferta pública inicial (IPO)",
-        "CEO": "CEO",
-        "layoffs": "demissões em massa",
-        "Fed": "Federal Reserve (Banco Central dos EUA)",
-        "interest rates": "taxas de juros",
-        "inflation": "inflação",
-        "GDP": "PIB",
-        "recession": "recessão",
-        "White House": "Casa Branca",
-        "Congress": "Congresso",
-        "NATO": "OTAN",
-        "WHO": "OMS",
-        "FDA": "FDA",
-    }
-
-    @classmethod
-    def apply(cls, text: str) -> str:
-        result = text
-        for en, pt in cls.TERMS.items():
-            import re
-
-            pattern = re.compile(re.escape(en), re.IGNORECASE)
-            result = pattern.sub(pt, result)
-        return result
 
 
 def test_llm_connection(provider: Optional[str] = None) -> bool:

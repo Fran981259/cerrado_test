@@ -2,10 +2,13 @@
 
 import os
 import time
+from threading import Lock
 
 import redis
 
 _LOCAL_COUNTER: dict[str, tuple[float, int]] = {}
+_POOL_LOCK = Lock()
+_POOLS: dict[str, redis.ConnectionPool] = {}
 
 
 def _is_production() -> bool:
@@ -23,6 +26,25 @@ def _local_limit(key: str, maximum: int, window: int) -> bool:
     return count > maximum
 
 
+def _redis_client(redis_url: str):
+    """Return one pooled Redis client per configured URL."""
+    with _POOL_LOCK:
+        pool = _POOLS.get(redis_url)
+        if pool is None:
+            pool = redis.ConnectionPool.from_url(redis_url, decode_responses=True)
+            _POOLS[redis_url] = pool
+    return redis.Redis(connection_pool=pool)
+
+
+def _atomic_increment(client, key: str, window: int) -> int:
+    """Increment a counter and refresh its TTL in one Redis transaction."""
+    pipe = client.pipeline(transaction=True)
+    pipe.incr(key)
+    pipe.expire(key, window)
+    count, _ = pipe.execute()
+    return int(count)
+
+
 def is_rate_limited(key: str, maximum: int, window: int) -> bool:
     """Incrementa o contador compartilhado e informa se o limite foi excedido."""
     redis_url = os.getenv("REDIS_URL")
@@ -31,10 +53,7 @@ def is_rate_limited(key: str, maximum: int, window: int) -> bool:
             raise RuntimeError("REDIS_URL obrigatório para rate limit em produção")
         return _local_limit(key, maximum, window)
     try:
-        client = redis.Redis.from_url(redis_url, decode_responses=True)
-        count = int(client.incr(key))
-        if count == 1:
-            client.expire(key, window)
+        count = _atomic_increment(_redis_client(redis_url), key, window)
         return count > maximum
     except redis.RedisError as error:
         if _is_production():

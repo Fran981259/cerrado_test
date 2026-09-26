@@ -18,17 +18,24 @@ export type EditorialChanges = Pick<
   "category" | "importance_score" | "engagement_score" | "status"
 >;
 
-type QueueResponse = { articles?: EditorialArticle[] };
+type QueueResponse = { total?: number; limit?: number; offset?: number; articles?: EditorialArticle[] };
+
+export type EditorialQueue = { total: number; limit: number; offset: number; articles: EditorialArticle[] };
 
 /** Loads the protected editorial queue with the operator-provided key. */
-export async function fetchEditorialQueue(apiKey: string): Promise<EditorialArticle[]> {
-  const response = await fetch("/api/editorial/review", {
+export async function fetchEditorialQueue(apiKey: string, offset = 0, limit = 50): Promise<EditorialQueue> {
+  const response = await fetch(`/api/editorial/review?offset=${offset}&limit=${limit}`, {
     headers: { "X-API-Key": apiKey },
     cache: "no-store",
   });
   if (!response.ok) throw new Error(response.status === 401 ? "Chave editorial inválida." : "Não foi possível carregar a fila.");
   const payload = (await response.json()) as QueueResponse;
-  return Array.isArray(payload.articles) ? payload.articles : [];
+  return {
+    total: Number(payload.total ?? 0),
+    limit: Number(payload.limit ?? limit),
+    offset: Number(payload.offset ?? offset),
+    articles: Array.isArray(payload.articles) ? payload.articles : [],
+  };
 }
 
 /** Persists editorial decisions for one article. */

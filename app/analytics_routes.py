@@ -1,11 +1,14 @@
 """First-party, rate-limited page-view tracking route."""
 
-from fastapi import APIRouter, Request
+import ipaddress
+import os
+
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from app.database import get_session
+from app.database import get_db
 from app.rate_limit import is_rate_limited
 
 router = APIRouter()
@@ -21,7 +24,7 @@ class TrackRequest(BaseModel):
 
 
 @router.post("/api/analytics/track")
-def track_pageview(request_data: TrackRequest, request: Request):
+def track_pageview(request_data: TrackRequest, request: Request, db=Depends(get_db)):
     """Store a page view unless the client exceeded the rate limit."""
     try:
         limited = _is_rate_limited(request)
@@ -29,7 +32,6 @@ def track_pageview(request_data: TrackRequest, request: Request):
         return JSONResponse(status_code=503, content={"status": "rate_limit_unavailable"})
     if limited:
         return {"status": "rate_limited"}
-    db = get_session()
     try:
         from app.schema import PageView
 
@@ -38,12 +40,32 @@ def track_pageview(request_data: TrackRequest, request: Request):
         return {"status": "ok"}
     except Exception as error:
         logger.error("Erro no tracking de analytics (%s)", type(error).__name__)
-        return {"status": "error"}
-    finally:
-        db.close()
+        raise HTTPException(status_code=503, detail="Analytics temporariamente indisponível") from None
 
 
 def _is_rate_limited(request: Request) -> bool:
     """Apply a shared counter keyed by client address."""
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = _client_ip(request)
     return is_rate_limited(f"portal:analytics:{client_ip}", _MAX_REQUESTS, _WINDOW_SECONDS)
+
+
+def _trusted_proxy_hosts() -> set[str]:
+    """Load the explicit proxy allowlist used for forwarded client addresses."""
+    raw = os.getenv("TRUSTED_PROXY_HOSTS", "127.0.0.1,::1")
+    return {value.strip() for value in raw.split(",") if value.strip()}
+
+
+def _client_ip(request: Request) -> str:
+    """Use X-Forwarded-For only when the immediate sender is trusted."""
+    immediate = request.client.host if request.client else "unknown"
+    if immediate not in _trusted_proxy_hosts() and "*" not in _trusted_proxy_hosts():
+        return immediate
+    forwarded = request.headers.get("x-forwarded-for", "")
+    for candidate in forwarded.split(","):
+        value = candidate.strip()
+        try:
+            ipaddress.ip_address(value)
+            return value
+        except ValueError:
+            continue
+    return immediate

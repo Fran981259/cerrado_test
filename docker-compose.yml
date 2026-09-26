@@ -54,9 +54,10 @@ services:
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}@redis:6379/0
       LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
+      LLM_FALLBACK_CHAIN: ${LLM_FALLBACK_CHAIN:-gemini,groq,openai}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-lite-latest}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-1.5-lite-latest}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       SITE_URL: ${NEXT_PUBLIC_SITE_URL:?NEXT_PUBLIC_SITE_URL obrigatorio}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?NEXT_PUBLIC_SITE_URL obrigatorio}
@@ -64,6 +65,7 @@ services:
       CELERY_SCHEDULER: "1"
       PUBLISH_API_KEY: ${PUBLISH_API_KEY:?PUBLISH_API_KEY obrigatorio}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?CORS_ALLOWED_ORIGINS obrigatorio}
+      TRUSTED_PROXY_HOSTS: ${TRUSTED_PROXY_HOSTS:-*}
       ENVIRONMENT: ${ENVIRONMENT:-production}
       SIMILARITY_THRESHOLD: ${SIMILARITY_THRESHOLD:-0.35}
       DATABASE_CONNECT_RETRIES: ${DATABASE_CONNECT_RETRIES:-10}
@@ -98,6 +100,7 @@ services:
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}@redis:6379/0
       LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
+      LLM_FALLBACK_CHAIN: ${LLM_FALLBACK_CHAIN:-gemini,groq,openai}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-lite-latest}
@@ -139,6 +142,7 @@ services:
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}@redis:6379/0
       LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
+      LLM_FALLBACK_CHAIN: ${LLM_FALLBACK_CHAIN:-gemini,groq,openai}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-lite-latest}
@@ -165,6 +169,42 @@ services:
       retries: 3
       start_period: 30s
 
+  celery_monitoring:
+    image: ${BACKEND_IMAGE:-ghcr.io/fran981259/portal-cerrado-backend:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: portal_cerrado_monitoring
+    restart: unless-stopped
+    logging: *default-logging
+    command: celery -A app.celery_app worker -Q monitoring -c 1 -l info
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}@redis:6379/0
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      DATABASE_CONNECT_RETRIES: ${DATABASE_CONNECT_RETRIES:-10}
+      DATABASE_CONNECT_RETRY_DELAY: ${DATABASE_CONNECT_RETRY_DELAY:-1}
+    volumes:
+      - app_data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - portal_cerrado_net
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import os, redis; redis.from_url(os.environ['REDIS_URL']).ping()\""]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 30s
+
   flower:
     image: ${BACKEND_IMAGE:-ghcr.io/fran981259/portal-cerrado-backend:latest}
     build:
@@ -178,6 +218,7 @@ services:
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}@redis:6379/0
       LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
+      LLM_FALLBACK_CHAIN: ${LLM_FALLBACK_CHAIN:-gemini,groq,openai}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-lite-latest}

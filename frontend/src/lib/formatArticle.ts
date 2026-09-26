@@ -218,3 +218,12 @@ export function readingTimeMinutes(raw: string): number {
 export function serializeJsonLd(value: unknown): string {
   return JSON.stringify(value).replace(/</g, "\\u003c");
 }
+
+/** Removes every tag and attribute not emitted by the article formatter. */
+export function sanitizeArticleHtml(html: string): string {
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ["p", "h2", "strong", "em", "ul", "li", "blockquote", "div"],
+    ALLOWED_ATTR: ["class"],
+  });
+}
+import DOMPurify from "isomorphic-dompurify";

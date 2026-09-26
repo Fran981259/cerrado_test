@@ -74,7 +74,7 @@ const ORGANIZATION_JSON_LD = {
 
 export default async function Home() {
   const settled = await Promise.allSettled([
-    fetchNewsResponse({ region: "ms", limit: 80, sortBy: "recent" }),
+    fetchNewsResponse({ region: "ms", limit: 20, sortBy: "recent" }),
     fetchNewsResponse({ region: "ms", category: "agriculture", limit: 5, sortBy: "recent" }),
     fetchNewsResponse({ region: "ms", category: "politics", limit: 24, sortBy: "recent" }),
   ]);

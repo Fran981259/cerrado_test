@@ -89,6 +89,7 @@ function DesktopLinks() {
                   <Link
                     key={s.label}
                     href={`/categoria/${s.slug}`}
+                    aria-current={on ? "page" : undefined}
                     className={`block rounded px-3 py-2 text-[12px] font-bold uppercase tracking-wider transition-colors ${on ? "bg-accent-soil text-white" : "text-text-muted hover:bg-black/5 hover:text-text-primary"}`}
                   >
                     {s.label}

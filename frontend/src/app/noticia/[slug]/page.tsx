@@ -9,6 +9,7 @@ import {
   formatArticleContent,
   formatArticleDate,
   readingTimeMinutes,
+  sanitizeArticleHtml,
   serializeJsonLd,
 } from '@/lib/formatArticle';
 import { categorySlug, getCategory, PATTERN_IMAGES } from '@/lib/categories';
@@ -75,7 +76,7 @@ export default async function NoticiaPage({ params }: { params: Promise<{ slug: 
   const cat = getCategory(article.category);
   const reporter = getReporter(article.reporter_slug);
   const img =
-    (article as unknown as { image_url?: string }).image_url ||
+    article.image_url ||
     PATTERN_IMAGES[article.category] ||
     PATTERN_IMAGES.general;
 
@@ -229,7 +230,7 @@ export default async function NoticiaPage({ params }: { params: Promise<{ slug: 
 
           <div className="article-body article-body-premium mx-auto px-5 py-8 sm:px-7 sm:py-10">
             {bodyHtml ? (
-              <div dangerouslySetInnerHTML={{ __html: bodyHtml }} />
+              <div dangerouslySetInnerHTML={{ __html: sanitizeArticleHtml(bodyHtml) }} />
             ) : (
               <>
                 <p>{article.summary}</p>

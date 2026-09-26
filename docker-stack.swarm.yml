@@ -57,6 +57,7 @@ services:
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}@redis:6379/0
       LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
+      LLM_FALLBACK_CHAIN: ${LLM_FALLBACK_CHAIN:-gemini,groq,openai}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-lite-latest}
@@ -67,6 +68,7 @@ services:
       CELERY_SCHEDULER: '1'
       PUBLISH_API_KEY: ${PUBLISH_API_KEY:?PUBLISH_API_KEY obrigatorio}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?CORS_ALLOWED_ORIGINS obrigatorio}
+      TRUSTED_PROXY_HOSTS: ${TRUSTED_PROXY_HOSTS:-*}
       ENVIRONMENT: ${ENVIRONMENT:-production}
       SIMILARITY_THRESHOLD: ${SIMILARITY_THRESHOLD:-0.35}
       DATABASE_CONNECT_RETRIES: ${DATABASE_CONNECT_RETRIES:-10}
@@ -98,6 +100,7 @@ services:
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}@redis:6379/0
       LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
+      LLM_FALLBACK_CHAIN: ${LLM_FALLBACK_CHAIN:-gemini,groq,openai}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-lite-latest}
@@ -133,6 +136,7 @@ services:
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}@redis:6379/0
       LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
+      LLM_FALLBACK_CHAIN: ${LLM_FALLBACK_CHAIN:-gemini,groq,openai}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-lite-latest}
@@ -160,6 +164,37 @@ services:
       restart_policy:
         condition: on-failure
         max_attempts: 3
+  celery_monitoring:
+    image: ${BACKEND_IMAGE:?BACKEND_IMAGE SHA obrigatoria}
+    logging: *id001
+    command: celery -A app.celery_app worker -Q monitoring -c 1 -l info
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}@redis:6379/0
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      DATABASE_CONNECT_RETRIES: ${DATABASE_CONNECT_RETRIES:-10}
+      DATABASE_CONNECT_RETRY_DELAY: ${DATABASE_CONNECT_RETRY_DELAY:-1}
+    volumes:
+    - cerrado_test_app_data:/app/data
+    networks:
+    - cerrado_test_net
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - python -c "import os, redis; redis.from_url(os.environ['REDIS_URL']).ping()"
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 30s
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
   flower:
     image: ${BACKEND_IMAGE:?BACKEND_IMAGE SHA obrigatoria}
     logging: *id001
@@ -168,6 +203,7 @@ services:
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:?POSTGRES_USER obrigatorio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio}@postgres:5432/portal_cerrado
       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio}@redis:6379/0
       LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
+      LLM_FALLBACK_CHAIN: ${LLM_FALLBACK_CHAIN:-gemini,groq,openai}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-lite-latest}
